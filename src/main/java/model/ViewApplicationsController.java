@@ -25,7 +25,7 @@ public class ViewApplicationsController extends HttpServlet {
         }
 
         try {
-            ApplicationDAO_1 appDAO = new ApplicationDAO_1();
+            ApplicationDAO appDAO = new ApplicationDAO();
             List<Application> applications;
 
             if ("JOB_SEEKER".equals(user.getRole())) {
