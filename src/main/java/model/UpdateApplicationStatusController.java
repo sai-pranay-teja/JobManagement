@@ -27,7 +27,7 @@ public class UpdateApplicationStatusController extends HttpServlet {
             int appId = Integer.parseInt(request.getParameter("appId"));
             String status = request.getParameter("status");
             
-            new ApplicationDAO_1().updateApplicationStatus(appId, status);
+            new ApplicationDAO().updateApplicationStatus(appId, status);
             
             response.sendRedirect("employerDashboard");
             
