@@ -29,7 +29,7 @@ public class DeleteJobController extends HttpServlet {
             int jobId = Integer.parseInt(request.getParameter("jobId"));
             
             // 3. Delete job from database
-            ApplicationDAO_1 dao = new ApplicationDAO_1();
+            ApplicationDAO dao = new ApplicationDAO();
             boolean success = dao.deleteJob(jobId, user.getUserId());
             
             // 4. Redirect to employer's job list
