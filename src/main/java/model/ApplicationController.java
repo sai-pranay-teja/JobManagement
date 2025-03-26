@@ -51,7 +51,7 @@ public class ApplicationController extends HttpServlet {
             application.setStatus("PENDING");
             application.setResumePath(UPLOAD_DIR + "/" + fileName);
             
-            new ApplicationDAO_1().addApplication(application);
+            new ApplicationDAO().addApplication(application);
             
             response.sendRedirect("viewApplications");
             
