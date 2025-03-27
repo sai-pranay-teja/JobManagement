@@ -29,6 +29,7 @@ pipeline {
         }
         
         
+
         stage('Copy Resources') {
             steps {
                 // Copy non-Java resources (JSP, config.properties, etc.)
