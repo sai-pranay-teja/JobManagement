@@ -55,6 +55,7 @@ pipeline {
         }
         
         
+
         stage('Smoke Test') {
             steps {
                 // Simple test using curl to verify that the login page is available
