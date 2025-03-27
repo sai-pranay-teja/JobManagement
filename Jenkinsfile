@@ -59,7 +59,7 @@ pipeline {
 
         }
         
-        
+
 
 
         stage('Smoke Test') {
@@ -77,5 +77,6 @@ pipeline {
         success {
             echo 'Build and deployment succeeded.'
         }
+        
     }
 }
