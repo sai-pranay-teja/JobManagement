@@ -75,17 +75,24 @@ pipeline {
                // sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp'
                sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp || true'
 
-               sh """
-               start_time=$(date +%s)
-               # Wait until log indicates deployment is complete
-               tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-                 echo "${line}" | grep -q "Deployment of web application archive" && break
-               done
-               end_time=$(date +%s)
-               echo "Deployment took $((end_time - start_time)) seconds."
 
-               """
 
+            }
+        }
+
+
+            stage('Deployment Speed') {
+                steps {
+                // Calculate the deployment time by monitoring catalina.out for the deployment message
+                  sh """
+                    start_time=\$(date +%s)
+                    # Wait until log indicates deployment is complete
+                    tail -f /opt/tomcat10/logs/catalina.out | while read line; do
+                      echo "\${line}" | grep -q "Deployment of web application archive" && break
+                    done
+                    end_time=\$(date +%s)
+                    echo "Deployment took \$((end_time - start_time)) seconds."
+                """
             }
         }
     }
