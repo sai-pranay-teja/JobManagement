@@ -50,8 +50,8 @@ pipeline {
             steps {
                 // Since Jenkins is running on the same server, simply move the WAR file to Tomcat's deployment directory and restart Tomcat
                 sh """
-                    sudo mv ${WAR_NAME} ${DEPLOY_DIR}/ && \
-                //    cd ${TOMCAT_HOME}/bin && ./shutdown.sh && ./startup.sh
+                    sudo mv ${WAR_NAME} ${DEPLOY_DIR}/ 
+                   # cd ${TOMCAT_HOME}/bin && ./shutdown.sh && ./startup.sh
                     sudo /opt/tomcat10/bin/shutdown.sh
                     sudo /opt/tomcat10/bin/startup.sh
                    """
