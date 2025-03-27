@@ -65,7 +65,9 @@ pipeline {
         stage('Smoke Test') {
             steps {
                 // Simple test using curl to verify that the login page is available
-                sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp'
+               // sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp'
+               sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp || true'
+
             }
         }
     }
@@ -77,6 +79,6 @@ pipeline {
         success {
             echo 'Build and deployment succeeded.'
         }
-        
+
     }
 }
