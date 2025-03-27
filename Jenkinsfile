@@ -27,7 +27,7 @@ pipeline {
                    '''
             }
         }
-        
+
         
 
         stage('Copy Resources') {
@@ -51,7 +51,9 @@ pipeline {
                 // Since Jenkins is running on the same server, simply move the WAR file to Tomcat's deployment directory and restart Tomcat
                 sh """
                    mv ${WAR_NAME} ${DEPLOY_DIR}/ && \
-                   cd ${TOMCAT_HOME}/bin && ./shutdown.sh && ./startup.sh
+                //    cd ${TOMCAT_HOME}/bin && ./shutdown.sh && ./startup.sh
+                    sudo /opt/tomcat10/bin/shutdown.sh
+                    sudo /opt/tomcat10/bin/startup.sh
                    """
             }
 
@@ -62,7 +64,7 @@ pipeline {
         stage('Smoke Test') {
             steps {
                 // Simple test using curl to verify that the login page is available
-                sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8080/JobManagement/login.jsp'
+                sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp'
             }
         }
     }
