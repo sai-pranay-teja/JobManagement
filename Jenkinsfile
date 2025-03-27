@@ -52,6 +52,7 @@ pipeline {
                    cd ${TOMCAT_HOME}/bin && ./shutdown.sh && ./startup.sh
                    """
             }
+            
         }
         
 
