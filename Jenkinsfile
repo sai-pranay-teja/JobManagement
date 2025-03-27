@@ -15,7 +15,7 @@ pipeline {
                 cleanWs()
             }
         }
-        
+
         stage('Checkout') {
             steps {
                 // Checkout code from GitHub
@@ -79,7 +79,7 @@ pipeline {
                start_time=$(date +%s)
                # Wait until log indicates deployment is complete
                tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-                 echo "$line" | grep -q "Deployment of web application archive" && break
+                 echo "${line}" | grep -q "Deployment of web application archive" && break
                done
                end_time=$(date +%s)
                echo "Deployment took $((end_time - start_time)) seconds."
