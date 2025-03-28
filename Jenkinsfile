@@ -52,7 +52,7 @@ pipeline {
                 archiveArtifacts artifacts: "${WAR_NAME}", fingerprint: true
             }
         }
-        
+
         
         stage('Deploy') {
             steps {
@@ -80,35 +80,41 @@ pipeline {
 
             }
         }
-        stage('Repeat Package & Deploy') {
+        // stage('Repeat Package & Deploy') {
+        //     steps {
+        //         // Rebuild the WAR file and deploy again to measure deployment speed.
+        //         // Repackage the WAR (if needed) and deploy it.
+        //         sh 'jar -cvf ${WAR_NAME} -C build .'
+        //         archiveArtifacts artifacts: "${WAR_NAME}", fingerprint: true
+        //         sh """
+        //             sudo mv ${WAR_NAME} ${DEPLOY_DIR}/ 
+        //             sudo /opt/tomcat10/bin/shutdown.sh
+        //             sudo /opt/tomcat10/bin/startup.sh
+        //         """
+        //     }
+        // }
+        stage('Deployment Speed') {
             steps {
-                // Rebuild the WAR file and deploy again to measure deployment speed.
-                // Repackage the WAR (if needed) and deploy it.
-                sh 'jar -cvf ${WAR_NAME} -C build .'
-                archiveArtifacts artifacts: "${WAR_NAME}", fingerprint: true
-                sh """
-                    sudo mv ${WAR_NAME} ${DEPLOY_DIR}/ 
-                    sudo /opt/tomcat10/bin/shutdown.sh
-                    sudo /opt/tomcat10/bin/startup.sh
-                """
-            }
-        }
+              sh """
+            start_time=\$(date +%s)
+            # Package the WAR file
+            jar -cvf ${WAR_NAME} -C build .
+            # Deploy the WAR to Tomcat and restart Tomcat
+            sudo mv ${WAR_NAME} ${DEPLOY_DIR}/
+            sudo /opt/tomcat10/bin/shutdown.sh
+            sudo /opt/tomcat10/bin/startup.sh
+            # Wait until the log indicates that the web application archive is deployed
+            tail -f /opt/tomcat10/logs/catalina.out | while read line; do
+              echo "\${line}" | grep -q "Deployment of web application archive" && break
+            done
+            end_time=\$(date +%s)
+            echo "Deployment took \$((end_time - start_time)) seconds."
+        """
+    }
+}
 
 
-            stage('Deployment Speed') {
-                steps {
-                // Calculate the deployment time by monitoring catalina.out for the deployment message
-                  sh """
-                    start_time=\$(date +%s)
-                    # Wait until log indicates deployment is complete
-                    tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-                      echo "\${line}" | grep -q "Deployment of web application archive" && break
-                    done
-                    end_time=\$(date +%s)
-                    echo "Deployment took \$((end_time - start_time)) seconds."
-                """
-            }
-        }
+
     }
     
 
