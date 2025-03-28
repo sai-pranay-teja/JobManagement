@@ -73,13 +73,25 @@ pipeline {
             steps {
                 // Simple test using curl to verify that the login page is available
                // sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp'
-               sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://18.61.31.57:8090/JobManagement/login.jsp || true'
+               sh 'curl -o /dev/null -s -w "Response Time: %{time_total}s\\n" http://98.130.117.98:8090/JobManagement/login.jsp || true'
 
 
 
             }
         }
-
+        stage('Repeat Package & Deploy') {
+            steps {
+                // Rebuild the WAR file and deploy again to measure deployment speed.
+                // Repackage the WAR (if needed) and deploy it.
+                sh 'jar -cvf ${WAR_NAME} -C build .'
+                archiveArtifacts artifacts: "${WAR_NAME}", fingerprint: true
+                sh """
+                    sudo mv ${WAR_NAME} ${DEPLOY_DIR}/ 
+                    sudo /opt/tomcat10/bin/shutdown.sh
+                    sudo /opt/tomcat10/bin/startup.sh
+                """
+            }
+        }
 
             stage('Deployment Speed') {
                 steps {
