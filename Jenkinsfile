@@ -92,7 +92,7 @@ pipeline {
                 """
             }
         }
-        
+
 
             stage('Deployment Speed') {
                 steps {
@@ -109,6 +109,7 @@ pipeline {
             }
         }
     }
+    
     
     post {
         failure {
