@@ -92,6 +92,7 @@ pipeline {
                 """
             }
         }
+        
 
             stage('Deployment Speed') {
                 steps {
