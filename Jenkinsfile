@@ -53,6 +53,7 @@ pipeline {
             }
         }
         
+        
         stage('Deploy') {
             steps {
                 // Since Jenkins is running on the same server, simply move the WAR file to Tomcat's deployment directory and restart Tomcat
@@ -110,7 +111,7 @@ pipeline {
         }
     }
     
-    
+
     post {
         failure {
             echo 'Build or deployment failed.'
