@@ -80,7 +80,7 @@ pipeline {
 
 stage('Run Ansible Playbook') {
     steps {
-        sh 'bash -c "source ~/.bashrc && /usr/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml"'
+        sh 'bash -c "source /etc/profile && /usr/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml"'
     }
 }
 
