@@ -71,12 +71,19 @@ pipeline {
 //     }
 // }
 
-stage('Check Ansible Path') {
+// stage('Check Ansible Path') {
+//     steps {
+//         sh 'echo $PATH'
+//         sh 'which ansible-playbook || echo "Ansible not found"'
+//     }
+// }
+
+stage('Run Ansible Playbook') {
     steps {
-        sh 'echo $PATH'
-        sh 'which ansible-playbook || echo "Ansible not found"'
+        sh 'bash -c "source ~/.bashrc && /usr/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml"'
     }
 }
+
 
 
         // stage('Deploy with Ansible') {
