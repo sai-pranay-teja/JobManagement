@@ -56,12 +56,21 @@ pipeline {
 }
 
 
-        stage('Deploy with Ansible') {
+c       stage('Verify Playbook Exists') {
             steps {
-                // sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
-                sh 'ansible-playbook -i inventory ansible_tomcat_deploy.yml'
-            }
-        }
+                sh 'ls -l /var/lib/jenkins/workspace/'
+                sh 'cat /var/lib/jenkins/workspace/ansible_tomcat_deploy.yml'
+    }
+}
+
+
+
+        // stage('Deploy with Ansible') {
+        //     steps {
+        //         // sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+        //         sh 'ansible-playbook -i inventory ansible_tomcat_deploy.yml'
+        //     }
+        // }
         
     }
 
