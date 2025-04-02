@@ -78,12 +78,19 @@ pipeline {
 //     }
 // }
 
+// stage('Run Ansible Playbook') {
+//     steps {
+//         sh 'bash -c "source /etc/profile && /usr/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml"'
+//     }
+// }
+
 stage('Run Ansible Playbook') {
     steps {
-        sh 'bash -c "source /etc/profile && /usr/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml"'
+        sh 'ls -lah $WORKSPACE'
+        sh 'cat $WORKSPACE/ansible_tomcat_deploy.yml'
+        sh '/usr/bin/ansible-playbook -vvvv -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml'
     }
 }
-
 
 
         // stage('Deploy with Ansible') {
