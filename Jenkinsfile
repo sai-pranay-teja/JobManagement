@@ -84,24 +84,24 @@ pipeline {
 //     }
 // }
 
-stage('Deploy') {
-    steps {
-        script {
-            sh '''
-                sh '/bin/bash /var/lib/jenkins/workspace/my-research-pipeline/run_ansible.sh'
+// stage('Deploy') {
+//     steps {
+//         script {
+//             sh '''
+//                 sh '/bin/bash /var/lib/jenkins/workspace/my-research-pipeline/run_ansible.sh'
 
-            '''
+//             '''
+//         }
+//     }
+// }
+
+
+        stage('Deploy with Ansible') {
+            steps {
+                sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+                // sh '/usr/local/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml'
+            }
         }
-    }
-}
-
-
-        // stage('Deploy with Ansible') {
-        //     steps {
-        //         // sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
-        //         sh '/usr/local/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml'
-        //     }
-        // }
         
     }
 
