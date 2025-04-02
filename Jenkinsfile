@@ -43,7 +43,7 @@ pipeline {
             steps {
                 sh 'jar -cvf ${WAR_NAME} -C build .'
                 sh 'mv ${WAR_NAME} ${WAR_STORAGE}/'  // Move WAR to Jenkins directory
-                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true
+                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true, allowEmptyArchive: true
             }
         }
 
