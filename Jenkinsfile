@@ -39,13 +39,22 @@ pipeline {
             }
         }
         
+        // stage('Package WAR') {
+        //     steps {
+        //         sh 'jar -cvf ${WAR_NAME} -C build .'
+        //         sh 'mv ${WAR_NAME} ${WAR_STORAGE}/'  // Move WAR to Jenkins directory
+        //         archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true, allowEmptyArchive: true
+        //     }
+        // }
         stage('Package WAR') {
             steps {
-                sh 'jar -cvf ${WAR_NAME} -C build .'
-                sh 'mv ${WAR_NAME} ${WAR_STORAGE}/'  // Move WAR to Jenkins directory
-                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true, allowEmptyArchive: true
-            }
-        }
+                sh 'jar -cvf ${WORKSPACE}/${WAR_NAME} -C build .'  // WAR is created in workspace
+                sh 'mv ${WORKSPACE}/${WAR_NAME} ${WAR_STORAGE}/'  // Move WAR to /var/lib/jenkins
+                sh 'ls -lh ${WAR_STORAGE}/'  // Debugging: Check if WAR exists
+                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true
+    }
+}
+
 
         stage('Deploy with Ansible') {
             steps {
