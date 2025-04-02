@@ -35,26 +35,29 @@ pipeline {
             steps {
                 sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                 sh 'cp -R src/main/webapp/* build/'
+                sh 'pwd'
             }
         }
+
+
         
-        stage('Package WAR') {
-            steps {
-                sh 'jar -cvf ${WAR_NAME} -C build .'
-                sh 'mv ${WAR_NAME} ${WAR_STORAGE}/'  // Save WAR in /home/ubuntu
-                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true
-            }
-        }
+        // stage('Package WAR') {
+        //     steps {
+        //         sh 'jar -cvf ${WAR_NAME} -C build .'
+        //         sh 'mv ${WAR_NAME} ${WAR_STORAGE}/'  // Save WAR in /home/ubuntu
+        //         archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true
+        //     }
+        // }
         
-        stage('Deploy') {
-            steps {
-                sh """
-                    sudo mv ${WAR_STORAGE}/${WAR_NAME} ${DEPLOY_DIR}/ 
-                    sudo /opt/tomcat10/bin/shutdown.sh
-                    sudo /opt/tomcat10/bin/startup.sh
-                """
-            }
-        }
+        // stage('Deploy') {
+        //     steps {
+        //         sh """
+        //             sudo mv ${WAR_STORAGE}/${WAR_NAME} ${DEPLOY_DIR}/ 
+        //             sudo /opt/tomcat10/bin/shutdown.sh
+        //             sudo /opt/tomcat10/bin/startup.sh
+        //         """
+        //     }
+        // }
     }
 
     post {
