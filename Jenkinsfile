@@ -45,7 +45,7 @@ pipeline {
             steps {
                 sh 'jar -cvf ${WAR_NAME} -C build .'
                 sh 'sudo mv ${WAR_NAME} ${WAR_STORAGE}/'  // Save WAR in /home/ubuntu
-                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true
+                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", allowEmptyArchive: true, fingerprint: true
             }
         }
         
