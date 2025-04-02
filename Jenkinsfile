@@ -71,14 +71,20 @@ pipeline {
 //     }
 // }
 
+stage('Check Ansible Path') {
+    steps {
+        sh 'echo $PATH'
+        sh 'which ansible-playbook || echo "Ansible not found"'
+    }
+}
 
 
-        stage('Deploy with Ansible') {
-            steps {
-                // sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
-                sh '/usr/local/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml'
-            }
-        }
+        // stage('Deploy with Ansible') {
+        //     steps {
+        //         // sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+        //         sh '/usr/local/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml'
+        //     }
+        // }
         
     }
 
