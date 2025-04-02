@@ -4,8 +4,9 @@ pipeline {
     environment {
         TOMCAT_HOME = "/opt/tomcat10"
         WAR_NAME = "JobManagement.war"
-        DEPLOY_DIR = "${TOMCAT_HOME}/webapps"
-        WAR_STORAGE = "/home/ubuntu"
+        WAR_STORAGE = "/var/lib/jenkins"  // Save WAR in Jenkins directory before deployment
+        INVENTORY_FILE = "/home/ubuntu/inventory"  // Ansible inventory file
+        PLAYBOOK_FILE = "/home/ubuntu/ansible_tomcat_deploy.yml"  // Ansible playbook
     }
 
     stages {
@@ -25,7 +26,9 @@ pipeline {
         stage('Compile') {
             steps {
                 sh 'mkdir -p build/WEB-INF/classes'
-                sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
+                sh '''
+                   javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
+                   '''
             }
         }
 
@@ -35,18 +38,18 @@ pipeline {
                 sh 'cp -R src/main/webapp/* build/'
             }
         }
-
+        
         stage('Package WAR') {
             steps {
                 sh 'jar -cvf ${WAR_NAME} -C build .'
-                sh 'mv ${WAR_NAME} ${WAR_STORAGE}/'  // Store WAR in /home/ubuntu
-                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", allowEmptyArchive: true, fingerprint: true
+                sh 'mv ${WAR_NAME} ${WAR_STORAGE}/'  // Move WAR to Jenkins directory
+                archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}", fingerprint: true
             }
         }
 
-        stage('Deploy using Ansible') {
+        stage('Deploy with Ansible') {
             steps {
-                sh 'ansible-playbook -i inventory deploy.yml'
+                sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
             }
         }
     }
