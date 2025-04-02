@@ -98,7 +98,7 @@ pipeline {
 
         stage('Deploy with Ansible') {
             steps {
-                sh "sudo ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+                sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
                 // sh '/usr/local/bin/ansible-playbook -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml'
             }
         }
