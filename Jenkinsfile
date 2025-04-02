@@ -64,6 +64,14 @@ pipeline {
 }
 
 
+stage('Check Ansible Path') {
+    steps {
+        sh 'which ansible-playbook'
+        sh 'ansible-playbook --version'
+    }
+}
+
+
 
         // stage('Deploy with Ansible') {
         //     steps {
