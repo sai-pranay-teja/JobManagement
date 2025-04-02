@@ -84,11 +84,14 @@ pipeline {
 //     }
 // }
 
-stage('Run Ansible Playbook') {
+stage('Deploy') {
     steps {
-        sh 'ls -lah $WORKSPACE'
-        sh 'cat $WORKSPACE/ansible_tomcat_deploy.yml'
-        sh '/usr/bin/ansible-playbook -vvvv -i $WORKSPACE/inventory $WORKSPACE/ansible_tomcat_deploy.yml'
+        script {
+            sh '''
+                /usr/bin/ansible-playbook -i /var/lib/jenkins/workspace/my-research-pipeline/inventory \
+                /var/lib/jenkins/workspace/my-research-pipeline/ansible_tomcat_deploy.yml
+            '''
+        }
     }
 }
 
