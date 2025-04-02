@@ -62,6 +62,7 @@ pipeline {
                 sh 'ansible-playbook -i /home/ubuntu/inventory /home/ubuntu/ansible_tomcat_deploy.yml'
             }
         }
+        
     }
 
     post {
