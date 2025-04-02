@@ -88,7 +88,7 @@ stage('Deploy') {
     steps {
         script {
             sh '''
-                sh 'bash /var/lib/jenkins/workspace/my-research-pipeline/run_ansible.sh'
+                sh '/bin/bash /var/lib/jenkins/workspace/my-research-pipeline/run_ansible.sh'
 
             '''
         }
