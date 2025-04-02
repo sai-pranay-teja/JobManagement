@@ -88,8 +88,8 @@ stage('Deploy') {
     steps {
         script {
             sh '''
-                /usr/bin/ansible-playbook -i /var/lib/jenkins/workspace/my-research-pipeline/inventory \
-                /var/lib/jenkins/workspace/my-research-pipeline/ansible_tomcat_deploy.yml
+                sh 'bash /var/lib/jenkins/workspace/my-research-pipeline/run_ansible.sh'
+
             '''
         }
     }
