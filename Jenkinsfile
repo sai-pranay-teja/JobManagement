@@ -56,7 +56,7 @@ pipeline {
 }
 
 
-c       stage('Verify Playbook Exists') {
+       stage('Verify Playbook Exists') {
             steps {
                 sh 'ls -l /var/lib/jenkins/workspace/'
                 sh 'cat /var/lib/jenkins/workspace/ansible_tomcat_deploy.yml'
