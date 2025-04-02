@@ -58,7 +58,7 @@ pipeline {
 
         stage('Deploy with Ansible') {
             steps {
-                sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+                sh "sudo ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
             }
         }
     }
