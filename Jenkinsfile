@@ -56,29 +56,29 @@ pipeline {
 }
 
 
-       stage('Verify Playbook Exists') {
+//        stage('Verify Playbook Exists') {
+//             steps {
+//                 sh 'ls -l /var/lib/jenkins/workspace/'
+//                 sh 'cat /var/lib/jenkins/workspace/ansible_tomcat_deploy.yml'
+//     }
+// }
+
+
+// stage('Check Ansible Path') {
+//     steps {
+//         sh 'which ansible-playbook'
+//         sh 'ansible-playbook --version'
+//     }
+// }
+
+
+
+        stage('Deploy with Ansible') {
             steps {
-                sh 'ls -l /var/lib/jenkins/workspace/'
-                sh 'cat /var/lib/jenkins/workspace/ansible_tomcat_deploy.yml'
-    }
-}
-
-
-stage('Check Ansible Path') {
-    steps {
-        sh 'which ansible-playbook'
-        sh 'ansible-playbook --version'
-    }
-}
-
-
-
-        // stage('Deploy with Ansible') {
-        //     steps {
-        //         // sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
-        //         sh 'ansible-playbook -i inventory ansible_tomcat_deploy.yml'
-        //     }
-        // }
+                // sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+                sh '/usr/local/bin/ansible-playbook -i inventory ansible_tomcat_deploy.yml'
+            }
+        }
         
     }
 
