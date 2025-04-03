@@ -23,6 +23,7 @@ pipeline {
                 sh 'jar -cvf ${WAR_NAME} -C build .'
             }
         }
+        
 
         stage('Deploy Locally') {
             steps {
