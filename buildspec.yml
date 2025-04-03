@@ -8,11 +8,17 @@ phases:
     commands:
       - echo "Fetching SSH Key from AWS Secrets Manager..."
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey --query SecretString --output text > key.pem
-      - sed -i 's/\\n/\n/g' key.pem  # Fix newlines
-      - echo "-----BEGIN OPENSSH PRIVATE KEY-----" >> key.pem
-      - chmod 400 key.pem  # Ensure correct permissions
-      - ls -lah key.pem  # Debug: Check if the key exists
-      - cat key.pem | head -n 5
+      - echo "Fixing newlines in key.pem..."
+      - sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
+      # Check if the header is missing; if so, add it at the top.
+      - grep -q "BEGIN OPENSSH PRIVATE KEY" key.pem || sed -i '1i-----BEGIN OPENSSH PRIVATE KEY-----' key.pem
+      # Check if the footer is missing; if so, append it.
+      - grep -q "END OPENSSH PRIVATE KEY" key.pem || echo "-----END OPENSSH PRIVATE KEY-----" >> key.pem
+      - chmod 400 key.pem  # Ensure correct permissions for SSH private key
+      - ls -lah key.pem  # Debug: Check file permissions and existence
+      - echo "Preview of key.pem (first 5 lines):"
+      - head -n 5 key.pem
+      - echo "Testing SSH connection..."
       - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "echo Connected!"
   build:
     commands:
