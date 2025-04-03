@@ -45,18 +45,21 @@ pipeline {
         // }
 
 
-        stage('Restart Tomcat') {
+stage('Restart Tomcat') {
     steps {
         sh '''
             echo "Stopping Tomcat..."
-            ${TOMCAT_HOME}/bin/shutdown.sh || true
-            sleep 5
+            PID=$(pgrep -f 'org.apache.catalina.startup.Bootstrap')
+            if [ ! -z "$PID" ]; then
+                kill -9 $PID
+                sleep 5
+            fi
             echo "Starting Tomcat..."
-            ${TOMCAT_HOME}/bin/startup.sh
+            /opt/tomcat10/bin/startup.sh
         '''
     }
-    
 }
+
 
     }
 
