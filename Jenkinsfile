@@ -5,6 +5,9 @@ pipeline {
         TOMCAT_HOME = "/opt/tomcat10"
         WAR_NAME = "JobManagement.war"
         DEPLOY_DIR = "${TOMCAT_HOME}/webapps"
+        SSH_KEY = "/var/lib/jenkins/.ssh/id_rsa"
+        SSH_USER = "root"
+        SSH_HOST = "localhost"
     }
 
     stages {
@@ -23,44 +26,28 @@ pipeline {
                 sh 'jar -cvf ${WAR_NAME} -C build .'
             }
         }
-        
-        stage('Deploy Locally') {
+
+        stage('Deploy to Tomcat') {
             steps {
-                sh "mv ${WAR_NAME} ${DEPLOY_DIR}/"
+                sh '''
+                    echo "Transferring WAR file to Tomcat server..."
+                    scp -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
+                '''
             }
         }
 
-        // stage('Restart Tomcat') {
-        //     steps {
-        //         sh '''
-        //             PID=$(ps aux | grep '[o]rg.apache.catalina.startup.Bootstrap' | awk '{print $2}')
-        //             if [ ! -z "$PID" ]; then
-        //                 echo "Stopping Tomcat..."
-        //                 kill -9 $PID
-        //             fi
-        //             echo "Starting Tomcat..."
-        //             ${TOMCAT_HOME}/bin/startup.sh
-        //         '''
-        //     }
-        // }
-
-
-stage('Restart Tomcat') {
-    steps {
-        sh '''
-            echo "Stopping Tomcat..."
-            PID=$(pgrep -f 'org.apache.catalina.startup.Bootstrap')
-            if [ ! -z "$PID" ]; then
-                kill -9 $PID
-                sleep 5
-            fi
-            echo "Starting Tomcat..."
-            /opt/tomcat10/bin/startup.sh
-        '''
-    }
-}
-
-
+        stage('Restart Tomcat') {
+            steps {
+                sh '''
+                    echo "Restarting Tomcat..."
+                    ssh -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} << EOF
+                        pkill -f 'org.apache.catalina.startup.Bootstrap' || true
+                        sleep 5
+                        ${TOMCAT_HOME}/bin/startup.sh
+                    EOF
+                '''
+            }
+        }
     }
 
     post {
