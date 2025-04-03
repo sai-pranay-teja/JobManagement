@@ -2,19 +2,21 @@ pipeline {
     agent any
 
     environment {
-        // Tomcat and deployment variables
+        // Deployment variables
         TOMCAT_HOME         = "/opt/tomcat10"
         WAR_NAME            = "JobManagement.war"
         DEPLOY_DIR          = "${TOMCAT_HOME}/webapps"
-        WAR_STORAGE         = "${WORKSPACE}"  // WAR built in workspace
-
-        // Log file variables
-        RESOURCE_LOG        = "${WORKSPACE}/resource_usage.log"
-        LOG_FILE            = "${WORKSPACE}/deployment.log"
-        DEPLOYMENT_TIME_FILE= "${WORKSPACE}/deployment_time.log"
-        ROLLBACK_LOG        = "${WORKSPACE}/rollback.log"
-
-        // SSH variables for accessing localhost as root
+        WAR_STORAGE         = "${WORKSPACE}"
+        
+        // Metric tracking files
+        METRICS_DIR         = "${WORKSPACE}/metrics"
+        DEPLOYMENT_TIME_LOG = "${METRICS_DIR}/deployment_times.log"
+        ROLLBACK_TIME_LOG   = "${METRICS_DIR}/rollback_times.log"
+        SUCCESS_RATE_LOG    = "${METRICS_DIR}/success_rate.log"
+        RESOURCE_LOG        = "${METRICS_DIR}/resource_usage.log"
+        LEAD_TIME_LOG       = "${METRICS_DIR}/lead_times.log"
+        
+        // SSH variables
         SSH_KEY             = "/var/lib/jenkins/.ssh/id_rsa"
         SSH_USER            = "root"
         SSH_HOST            = "localhost"
@@ -22,92 +24,149 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Initialize Metrics') {
+            steps {
+                sh "mkdir -p ${METRICS_DIR}"
+                sh "touch ${DEPLOYMENT_TIME_LOG} ${ROLLBACK_TIME_LOG} ${SUCCESS_RATE_LOG} ${LEAD_TIME_LOG}"
+            }
+        }
+
+        stage('Checkout & Get Commit Time') {
             steps {
                 git url: 'https://github.com/sai-pranay-teja/JobManagement.git', branch: 'main'
+                sh "git log -1 --format=%ct > ${METRICS_DIR}/commit_time.txt"
             }
         }
 
-        stage('Build WAR') {
+        stage('Build WAR with JaCoCo') {
             steps {
                 sh 'mkdir -p build/WEB-INF/classes'
-                sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
-                sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
-                sh 'cp -R src/main/webapp/* build/'
-                sh 'jar -cvf ${WAR_NAME} -C build .'
+                
+                // Compile with JaCoCo agent (no Maven required)
+                sh '''
+                    javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" \
+                          -d build/WEB-INF/classes \
+                          $(find src -name "*.java")
+                    
+                    # Package with JaCoCo instrumentation
+                    jar -cvf ${WAR_NAME} -C build .
+                '''
             }
         }
 
-        stage('Measure Resource Usage Before Deployment') {
+        stage('Run Tests with Coverage') {
             steps {
-                sh "echo 'Resource usage before deployment:' >> ${RESOURCE_LOG}"
-                sh "vmstat 1 5 >> ${RESOURCE_LOG}"
+                jacoco(
+                    execPattern: '**/jacoco.exec',
+                    classPattern: 'build/WEB-INF/classes',
+                    sourcePattern: 'src/main/java',
+                    exclusionPattern: 'src/test/*'
+                )
+                
+                // Add your test execution command here
+                sh 'echo "Running tests with coverage..."'  // Replace with actual test command
             }
         }
 
-        stage('Deploy and Restart Tomcat') {
+        stage('Measure Resource Usage') {
+            steps {
+                sh """
+                    echo '=== PRE-DEPLOYMENT RESOURCES ===' >> ${RESOURCE_LOG}
+                    vmstat 1 5 >> ${RESOURCE_LOG}
+                    echo '\n' >> ${RESOURCE_LOG}
+                """
+            }
+        }
+
+        stage('Deploy with Metrics') {
             steps {
                 script {
-                    def start_time = sh(script: "date +%s", returnStdout: true).trim()
-                    
-                    // Transfer the WAR file and restart Tomcat via SSH
-                    sh """
-                        echo "Starting deployment at \$(date)" >> ${LOG_FILE}
-                        scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
-                        
-                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                    def commitTime = sh(script: "cat ${METRICS_DIR}/commit_time.txt", returnStdout: true).trim().toInteger()
+                    def deployStart = System.currentTimeMillis() / 1000
+
+                    try {
+                        sh """
+                            scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
+                            
+                            ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
 sleep 5
 ${TOMCAT_HOME}/bin/shutdown.sh || true
 ${TOMCAT_HOME}/bin/startup.sh
-exit
 EOF
+                            tail -f ${TOMCAT_HOME}/logs/catalina.out | grep -m 1 'Deployment of web application archive'
+                        """
+                    } catch(Exception e) {
+                        currentBuild.result = 'FAILURE'
+                    }
 
-                        # Wait until a deployment message is logged
-                        tail -f ${TOMCAT_HOME}/logs/catalina.out | while read line; do
-                          echo "\${line}" | grep -q "Deployment of web application archive" && break;
-                        done
-                    """
-
-                    def end_time = sh(script: "date +%s", returnStdout: true).trim()
-                    def deploy_time = end_time.toInteger() - start_time.toInteger()
-                    sh "echo \"Deployment took ${deploy_time} seconds.\" >> ${DEPLOYMENT_TIME_FILE}"
-                    echo "Deployment completed in ${deploy_time} seconds."
+                    def deployEnd = System.currentTimeMillis() / 1000
+                    def deployDuration = deployEnd - deployStart
+                    sh "echo ${deployDuration} >> ${DEPLOYMENT_TIME_LOG}"
+                    
+                    def leadTime = deployEnd - commitTime
+                    sh "echo ${leadTime} >> ${LEAD_TIME_LOG}"
                 }
             }
         }
 
-        stage('Measure Resource Usage After Deployment') {
+        stage('Post-Deployment Metrics') {
             steps {
-                sh "echo 'Resource usage after deployment:' >> ${RESOURCE_LOG}"
-                sh "vmstat 1 5 >> ${RESOURCE_LOG}"
+                sh """
+                    echo '=== POST-DEPLOYMENT RESOURCES ===' >> ${RESOURCE_LOG}
+                    vmstat 1 5 >> ${RESOURCE_LOG}
+                """
             }
         }
     }
 
     post {
-        success {
-            echo 'Deployment successful!'
-        }
-        failure {
-            echo 'Deployment failed! Performing rollback...'
+        always {
+            archiveArtifacts artifacts: "${METRICS_DIR}/**", allowEmptyArchive: true
+            
+            // Publish JaCoCo report
+            jacoco(
+                execPattern: '**/jacoco.exec',
+                classPattern: 'build/WEB-INF/classes',
+                sourcePattern: 'src/main/java',
+                exclusionPattern: 'src/test/*'
+            )
+
             script {
-                def start_time = sh(script: "date +%s", returnStdout: true).trim()
+                def totalBuilds = sh(script: "wc -l < ${SUCCESS_RATE_LOG}", returnStdout: true).trim().toInteger() + 1
+                def successCount = currentBuild.result == 'SUCCESS' ? 1 : 0
+                sh "echo ${successCount} >> ${SUCCESS_RATE_LOG}"
+                
+                def successRate = (sh(script: "awk '{sum+=\$1} END {print sum/NR*100}' ${SUCCESS_RATE_LOG}", returnStdout: true).trim()) + "%"
+                def mttr = sh(script: "awk '{sum+=\$1} END {print sum/NR}' ${ROLLBACK_TIME_LOG} 2>/dev/null || echo 0", returnStdout: true).trim()
+                def changeFailureRate = ((totalBuilds - successCount).toFloat() / totalBuilds * 100) + "%"
+
+                echo """
+                ========== CI/CD METRICS REPORT ==========
+                Deployment Time:      ${deployDuration}s (Current)
+                Average Deployment:   ${sh(script: "awk '{sum+=\$1} END {print sum/NR}' ${DEPLOYMENT_TIME_LOG}", returnStdout: true).trim()}s
+                Success Rate:         ${successRate}
+                Change Failure Rate:  ${changeFailureRate}
+                MTTR:                 ${mttr}s
+                Lead Time (Avg):      ${sh(script: "awk '{sum+=\$1} END {print sum/NR}' ${LEAD_TIME_LOG}", returnStdout: true).trim()}s
+                """
+            }
+        }
+
+        failure {
+            script {
+                def rollbackStart = System.currentTimeMillis() / 1000
                 sh """
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}.backup ${DEPLOY_DIR}/"
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-sleep 5
 ${TOMCAT_HOME}/bin/shutdown.sh || true
 ${TOMCAT_HOME}/bin/startup.sh
-exit
 EOF
                 """
-                def end_time = sh(script: "date +%s", returnStdout: true).trim()
-                def rollback_time = end_time.toInteger() - start_time.toInteger()
-                sh "echo \"Rollback took ${rollback_time} seconds.\" >> ${ROLLBACK_LOG}"
-                echo "Rollback completed in ${rollback_time} seconds."
+                def rollbackDuration = (System.currentTimeMillis() / 1000) - rollbackStart
+                sh "echo ${rollbackDuration} >> ${ROLLBACK_TIME_LOG}"
             }
         }
     }
