@@ -204,7 +204,7 @@ EOF
             def memAfter  = readFile(MEM_AFTER_LOG).trim()
 
             // Read rollback time if any (default to "N/A" if not triggered)
-            def rollbackTime = "N/A"
+            rollbackTime = "N/A"
             if (fileExists(ROLLBACK_LOG)) {
                 def rollbackContent = readFile(ROLLBACK_LOG).trim()
                 rollbackTime = rollbackContent.replaceAll("[^0-9]", "").isEmpty() ? "N/A" : rollbackContent.replaceAll("[^0-9]", "")
