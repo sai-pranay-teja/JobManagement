@@ -78,16 +78,19 @@ stage('Run Unit Tests') {
     steps {
         sh """
             mkdir -p ${WORKSPACE}/test_output
+            # Compile tests from src/main/test to test_output
             javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output \$(find ${WORKSPACE}/src/main/test -name "*.java")
-            java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path > ${TEST_RESULTS_LOG}
+            # Run tests by scanning the test_output directory, printing a summary, and redirect output to the test results log.
+            java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output --details summary > ${TEST_RESULTS_LOG} || true
         """
         script {
-            // Use "|| true" so that if grep finds no matches, it does not fail the stage.
+            // Extract lines with test summary info (e.g., "Tests run:" or similar)
             def testResults = sh(script: "grep -E 'Tests run:' ${TEST_RESULTS_LOG} || true", returnStdout: true).trim()
             echo "Test Results Summary:\n${testResults}"
         }
     }
 }
+
 
         stage('Measure Resource Usage Before Deployment') {
             steps {
