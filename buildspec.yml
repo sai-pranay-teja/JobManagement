@@ -20,6 +20,7 @@ phases:
       - head -n 5 key.pem
       - echo "Testing SSH connection..."
       - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "echo Connected!"
+      
   build:
     commands:
       - echo "Building Job Management System..."
