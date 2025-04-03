@@ -24,14 +24,23 @@ pipeline {
             }
         }
         
-
         stage('Deploy Locally') {
             steps {
-                sh """
-                    mv ${WAR_NAME} ${DEPLOY_DIR}/
-                    ${TOMCAT_HOME}/bin/shutdown.sh || true
+                sh "mv ${WAR_NAME} ${DEPLOY_DIR}/"
+            }
+        }
+
+        stage('Restart Tomcat') {
+            steps {
+                sh '''
+                    PID=$(ps aux | grep '[o]rg.apache.catalina.startup.Bootstrap' | awk '{print $2}')
+                    if [ ! -z "$PID" ]; then
+                        echo "Stopping Tomcat..."
+                        kill -9 $PID
+                    fi
+                    echo "Starting Tomcat..."
                     ${TOMCAT_HOME}/bin/startup.sh
-                """
+                '''
             }
         }
     }
