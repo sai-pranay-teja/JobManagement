@@ -33,7 +33,7 @@ phases:
     commands:
       - echo "Deploying WAR file to Tomcat server..."
       - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@18.60.142.88:/opt/tomcat10/webapps/
-      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 <<EOF
+      - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 <<EOF
           sudo pkill -f 'org.apache.catalina.startup.Bootstrap' || true
           sleep 5
           sudo /opt/tomcat10/bin/shutdown.sh || true
@@ -45,7 +45,7 @@ artifacts:
     - JobManagement.war
 
 
-    
+
 
 
 
