@@ -31,7 +31,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Transferring WAR file to Tomcat server..."
-                    scp -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
+                    scp -i StrictHostKeyChecking=no ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
                 '''
             }
         }
