@@ -61,19 +61,33 @@ pipeline {
             }
         }
 
-        stage('Run Unit Tests') {
-            steps {
-                sh """
-                    mkdir -p ${WORKSPACE}/test_output
-                    javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output \$(find ${WORKSPACE}/src/main/test -name "*.java")
-                    java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path > ${TEST_RESULTS_LOG}
-                """
-                script {
-                    def testResults = sh(script: "grep -E 'Tests run:' ${TEST_RESULTS_LOG}", returnStdout: true).trim()
-                    echo "Test Results Summary:\n${testResults}"
-                }
-            }
+        // stage('Run Unit Tests') {
+        //     steps {
+        //         sh """
+        //             mkdir -p ${WORKSPACE}/test_output
+        //             javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output \$(find ${WORKSPACE}/src/main/test -name "*.java")
+        //             java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path > ${TEST_RESULTS_LOG}
+        //         """
+        //         script {
+        //             def testResults = sh(script: "grep -E 'Tests run:' ${TEST_RESULTS_LOG}", returnStdout: true).trim()
+        //             echo "Test Results Summary:\n${testResults}"
+        //         }
+        //     }
+        // }
+stage('Run Unit Tests') {
+    steps {
+        sh """
+            mkdir -p ${WORKSPACE}/test_output
+            javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output \$(find ${WORKSPACE}/src/main/test -name "*.java")
+            java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path > ${TEST_RESULTS_LOG}
+        """
+        script {
+            // Use "|| true" so that if grep finds no matches, it does not fail the stage.
+            def testResults = sh(script: "grep -E 'Tests run:' ${TEST_RESULTS_LOG} || true", returnStdout: true).trim()
+            echo "Test Results Summary:\n${testResults}"
         }
+    }
+}
 
         stage('Measure Resource Usage Before Deployment') {
             steps {
