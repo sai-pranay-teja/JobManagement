@@ -10,7 +10,7 @@ phases:
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey --query SecretString --output text > key.pem
       - sed -i 's/\\n/\n/g' key.pem 
       - chmod 400 key.pem
-      - ls -lah key.pem  # Debug: Ensure key exists
+      - cat key.pem
       - echo "Testing SSH Connection..."
       - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "echo Connected!"
   build:
