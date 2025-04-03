@@ -2,12 +2,25 @@ pipeline {
     agent any
 
     environment {
-        TOMCAT_HOME = "/opt/tomcat10"
-        WAR_NAME = "JobManagement.war"
-        DEPLOY_DIR = "${TOMCAT_HOME}/webapps"
-        SSH_KEY = "/var/lib/jenkins/.ssh/id_rsa"
-        SSH_USER = "root"
-        SSH_HOST = "localhost"
+        // Tomcat and WAR variables
+        TOMCAT_HOME         = "/opt/tomcat10"
+        WAR_NAME            = "JobManagement.war"
+        DEPLOY_DIR          = "${TOMCAT_HOME}/webapps"
+        WAR_STORAGE         = "${WORKSPACE}"  // Assuming WAR is built in the Jenkins workspace
+        
+        // Log file variables
+        RESOURCE_LOG        = "${WORKSPACE}/resource_usage.log"
+        LOG_FILE            = "${WORKSPACE}/deployment.log"
+        DEPLOYMENT_TIME_FILE= "${WORKSPACE}/deployment_time.log"
+        ROLLBACK_LOG        = "${WORKSPACE}/rollback.log"
+
+        // SSH variables for key-based access to localhost as root
+        SSH_KEY             = "/var/lib/jenkins/.ssh/id_rsa"
+        SSH_USER            = "root"
+        SSH_HOST            = "localhost"
+        
+        // (Optional) Disable strict host key checking for SSH commands
+        SSH_OPTS            = "-o StrictHostKeyChecking=no"
     }
 
     stages {
@@ -19,6 +32,7 @@ pipeline {
 
         stage('Build WAR') {
             steps {
+                // Compile Java source, copy resources, and package WAR inside WORKSPACE
                 sh 'mkdir -p build/WEB-INF/classes'
                 sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
                 sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
@@ -26,30 +40,88 @@ pipeline {
                 sh 'jar -cvf ${WAR_NAME} -C build .'
             }
         }
-
-        stage('Deploy to Tomcat') {
+        
+        stage('Measure Resource Usage Before Deployment') {
             steps {
-                sh '''
-                    echo "Transferring WAR file to Tomcat server..."
-                    scp -o StrictHostKeyChecking=no -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
-                '''
+                sh "echo 'Resource usage before deployment:' >> ${RESOURCE_LOG}"
+                sh "vmstat 1 5 >> ${RESOURCE_LOG}"
             }
         }
+        
+        stage('Deploy and Measure Time') {
+            steps {
+                script {
+                    // Capture start time
+                    def start_time = sh(script: "date +%s", returnStdout: true).trim()
 
-stage('Restart Tomcat') {
-    steps {
-        sh '''
-            echo "Restarting Tomcat..."
-            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                    // Deploy the WAR file and restart Tomcat using SSH to localhost as root
+                    sh """
+                        echo "Starting deployment at \$(date)" >> ${LOG_FILE}
+                        
+                        # Transfer the WAR file to the remote (localhost) Tomcat webapps directory
+                        scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
+                        
+                        # Restart Tomcat using SSH commands
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
 sleep 5
+${TOMCAT_HOME}/bin/shutdown.sh || true
 ${TOMCAT_HOME}/bin/startup.sh
+exit
 EOF
-        '''
-    }
-}
+                        
+                        # Wait until the deployment message appears in catalina.out
+                        tail -f ${TOMCAT_HOME}/logs/catalina.out | while read line; do
+                          echo "\${line}" | grep -q "Deployment of web application archive" && break;
+                        done
+                    """
 
-}
+                    // Capture end time and compute duration
+                    def end_time = sh(script: "date +%s", returnStdout: true).trim()
+                    def deploy_time = end_time.toInteger() - start_time.toInteger()
+                    sh "echo \"Deployment took ${deploy_time} seconds.\" >> ${DEPLOYMENT_TIME_FILE}"
+                    echo "Deployment completed in ${deploy_time} seconds."
+                }
+            }
+        }
+        
+        stage('Measure Resource Usage After Deployment') {
+            steps {
+                sh "echo 'Resource usage after deployment:' >> ${RESOURCE_LOG}"
+                sh "vmstat 1 5 >> ${RESOURCE_LOG}"
+            }
+        }
+        
+        stage('Rollback on Failure') {
+            when {
+                failure()
+            }
+            steps {
+                script {
+                    def start_time = sh(script: "date +%s", returnStdout: true).trim()
+
+                    // Rollback: Remove deployed WAR and restore backup (assuming backup exists)
+                    sh """
+                        echo "Starting rollback at \$(date)" >> ${ROLLBACK_LOG}
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}.backup ${DEPLOY_DIR}/"
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+pkill -f 'org.apache.catalina.startup.Bootstrap' || true
+sleep 5
+${TOMCAT_HOME}/bin/shutdown.sh || true
+${TOMCAT_HOME}/bin/startup.sh
+exit
+EOF
+                    """
+
+                    def end_time = sh(script: "date +%s", returnStdout: true).trim()
+                    def rollback_time = end_time.toInteger() - start_time.toInteger()
+                    sh "echo \"Rollback took ${rollback_time} seconds.\" >> ${ROLLBACK_LOG}"
+                    echo "Rollback completed in ${rollback_time} seconds."
+                }
+            }
+        }
+    }
 
     post {
         success {
