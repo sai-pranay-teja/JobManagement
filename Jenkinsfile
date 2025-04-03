@@ -2,7 +2,7 @@
 def pipelineStartTime = 0
 def leadTimeForChanges = 0
 // rollbackTime is declared elsewhere; do not redeclare it here
-rollbackTime = "N/A"
+def rollbackTime = "N/A"
 
 pipeline {
     agent any
@@ -217,5 +217,5 @@ EOF
             }
         }
     }
-    
+
 }
