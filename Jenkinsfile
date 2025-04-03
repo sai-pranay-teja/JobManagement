@@ -30,19 +30,33 @@ pipeline {
             }
         }
 
+        // stage('Restart Tomcat') {
+        //     steps {
+        //         sh '''
+        //             PID=$(ps aux | grep '[o]rg.apache.catalina.startup.Bootstrap' | awk '{print $2}')
+        //             if [ ! -z "$PID" ]; then
+        //                 echo "Stopping Tomcat..."
+        //                 kill -9 $PID
+        //             fi
+        //             echo "Starting Tomcat..."
+        //             ${TOMCAT_HOME}/bin/startup.sh
+        //         '''
+        //     }
+        // }
+
+
         stage('Restart Tomcat') {
-            steps {
-                sh '''
-                    PID=$(ps aux | grep '[o]rg.apache.catalina.startup.Bootstrap' | awk '{print $2}')
-                    if [ ! -z "$PID" ]; then
-                        echo "Stopping Tomcat..."
-                        kill -9 $PID
-                    fi
-                    echo "Starting Tomcat..."
-                    ${TOMCAT_HOME}/bin/startup.sh
-                '''
-            }
-        }
+    steps {
+        sh '''
+            echo "Stopping Tomcat..."
+            ${TOMCAT_HOME}/bin/shutdown.sh || true
+            sleep 5
+            echo "Starting Tomcat..."
+            ${TOMCAT_HOME}/bin/startup.sh
+        '''
+    }
+}
+
     }
 
     post {
