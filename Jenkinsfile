@@ -36,19 +36,20 @@ pipeline {
             }
         }
 
-        stage('Restart Tomcat') {
-            steps {
-                sh '''
-                    echo "Restarting Tomcat..."
-                    ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} << EOF
-                        pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-                        sleep 5
-                        ${TOMCAT_HOME}/bin/startup.sh
-                    EOF
-                '''
-            }
-        }
+stage('Restart Tomcat') {
+    steps {
+        sh '''
+            echo "Restarting Tomcat..."
+            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+pkill -f 'org.apache.catalina.startup.Bootstrap' || true
+sleep 5
+${TOMCAT_HOME}/bin/startup.sh
+EOF
+        '''
     }
+}
+
+}
 
     post {
         success {
