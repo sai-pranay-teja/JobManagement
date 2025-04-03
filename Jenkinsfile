@@ -1,5 +1,9 @@
 // Global variable to capture the pipeline start time
 def pipelineStartTime = 0
+// Global variable to capture lead time for changes
+def leadTimeForChanges = 0
+// Global variable to capture rollback time (if any)
+def rollbackTime = "N/A"
 
 pipeline {
     agent any
@@ -16,6 +20,10 @@ pipeline {
         LOG_FILE             = "${WORKSPACE}/deployment.log"
         DEPLOYMENT_TIME_FILE = "${WORKSPACE}/deployment_time.log"
         ROLLBACK_LOG         = "${WORKSPACE}/rollback.log"
+
+        // Memory usage log files in human readable format
+        MEM_BEFORE_LOG       = "${WORKSPACE}/mem_before.log"
+        MEM_AFTER_LOG        = "${WORKSPACE}/mem_after.log"
 
         // SSH variables for accessing localhost as root
         SSH_KEY              = "/var/lib/jenkins/.ssh/id_rsa"
@@ -55,6 +63,8 @@ pipeline {
             steps {
                 sh "echo 'Resource usage before deployment:' >> ${RESOURCE_LOG}"
                 sh "vmstat 1 5 >> ${RESOURCE_LOG}"
+                // Capture memory usage in human readable format
+                sh "free -h > ${MEM_BEFORE_LOG}"
             }
         }
 
@@ -67,8 +77,8 @@ pipeline {
                     // Calculate Lead Time for Changes:
                     // (difference between the last commit timestamp and deployment start time)
                     def commitTime = sh(script: "git log -1 --format=%ct", returnStdout: true).trim().toInteger()
-                    def leadTime = deployStartTime - commitTime
-                    echo "Lead Time for Changes (time from last commit to deployment start): ${leadTime} seconds"
+                    leadTimeForChanges = deployStartTime - commitTime
+                    echo "Lead Time for Changes (time from last commit to deployment start): ${leadTimeForChanges} seconds"
 
                     // Transfer the WAR file and restart Tomcat via SSH
                     sh """
@@ -102,6 +112,8 @@ EOF
             steps {
                 sh "echo 'Resource usage after deployment:' >> ${RESOURCE_LOG}"
                 sh "vmstat 1 5 >> ${RESOURCE_LOG}"
+                // Capture memory usage in human readable format after deployment
+                sh "free -h > ${MEM_AFTER_LOG}"
             }
         }
 
@@ -112,15 +124,47 @@ EOF
                     def pipelineEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                     def totalPipelineTime = pipelineEndTime - pipelineStartTime
 
-                    echo "------- CI/CD Metrics Summary -------"
-                    echo "Total Pipeline Time (Automation Overhead): ${totalPipelineTime} seconds"
+                    // Read deployment time from file
+                    def deploymentTime = readFile(DEPLOYMENT_TIME_FILE).trim()
+
+                    // Read memory usage logs
+                    def memBefore = readFile(MEM_BEFORE_LOG).trim()
+                    def memAfter  = readFile(MEM_AFTER_LOG).trim()
+
+                    // Read rollback time if any (it may be "N/A" if not triggered)
+                    if (fileExists(ROLLBACK_LOG)) {
+                        def rollbackContent = readFile(ROLLBACK_LOG).trim()
+                        if(rollbackContent) {
+                            // extract numeric value if possible
+                            rollbackTime = rollbackContent.replaceAll("[^0-9]", "")
+                            if(rollbackTime == "") {
+                                rollbackTime = "N/A"
+                            }
+                        }
+                    }
+
                     echo ""
-                    echo "Deployment Time:"
-                    sh "cat ${DEPLOYMENT_TIME_FILE}"
+                    echo "----------------------------------------------"
+                    echo "              CI/CD Metrics Summary           "
+                    echo "----------------------------------------------"
+                    echo String.format("| %-30s | %-15s |", "Metric", "Value")
+                    echo "----------------------------------------------"
+                    echo String.format("| %-30s | %-15s |", "Total Pipeline Time (sec)", totalPipelineTime)
+                    // Extract deployment time value from file (if file contains more than one line, use the first occurrence)
+                    def deployTimeValue = deploymentTime.tokenize().find { it.isNumber() } ?: "N/A"
+                    echo String.format("| %-30s | %-15s |", "Deployment Time (sec)", deployTimeValue)
+                    echo String.format("| %-30s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
+                    echo String.format("| %-30s | %-15s |", "Rollback Time (sec)", rollbackTime)
+                    echo "----------------------------------------------"
                     echo ""
-                    echo "Resource Utilization Log:"
-                    sh "cat ${RESOURCE_LOG}"
-                    echo "-------------------------------------"
+                    echo "Memory Usage BEFORE Deployment (free -h):"
+                    echo "----------------------------------------------"
+                    echo memBefore
+                    echo "----------------------------------------------"
+                    echo "Memory Usage AFTER Deployment (free -h):"
+                    echo "----------------------------------------------"
+                    echo memAfter
+                    echo "----------------------------------------------"
                 }
             }
         }
@@ -146,11 +190,9 @@ exit
 EOF
                 """
                 def rollbackEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-                def rollbackDuration = rollbackEndTime - rollbackStartTime
-                sh "echo \"Rollback took ${rollbackDuration} seconds.\" >> ${ROLLBACK_LOG}"
-                echo "Rollback completed in ${rollbackDuration} seconds."
-                // Optionally, display rollback log
-                sh "echo 'Rollback Log:'; cat ${ROLLBACK_LOG}"
+                def computedRollbackTime = rollbackEndTime - rollbackStartTime
+                sh "echo \"Rollback took ${computedRollbackTime} seconds.\" >> ${ROLLBACK_LOG}"
+                echo "Rollback completed in ${computedRollbackTime} seconds."
             }
         }
     }

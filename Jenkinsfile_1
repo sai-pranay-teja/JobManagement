@@ -1,27 +1,40 @@
+// Global variable to capture the pipeline start time
+def pipelineStartTime = 0
+
 pipeline {
     agent any
 
     environment {
         // Tomcat and deployment variables
-        TOMCAT_HOME         = "/opt/tomcat10"
-        WAR_NAME            = "JobManagement.war"
-        DEPLOY_DIR          = "${TOMCAT_HOME}/webapps"
-        WAR_STORAGE         = "${WORKSPACE}"  // WAR built in workspace
+        TOMCAT_HOME          = "/opt/tomcat10"
+        WAR_NAME             = "JobManagement.war"
+        DEPLOY_DIR           = "${TOMCAT_HOME}/webapps"
+        WAR_STORAGE          = "${WORKSPACE}"  // WAR built in workspace
 
         // Log file variables
-        RESOURCE_LOG        = "${WORKSPACE}/resource_usage.log"
-        LOG_FILE            = "${WORKSPACE}/deployment.log"
-        DEPLOYMENT_TIME_FILE= "${WORKSPACE}/deployment_time.log"
-        ROLLBACK_LOG        = "${WORKSPACE}/rollback.log"
+        RESOURCE_LOG         = "${WORKSPACE}/resource_usage.log"
+        LOG_FILE             = "${WORKSPACE}/deployment.log"
+        DEPLOYMENT_TIME_FILE = "${WORKSPACE}/deployment_time.log"
+        ROLLBACK_LOG         = "${WORKSPACE}/rollback.log"
 
         // SSH variables for accessing localhost as root
-        SSH_KEY             = "/var/lib/jenkins/.ssh/id_rsa"
-        SSH_USER            = "root"
-        SSH_HOST            = "localhost"
-        SSH_OPTS            = "-o StrictHostKeyChecking=no"
+        SSH_KEY              = "/var/lib/jenkins/.ssh/id_rsa"
+        SSH_USER             = "root"
+        SSH_HOST             = "localhost"
+        SSH_OPTS             = "-o StrictHostKeyChecking=no"
     }
 
     stages {
+        stage('Initialize') {
+            steps {
+                script {
+                    // Record the pipeline start time for automation overhead metrics
+                    pipelineStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                    echo "Pipeline start time recorded: ${pipelineStartTime}"
+                }
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/sai-pranay-teja/JobManagement.git', branch: 'main'
@@ -48,8 +61,15 @@ pipeline {
         stage('Deploy and Restart Tomcat') {
             steps {
                 script {
-                    def start_time = sh(script: "date +%s", returnStdout: true).trim()
-                    
+                    // Record deployment start time
+                    def deployStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+
+                    // Calculate Lead Time for Changes:
+                    // (difference between the last commit timestamp and deployment start time)
+                    def commitTime = sh(script: "git log -1 --format=%ct", returnStdout: true).trim().toInteger()
+                    def leadTime = deployStartTime - commitTime
+                    echo "Lead Time for Changes (time from last commit to deployment start): ${leadTime} seconds"
+
                     // Transfer the WAR file and restart Tomcat via SSH
                     sh """
                         echo "Starting deployment at \$(date)" >> ${LOG_FILE}
@@ -69,10 +89,11 @@ EOF
                         done
                     """
 
-                    def end_time = sh(script: "date +%s", returnStdout: true).trim()
-                    def deploy_time = end_time.toInteger() - start_time.toInteger()
-                    sh "echo \"Deployment took ${deploy_time} seconds.\" >> ${DEPLOYMENT_TIME_FILE}"
-                    echo "Deployment completed in ${deploy_time} seconds."
+                    // Record deployment end time and calculate deployment duration
+                    def deployEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                    def deployDuration = deployEndTime - deployStartTime
+                    sh "echo \"Deployment took ${deployDuration} seconds.\" >> ${DEPLOYMENT_TIME_FILE}"
+                    echo "Deployment completed in ${deployDuration} seconds."
                 }
             }
         }
@@ -81,6 +102,26 @@ EOF
             steps {
                 sh "echo 'Resource usage after deployment:' >> ${RESOURCE_LOG}"
                 sh "vmstat 1 5 >> ${RESOURCE_LOG}"
+            }
+        }
+
+        stage('Display Metrics') {
+            steps {
+                script {
+                    // Record the pipeline end time
+                    def pipelineEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                    def totalPipelineTime = pipelineEndTime - pipelineStartTime
+
+                    echo "------- CI/CD Metrics Summary -------"
+                    echo "Total Pipeline Time (Automation Overhead): ${totalPipelineTime} seconds"
+                    echo ""
+                    echo "Deployment Time:"
+                    sh "cat ${DEPLOYMENT_TIME_FILE}"
+                    echo ""
+                    echo "Resource Utilization Log:"
+                    sh "cat ${RESOURCE_LOG}"
+                    echo "-------------------------------------"
+                }
             }
         }
     }
@@ -92,7 +133,7 @@ EOF
         failure {
             echo 'Deployment failed! Performing rollback...'
             script {
-                def start_time = sh(script: "date +%s", returnStdout: true).trim()
+                def rollbackStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                 sh """
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}.backup ${DEPLOY_DIR}/"
@@ -104,10 +145,12 @@ ${TOMCAT_HOME}/bin/startup.sh
 exit
 EOF
                 """
-                def end_time = sh(script: "date +%s", returnStdout: true).trim()
-                def rollback_time = end_time.toInteger() - start_time.toInteger()
-                sh "echo \"Rollback took ${rollback_time} seconds.\" >> ${ROLLBACK_LOG}"
-                echo "Rollback completed in ${rollback_time} seconds."
+                def rollbackEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                def rollbackDuration = rollbackEndTime - rollbackStartTime
+                sh "echo \"Rollback took ${rollbackDuration} seconds.\" >> ${ROLLBACK_LOG}"
+                echo "Rollback completed in ${rollbackDuration} seconds."
+                // Optionally, display rollback log
+                sh "echo 'Rollback Log:'; cat ${ROLLBACK_LOG}"
             }
         }
     }
