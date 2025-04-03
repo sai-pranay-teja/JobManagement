@@ -1,0 +1,33 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+  pre_build:
+    commands:
+      - echo "Fetching SSH Key from AWS Secrets Manager..."
+      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey --query SecretString --output text > key.pem
+      - chmod 600 key.pem
+  build:
+    commands:
+      - echo "Building Job Management System..."
+      - mkdir -p build/WEB-INF/classes
+      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
+      - cp -R src/main/resources/* build/WEB-INF/classes/
+      - cp -R src/main/webapp/* build/
+      - jar -cvf JobManagement.war -C build .
+  post_build:
+    commands:
+      - echo "Deploying WAR file to Tomcat server..."
+      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@your-server-ip:/opt/tomcat10/webapps/
+      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@your-server-ip <<EOF
+          pkill -f 'org.apache.catalina.startup.Bootstrap' || true
+          sleep 5
+          /opt/tomcat10/bin/shutdown.sh || true
+          /opt/tomcat10/bin/startup.sh
+          exit
+        EOF
+artifacts:
+  files:
+    - JobManagement.war
