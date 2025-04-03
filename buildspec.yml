@@ -10,7 +10,6 @@ phases:
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey --query SecretString --output text > key.pem
       - sed -i 's/\\n/\n/g' key.pem  # Fix newlines
       - echo "Fixing SSH Key Format..."
-      - ssh-keygen -p -m PEM -f key.pem -N "" -C ""  # Convert key format
       - chmod 400 key.pem  # Ensure correct permissions
       - ls -lah key.pem  # Debug: Check if the key exists
       - cat key.pem  # Debug: Ensure key is readable
