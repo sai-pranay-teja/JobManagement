@@ -20,7 +20,7 @@ phases:
   post_build:
     commands:
       - echo "Deploying WAR file to Tomcat server..."
-      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@your-server-ip:/opt/tomcat10/webapps/
+      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@18.60.142.88:/opt/tomcat10/webapps/
       - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@your-server-ip <<EOF
           pkill -f 'org.apache.catalina.startup.Bootstrap' || true
           sleep 5
