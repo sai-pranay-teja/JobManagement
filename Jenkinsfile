@@ -80,16 +80,18 @@ stage('Run Unit Tests') {
             mkdir -p ${WORKSPACE}/test_output
             # Compile tests from src/main/test to test_output
             javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output \$(find ${WORKSPACE}/src/main/test -name "*.java")
-            # Run tests by scanning the test_output directory, printing a summary, and redirect output to the test results log.
-            java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output --details summary > ${TEST_RESULTS_LOG} || true
+            # Run tests: The --scan-class-path option points to the test_output directory.
+            # Redirect both stdout and stderr to the TEST_RESULTS_LOG.
+            java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output --details summary > ${TEST_RESULTS_LOG} 2>&1 || true
         """
         script {
-            // Extract lines with test summary info (e.g., "Tests run:" or similar)
-            def testResults = sh(script: "grep -E 'Tests run:' ${TEST_RESULTS_LOG} || true", returnStdout: true).trim()
+            // Read the entire test results log and display it
+            def testResults = readFile(TEST_RESULTS_LOG).trim()
             echo "Test Results Summary:\n${testResults}"
         }
     }
 }
+
 
 
         stage('Measure Resource Usage Before Deployment') {
