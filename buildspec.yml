@@ -40,9 +40,10 @@ phases:
           sudo /opt/tomcat10/bin/startup.sh
           exit
         EOF
-# artifacts:
-#   files:
-#     - JobManagement.war
+artifacts:
+  files:
+    - JobManagement.war
+
 
 
 
