@@ -9,11 +9,10 @@ phases:
       - echo "Fetching SSH Key from AWS Secrets Manager..."
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey --query SecretString --output text > key.pem
       - sed -i 's/\\n/\n/g' key.pem  # Fix newlines
-      - echo "Fixing SSH Key Format..."
+      - echo "-----BEGIN OPENSSH PRIVATE KEY-----" >> key.pem
       - chmod 400 key.pem  # Ensure correct permissions
       - ls -lah key.pem  # Debug: Check if the key exists
-      - cat key.pem  # Debug: Ensure key is readable
-      - echo "Testing SSH Connection..."
+      - cat key.pem | head -n 5
       - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "echo Connected!"
   build:
     commands:
