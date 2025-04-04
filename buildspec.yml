@@ -86,7 +86,7 @@ phases:
   #     - echo "Metrics Summary:"
   #     - cat metrics_summary.log
   post_build:
-  commands:
+    commands:
     - echo "Measuring resource usage BEFORE deployment..."
     - vmstat 1 5 > resource_usage_before.log
     - free -h > mem_before.log
