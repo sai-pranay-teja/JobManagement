@@ -1,152 +1,137 @@
-name: CI/CD Pipeline with Extended Ngrok Debug
+name: CI/CD Pipeline with External Access
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Record Pipeline Start Time
-        run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
-
-      - name: Checkout Source
+      - name: Checkout source
         uses: actions/checkout@v3
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
-          distribution: temurin
           java-version: '17'
+          distribution: 'corretto'
 
-      - name: Build WAR File
+      - name: Install Dependencies
         run: |
-          echo "Building Job Management System..."
+          # Install Tomcat
+          sudo mkdir -p /opt/tomcat
+          sudo chown $USER:$USER /opt/tomcat
+          wget -q https://archive.apache.org/dist/tomcat/tomcat-10/v10.0.27/bin/apache-tomcat-10.0.27.tar.gz
+          tar -xzf apache-tomcat-10.0.27.tar.gz
+          mv apache-tomcat-10.0.27/* /opt/tomcat/
+          chmod +x /opt/tomcat/bin/*.sh
+
+          # Install ngrok
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok
+
+      - name: Configure ngrok
+        run: |
+          ngrok config add-authtoken ${{ secrets.NGROK_TOKEN }}
+          echo "ngrok configured successfully"
+
+      - name: Record pipeline start time
+        run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Build WAR file
+        run: |
           mkdir -p build/WEB-INF/classes
           javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
           cp -R src/main/resources/* build/WEB-INF/classes/
           cp -R src/main/webapp/* build/
           jar -cvf JobManagement.war -C build .
-          ls -lah JobManagement.war
 
       - name: Run Unit Tests
         run: |
-          echo "Running Unit Tests..."
           mkdir -p test_output
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
-          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
-            org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
-          echo "Unit test results preview:"
+          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
           head -n 20 test_results.log
 
-      - name: Start Tomcat Container
+      - name: Start Tomcat and ngrok
         run: |
-          echo "Starting Tomcat container..."
-          docker run -d --name tomcat -p 8080:8080 tomcat:9-jdk17
-          echo "Waiting for container initialization..."
-          sleep 15
+          /opt/tomcat/bin/startup.sh
+          ngrok http 8080 --log=stdout > ngrok.log &
+          echo "Tomcat and ngrok started"
 
-      - name: Record Pre-deployment Container Metrics
+      - name: Get Public URL
         run: |
-          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
-          docker exec tomcat free -h > mem_before.log
-
-      - name: Record Deployment Start Time
-        run: echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
+          sleep 5  # Wait for ngrok initialization
+          NGROK_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          echo "PUBLIC_URL=$NGROK_URL" >> $GITHUB_ENV
+          echo "Public URL: $NGROK_URL"
 
       - name: Deploy WAR to Tomcat
         run: |
-          echo "Copying WAR file into Tomcat container..."
-          docker cp JobManagement.war tomcat:/usr/local/tomcat/webapps/
-          echo "Waiting for deployment..."
-          sleep 20
+          cp JobManagement.war /opt/tomcat/webapps/
+          timeout 60 bash -c 'while [ ! -f /opt/tomcat/webapps/JobManagement.war ]; do sleep 1; done'
 
-      - name: Record Deployment End Time
-        run: echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
-
-      - name: Record Post-deployment Container Metrics
+      - name: Record deployment start time
         run: |
-          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-          docker exec tomcat free -h > mem_after.log
+          echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
+          COMMIT_TIME=$(git log -1 --format=%ct)
+          LEAD_TIME=$(($(date +%s) - COMMIT_TIME))
+          echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
 
-      - name: Download and Setup Ngrok
+      - name: Verify External Access
         run: |
-          # Download the newer Ngrok v3 binary as a TGZ archive.
-          wget https://bin.equinox.io/c/bNyj1mQVY4i/ngrok-v3-stable-linux-amd64.tgz
-          tar -xzf ngrok-v3-stable-linux-amd64.tgz
-          chmod +x ngrok
-          ./ngrok authtoken ${{ secrets.NGROK_TOKEN }}
-
-      - name: Start Ngrok Tunnel
-        run: |
-          nohup ./ngrok http 8080 > ngrok.log 2>&1 &
-          echo "Waiting 20 seconds for Ngrok to initialize..."
-          sleep 20
-
-      - name: Retrieve Ngrok Public URL
-        id: get-ngrok-url
-        run: |
-          echo "Attempting to retrieve Ngrok tunnel public URL..."
-          for i in {1..15}; do
-            URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-            if [ ! -z "$URL" ] && [ "$URL" != "null" ]; then
-              echo "Ngrok public URL: $URL"
-              echo "NGROK_URL=${URL}" >> $GITHUB_ENV
+          for i in {1..30}; do
+            if curl -sSf $PUBLIC_URL/JobManagement/ >/dev/null; then
+              echo "Application accessible externally"
               exit 0
             fi
-            echo "Attempt $i: Ngrok tunnel not ready, waiting 5 seconds..."
-            sleep 5
+            sleep 2
           done
-          echo "Ngrok tunnel did not start as expected. Dumping ngrok.log for debugging:"
-          cat ngrok.log
-          exit 1
+          echo "External access verification failed" && exit 1
 
-      - name: Calculate Timing Metrics
+      - name: Record post-deployment metrics
         run: |
-          DEPLOY_DURATION=$(($(echo $DEPLOY_END_TIME) - $(echo $DEPLOY_START_TIME)))
+          echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
+          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
+          free -h > mem_after.log
+
+      - name: Calculate Metrics
+        run: |
+          DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
           PIPELINE_END_TIME=$(date +%s)
           TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
-          COMMIT_TIME=$(git log -1 --format=%ct)
-          LEAD_TIME=$(($(echo $DEPLOY_END_TIME) - $COMMIT_TIME))
           echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
           echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
-          echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
-          echo "Deployment Duration (sec): $DEPLOY_DURATION"
-          echo "Total Pipeline Time (sec): $TOTAL_PIPELINE_TIME"
-          echo "Lead Time for Changes (sec): $LEAD_TIME"
 
-      - name: Display CI/CD Metrics
+      - name: Display Metrics
         run: |
           echo "-------------------------------------------------"
           echo "              CI/CD Metrics Summary              "
           echo "-------------------------------------------------"
           echo "| Metric                             | Value          |"
           echo "-------------------------------------------------"
-          printf "| %-35s | %-15s |\n" "Public URL" "${NGROK_URL}"
-          printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "${TOTAL_PIPELINE_TIME}"
-          printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "${DEPLOY_DURATION}"
-          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "${LEAD_TIME}"
+          printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME"
+          printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
+          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
           TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
           printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
           echo "-------------------------------------------------"
-          echo "Memory Usage BEFORE:"
-          cat mem_before.log
+          echo "Public Application URL: $PUBLIC_URL/JobManagement/"
           echo "-------------------------------------------------"
-          echo "Memory Usage AFTER:"
-          cat mem_after.log
+          echo "Memory Usage:"
+          free -h
           echo "-------------------------------------------------"
-          echo "Resource Usage BEFORE (vmstat):"
-          cat resource_usage_before.log
-          echo "-------------------------------------------------"
-          echo "Resource Usage AFTER (vmstat):"
-          cat resource_usage_after.log
+          echo "Resource Usage (vmstat):"
+          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
           echo "-------------------------------------------------"
 
-      - name: Stop Tomcat Container (Cleanup)
+      - name: Cleanup
         if: always()
         run: |
-          echo "Stopping Tomcat container..."
-          docker stop tomcat
-          docker rm tomcat
+          /opt/tomcat/bin/shutdown.sh || true
+          pkill -f tomcat || true
+          pkill -f ngrok || true
+          rm -rf /opt/tomcat*
