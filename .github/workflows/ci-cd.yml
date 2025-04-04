@@ -2,156 +2,116 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
+    env:
+      SSH_KEY_SECRET: ${{ secrets.SSH_PRIVATE_KEY }}
+      REMOTE_HOST: 40.192.55.121
+      REMOTE_USER: ubuntu
+
     steps:
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v3
 
       - name: Set up Java 17
-        id: setup-java
         uses: actions/setup-java@v3
         with:
-          distribution: temurin
           java-version: '17'
+          distribution: 'corretto'
 
-      - name: Fetch SSH Key from AWS Secrets Manager
+      - name: Save SSH key to file
         run: |
-          echo "Fetching SSH Key from AWS Secrets Manager..."
-          aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
-          echo "Fixing newlines in key.pem..."
+          echo "$SSH_KEY_SECRET" > key.pem
           sed -i 's/\\n/\n/g' key.pem
-          echo "Checking header in key.pem..."
           grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
-          echo "Checking footer in key.pem..."
           grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
           chmod 400 key.pem
-          ls -lah key.pem
-          echo "Preview of key.pem (first 5 lines):"
-          head -n 5 key.pem
-          echo "Testing SSH connection..."
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "echo Connected!"
 
-      - name: Record Pipeline Start Time
-        id: pipeline_time
-        run: echo "::set-output name=start::$(date +%s)"
+      - name: Record pipeline start time
+        run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
 
-      - name: Build Job Management System
+      - name: Build WAR file
         run: |
-          echo "Building Job Management System..."
           mkdir -p build/WEB-INF/classes
           javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
           cp -R src/main/resources/* build/WEB-INF/classes/
           cp -R src/main/webapp/* build/
           jar -cvf JobManagement.war -C build .
-          echo "WAR file built successfully."
 
       - name: Run Unit Tests
         run: |
-          echo "Running Unit Tests..."
           mkdir -p test_output
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
-          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log 2>&1 || true
-          echo "Unit tests completed. Preview of test results:"
+          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
           head -n 20 test_results.log
 
-      - name: Post Build - Metrics & Deployment
+      - name: Record pre-deployment resource usage
         run: |
-          echo "----- POST BUILD: Starting metrics collection & deployment -----"
-          # Measure resource usage BEFORE deployment (human-readable)
-          echo "Measuring resource usage BEFORE deployment..."
           vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
           free -h > mem_before.log
 
-          # Record deployment start time and calculate Lead Time for Changes
-          echo "Recording deployment start time..."
-          DEPLOY_START_TIME=$(date +%s)
-          echo "Calculating Lead Time for Changes..."
+      - name: Record deployment start time & calculate Lead Time
+        run: |
+          echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
           COMMIT_TIME=$(git log -1 --format=%ct)
-          LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
-          echo "Lead Time for Changes - $LEAD_TIME seconds"
+          LEAD_TIME=$(($(date +%s) - COMMIT_TIME))
+          echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
 
-          # Deploy the WAR file to the Tomcat server
-          echo "Deploying WAR file to Tomcat server..."
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
-
-          # Restart Tomcat using remote commands (removing only the exploded directory)
-          echo "Restarting Tomcat..."
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
-          sudo rm -rf /opt/tomcat10/webapps/JobManagement
-          sleep 5
-          sudo /opt/tomcat10/bin/shutdown.sh || true
-          sudo /opt/tomcat10/bin/startup.sh
-          exit
+      - name: Deploy WAR to Tomcat
+        run: |
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<'EOF'
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sleep 5
+            sudo /opt/tomcat10/bin/shutdown.sh || true
+            sudo /opt/tomcat10/bin/startup.sh
           EOF
 
-          # Wait for deployment to finish by monitoring Tomcat logs
-          echo "Waiting for deployment to finish..."
-          tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-            echo "$line" | grep -q "Deployment of web application archive" && break;
-          done
+      - name: Wait for deployment logs
+        run: |
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "tail -f /opt/tomcat10/logs/catalina.out | grep -m 1 'Deployment of web application archive'"
 
-          # Record deployment end time and calculate deployment duration
-          echo "Recording deployment end time..."
-          DEPLOY_END_TIME=$(date +%s)
-          DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
-          echo "Deployment took $DEPLOY_DURATION seconds."
-
-          # Measure resource usage AFTER deployment
-          echo "Measuring resource usage AFTER deployment..."
+      - name: Record post-deployment resource usage
+        run: |
+          echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
           vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
           free -h > mem_after.log
 
-          # Record pipeline end time and calculate total pipeline time
-          echo "Recording pipeline end time..."
+      - name: Calculate deployment time and total pipeline time
+        run: |
+          DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
           PIPELINE_END_TIME=$(date +%s)
-          TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - ${{ steps.pipeline_time.outputs.start }})
-          echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds."
+          TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
+          echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
+          echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
 
-          # Aggregate metrics and display them
-          {
-            echo "-------------------------------------------------"
-            echo "              CI/CD Metrics Summary              "
-            echo "-------------------------------------------------"
-            echo "| Metric                             | Value          |"
-            echo "-------------------------------------------------"
-            printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME"
-            printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
-            printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
-            printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A"
-            TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
-            printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
-            echo "-------------------------------------------------"
-            echo "Memory Usage BEFORE (free -h):"
-            cat mem_before.log
-            echo "-------------------------------------------------"
-            echo "Resource Usage BEFORE (vmstat):"
-            cat resource_usage_before.log
-            echo "-------------------------------------------------"
-            echo "Memory Usage AFTER (free -h):"
-            cat mem_after.log
-            echo "-------------------------------------------------"
-            echo "Resource Usage AFTER (vmstat):"
-            cat resource_usage_after.log
-            echo "-------------------------------------------------"
-          } > metrics_summary.log
-          echo "----- Metrics Summary -----"
-          cat metrics_summary.log
-          echo "----- End of Metrics Display -----"
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@8e0f1a8e5f62172f153cfb14f2a3e9c79bb5c4e3
-        with:
-          name: artifacts
-          path: |
-            JobManagement.war
-            test_results.log
-            resource_usage_before.log
-            resource_usage_after.log
-            mem_before.log
-            mem_after.log
-            metrics_summary.log
+      - name: Display CI/CD Metrics
+        run: |
+          echo "-------------------------------------------------"
+          echo "              CI/CD Metrics Summary              "
+          echo "-------------------------------------------------"
+          echo "| Metric                             | Value          |"
+          echo "-------------------------------------------------"
+          printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME"
+          printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
+          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
+          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A"
+          TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
+          printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
+          echo "-------------------------------------------------"
+          echo "Memory Usage BEFORE:"
+          cat mem_before.log
+          echo "-------------------------------------------------"
+          echo "Memory Usage AFTER:"
+          cat mem_after.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage BEFORE (vmstat):"
+          cat resource_usage_before.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage AFTER (vmstat):"
+          cat resource_usage_after.log
+          echo "-------------------------------------------------"
