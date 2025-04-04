@@ -1,4 +1,4 @@
-name: CI/CD Pipeline with External Access
+name: CI/CD Pipeline with Manual Control
 
 on:
   push:
@@ -20,7 +20,6 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # Install Tomcat
           sudo mkdir -p /opt/tomcat
           sudo chown $USER:$USER /opt/tomcat
           wget -q https://archive.apache.org/dist/tomcat/tomcat-10/v10.0.27/bin/apache-tomcat-10.0.27.tar.gz
@@ -28,14 +27,13 @@ jobs:
           mv apache-tomcat-10.0.27/* /opt/tomcat/
           chmod +x /opt/tomcat/bin/*.sh
 
-          # Install ngrok
           curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
           echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
           sudo apt update && sudo apt install ngrok
 
       - name: Configure ngrok
         run: |
-          ngrok config add-authtoken ${{ secrets.NGROK_TOKEN }}
+          ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
           echo "ngrok configured successfully"
 
       - name: Record pipeline start time
@@ -56,20 +54,20 @@ jobs:
           java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
           head -n 20 test_results.log
 
-      - name: Start Tomcat and ngrok
+      - name: Start Services
         run: |
           /opt/tomcat/bin/startup.sh
           ngrok http 8080 --log=stdout > ngrok.log &
-          echo "Tomcat and ngrok started"
+          echo "Services started"
 
       - name: Get Public URL
         run: |
-          sleep 5  # Wait for ngrok initialization
+          sleep 5
           NGROK_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
           echo "PUBLIC_URL=$NGROK_URL" >> $GITHUB_ENV
           echo "Public URL: $NGROK_URL"
 
-      - name: Deploy WAR to Tomcat
+      - name: Deploy WAR
         run: |
           cp JobManagement.war /opt/tomcat/webapps/
           timeout 60 bash -c 'while [ ! -f /opt/tomcat/webapps/JobManagement.war ]; do sleep 1; done'
@@ -81,57 +79,59 @@ jobs:
           LEAD_TIME=$(($(date +%s) - COMMIT_TIME))
           echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
 
-      - name: Verify External Access
+      - name: Verify Deployment
         run: |
           for i in {1..30}; do
             if curl -sSf $PUBLIC_URL/JobManagement/ >/dev/null; then
-              echo "Application accessible externally"
+              echo "Application ready"
               exit 0
             fi
             sleep 2
           done
-          echo "External access verification failed" && exit 1
+          echo "Verification failed" && exit 1
 
-      - name: Record post-deployment metrics
+      - name: Record metrics
         run: |
           echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
-          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-          free -h > mem_after.log
+          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage.log
+          free -h > mem.log
 
-      - name: Calculate Metrics
+      - name: Display Info
         run: |
+          echo "###########################################################"
+          echo "#  Application URL: $PUBLIC_URL/JobManagement/ #"
+          echo "#                                                         #"
+          echo "#  To stop the application and end the job:               #"
+          echo "#  1. Click the 'Cancel workflow' button above            #"
+          echo "#  2. Wait for cleanup to complete (~30 seconds)          #"
+          echo "###########################################################"
+
           DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
           PIPELINE_END_TIME=$(date +%s)
           TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
-          echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
-          echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
 
-      - name: Display Metrics
+          echo "-------------------------------------------------"
+          echo "| Metric                  | Value               |"
+          echo "-------------------------------------------------"
+          printf "| %-22s | %-18s |\n" "Lead Time" "${LEAD_TIME}s"
+          printf "| %-22s | %-18s |\n" "Deployment Time" "${DEPLOY_DURATION}s"
+          printf "| %-22s | %-18s |\n" "Total Time" "${TOTAL_PIPELINE_TIME}s"
+          echo "-------------------------------------------------"
+
+      - name: Keep Alive
         run: |
-          echo "-------------------------------------------------"
-          echo "              CI/CD Metrics Summary              "
-          echo "-------------------------------------------------"
-          echo "| Metric                             | Value          |"
-          echo "-------------------------------------------------"
-          printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME"
-          printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
-          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
-          TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
-          printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
-          echo "-------------------------------------------------"
-          echo "Public Application URL: $PUBLIC_URL/JobManagement/"
-          echo "-------------------------------------------------"
-          echo "Memory Usage:"
-          free -h
-          echo "-------------------------------------------------"
-          echo "Resource Usage (vmstat):"
-          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
-          echo "-------------------------------------------------"
+          echo "Job will remain active until manually cancelled..."
+          while true; do 
+            sleep 300
+            echo "[$(date +%H:%M:%S)] Job still active - click 'Cancel workflow' to stop"
+          done
 
       - name: Cleanup
         if: always()
         run: |
+          echo "Starting cleanup process..."
           /opt/tomcat/bin/shutdown.sh || true
           pkill -f tomcat || true
           pkill -f ngrok || true
           rm -rf /opt/tomcat*
+          echo "Cleanup completed successfully"
