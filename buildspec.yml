@@ -6,21 +6,22 @@ phases:
       java: corretto17
   pre_build:
     commands:
-    - echo "Fetching SSH Key from AWS Secrets Manager..."
-    - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
-    - echo "Fixing newlines in key.pem..."
-    - sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
-    - echo "Checking header in key.pem..."
-    - grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
-    - echo "Checking footer in key.pem..."
-    - grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
-    - chmod 400 key.pem  # Ensure the key has secure permissions
-    - ls -lah key.pem  # Debug: List key file details
-    - echo "Preview of key.pem (first 5 lines):"
-    - head -n 5 key.pem
-    - echo "Testing SSH connection..."
-    - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "echo Connected!"
-      
+      - echo "Fetching SSH Key from AWS Secrets Manager..."
+      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
+      - echo "Fixing newlines in key.pem..."
+      - sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
+      - echo "Checking header in key.pem..."
+      - grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
+      - echo "Checking footer in key.pem..."
+      - grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
+      - chmod 400 key.pem  # Ensure the key has secure permissions
+      - ls -lah key.pem  # Debug: List key file details
+      - echo "Preview of key.pem (first 5 lines):"
+      - head -n 5 key.pem
+      - echo "Testing SSH connection..."
+      - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "echo Connected!"
+      - echo "Recording pipeline start time..."
+      - export PIPELINE_START_TIME=$(date +%s)
   build:
     commands:
       - echo "Building Job Management System..."
@@ -29,52 +30,80 @@ phases:
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
-
-  # post_build:
-  #   commands:
-  #     - echo "Deploying WAR file to Tomcat server..."
-  #     - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
-  #     - |
-  #       ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
-  #       pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-  #       sleep 5
-  #       /opt/tomcat10/bin/shutdown.sh || true
-  #       /opt/tomcat10/bin/startup.sh
-  #       exit
-  #       EOF
-post_build:
-  commands:
-    - echo "Removing previous deployment (if exists)..."
-    - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "rm -rf /opt/tomcat10/webapps/JobManagement /opt/tomcat10/webapps/JobManagement.war"
-    - echo "Deploying WAR file to Tomcat server..."
-    - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
-    - echo "Restarting Tomcat..."
-    - |
-      ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
-      sleep 5
-      /opt/tomcat10/bin/shutdown.sh || true
-      /opt/tomcat10/bin/startup.sh
-      exit
-      EOF
-    - echo "Waiting for deployment to finish..."
-    - |
-      tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-        echo "$line" | grep -q "Deployment of web application archive" && break;
-      done
-
-
-
+      - echo "Running Unit Tests..."
+      - mkdir -p test_output
+      - javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
+      - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log 2>&1 || true
+      - echo "Unit tests completed. Test results:"
+      - head -n 20 test_results.log
+  post_build:
+    commands:
+      - echo "Measuring resource usage BEFORE deployment..."
+      - vmstat 1 5 > resource_usage_before.log
+      - free -h > mem_before.log
+      - echo "Recording deployment start time..."
+      - export DEPLOY_START_TIME=$(date +%s)
+      - echo "Calculating Lead Time for Changes..."
+      - export COMMIT_TIME=$(git log -1 --format=%ct)
+      - export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
+      - echo "Lead Time for Changes: $LEAD_TIME seconds" >> deployment_time.log
+      - echo "Deploying WAR file to Tomcat server..."
+      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
+      - echo "Restarting Tomcat..."
+      - |
+        ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
+        # Remove any previous deployment
+        rm -rf /opt/tomcat10/webapps/JobManagement /opt/tomcat10/webapps/JobManagement.war
+        sleep 5
+        /opt/tomcat10/bin/shutdown.sh || true
+        /opt/tomcat10/bin/startup.sh
+        exit
+        EOF
+      - echo "Waiting for deployment to finish..."
+      - |
+        tail -f /opt/tomcat10/logs/catalina.out | while read line; do
+          echo "$line" | grep -q "Deployment of web application archive" && break;
+        done
+      - export DEPLOY_END_TIME=$(date +%s)
+      - export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
+      - echo "Deployment took $DEPLOY_DURATION seconds." >> deployment_time.log
+      - echo "Measuring resource usage AFTER deployment..."
+      - vmstat 1 5 > resource_usage_after.log
+      - free -h > mem_after.log
+      - echo "Recording pipeline end time..."
+      - export PIPELINE_END_TIME=$(date +%s)
+      - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+      - echo "Total Pipeline Time: $TOTAL_PIPELINE_TIME seconds." >> pipeline_metrics.log
+      - echo "Aggregating Metrics..."
+      - |
+        echo "-------------------------------------------------" >> metrics_summary.log
+        echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Metric" "Value" >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
+        # For rollback time, if needed, default to N/A here.
+        printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+        # Extract test summary (if available)
+        if grep -qi "Tests run:" test_results.log; then
+          TEST_SUMMARY=$(grep -i "Tests run:" test_results.log | head -n 1)
+        else
+          TEST_SUMMARY="N/A"
+        fi
+        printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+      - echo "Metrics Summary:"
+      - cat metrics_summary.log
 artifacts:
   files:
     - JobManagement.war
-
-
-
-
-
-
-
-
-
-
-
+    - test_results.log
+    - deployment_time.log
+    - pipeline_metrics.log
+    - resource_usage_before.log
+    - resource_usage_after.log
+    - mem_before.log
+    - mem_after.log
+    - metrics_summary.log

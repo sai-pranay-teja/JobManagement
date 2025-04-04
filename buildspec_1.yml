@@ -7,7 +7,7 @@ phases:
   pre_build:
     commands:
     - echo "Fetching SSH Key from AWS Secrets Manager..."
-    - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_1 --query SecretString --output text > key.pem
+    - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
     - echo "Fixing newlines in key.pem..."
     - sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
     - echo "Checking header in key.pem..."
@@ -19,7 +19,7 @@ phases:
     - echo "Preview of key.pem (first 5 lines):"
     - head -n 5 key.pem
     - echo "Testing SSH connection..."
-    - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "echo Connected!"
+    - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "echo Connected!"
       
   build:
     commands:
@@ -29,34 +29,46 @@ phases:
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
+
   # post_build:
   #   commands:
   #     - echo "Deploying WAR file to Tomcat server..."
-  #     - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@18.60.142.88:/opt/tomcat10/webapps/
-  #     - echo "Stopping Tomcat..."
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sudo pkill -f 'org.apache.catalina.startup.Bootstrap' || true"
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sleep 5"
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sudo /opt/tomcat10/bin/shutdown.sh || true"
-  #     - echo "Starting Tomcat..."
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sudo /opt/tomcat10/bin/startup.sh"
-  post_build:
-    commands:
-      - echo "Deploying WAR file to Tomcat server..."
-      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@18.60.142.88:/opt/tomcat10/webapps/
-      - |
-        ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 <<'EOF'
-        pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-        sleep 5
-        /opt/tomcat10/bin/shutdown.sh || true
-        /opt/tomcat10/bin/startup.sh
-        exit
-        EOF
+  #     - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
+  #     - |
+  #       ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
+  #       pkill -f 'org.apache.catalina.startup.Bootstrap' || true
+  #       sleep 5
+  #       /opt/tomcat10/bin/shutdown.sh || true
+  #       /opt/tomcat10/bin/startup.sh
+  #       exit
+  #       EOF
+post_build:
+  commands:
+    - echo "Removing previous deployment (if exists)..."
+    - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "rm -rf /opt/tomcat10/webapps/JobManagement /opt/tomcat10/webapps/JobManagement.war"
+    - echo "Deploying WAR file to Tomcat server..."
+    - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
+    - echo "Restarting Tomcat..."
+    - |
+      ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
+      sleep 5
+      /opt/tomcat10/bin/shutdown.sh || true
+      /opt/tomcat10/bin/startup.sh
+      exit
+      EOF
+    - echo "Waiting for deployment to finish..."
+    - |
+      tail -f /opt/tomcat10/logs/catalina.out | while read line; do
+        echo "$line" | grep -q "Deployment of web application archive" && break;
+      done
 
 
 
 artifacts:
   files:
     - JobManagement.war
+
+
 
 
 
