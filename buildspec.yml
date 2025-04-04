@@ -72,7 +72,7 @@ phases:
       - echo "Recording pipeline end time..."
       - export PIPELINE_END_TIME=$(date +%s)
       - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
-      - echo "Total Pipeline Time: $TOTAL_PIPELINE_TIME seconds." >> pipeline_metrics.log
+      - echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds." >> pipeline_metrics.log
       - echo "Aggregating Metrics..."
       - >
         echo "-------------------------------------------------" > metrics_summary.log && echo "              CI/CD Metrics Summary              " >> metrics_summary.log && echo "-------------------------------------------------" >> metrics_summary.log && echo "| Metric                             | Value          |" >> metrics_summary.log && echo "-------------------------------------------------" >> metrics_summary.log
