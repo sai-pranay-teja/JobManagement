@@ -7,7 +7,7 @@ phases:
   pre_build:
     commands:
     - echo "Fetching SSH Key from AWS Secrets Manager..."
-    - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_1 --query SecretString --output text > key.pem
+    - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
     - echo "Fixing newlines in key.pem..."
     - sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
     - echo "Checking header in key.pem..."
