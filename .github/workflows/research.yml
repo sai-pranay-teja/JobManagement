@@ -1,16 +1,19 @@
-name: CI/CD Pipeline with Ngrok
+name: CI/CD Pipeline with Metrics & Ngrok
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      # Record the pipeline start time.
+      - name: Record Pipeline Start Time
+        run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Checkout Source
         uses: actions/checkout@v3
 
       - name: Set up Java 17
@@ -35,7 +38,7 @@ jobs:
           mkdir -p test_output
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
           java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
-            org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log 2>&1 || true
+            org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
           echo "Unit test results preview:"
           head -n 20 test_results.log
 
@@ -43,15 +46,31 @@ jobs:
         run: |
           echo "Starting Tomcat container..."
           docker run -d --name tomcat -p 8080:8080 tomcat:9-jdk17
-          echo "Waiting for Tomcat to initialize..."
+          echo "Waiting for container initialization..."
           sleep 15
+
+      - name: Record Pre-deployment Container Metrics
+        run: |
+          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
+          docker exec tomcat free -h > mem_before.log
+
+      - name: Record Deployment Start Time
+        run: echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Deploy WAR to Tomcat
+        run: |
           echo "Copying WAR file into Tomcat container..."
           docker cp JobManagement.war tomcat:/usr/local/tomcat/webapps/
           echo "Waiting for deployment..."
           sleep 20
 
-      - name: Install jq (for parsing JSON)
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Record Deployment End Time
+        run: echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Record Post-deployment Container Metrics
+        run: |
+          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
+          docker exec tomcat free -h > mem_after.log
 
       - name: Download and Setup Ngrok
         run: |
@@ -66,26 +85,64 @@ jobs:
           sleep 10
 
       - name: Retrieve Ngrok Public URL
-        id: get-url
+        id: get-ngrok-url
         run: |
-          URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-          echo "NGROK_URL=${URL}" >> $GITHUB_ENV
-          echo "Ngrok public URL: ${URL}"
+          # Retry loop to wait for Ngrok tunnel to be ready
+          for i in {1..12}; do
+            URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+            if [ ! -z "$URL" ] && [ "$URL" != "null" ]; then
+              echo "Ngrok public URL: $URL"
+              echo "NGROK_URL=${URL}" >> $GITHUB_ENV
+              exit 0
+            fi
+            echo "Waiting for Ngrok tunnel to be established..."
+            sleep 5
+          done
+          echo "Failed to retrieve Ngrok URL" >&2
+          exit 1
 
-      - name: Collect Container Metrics
+      - name: Calculate Timing Metrics
         run: |
-          echo "----- CI/CD Metrics Summary -----"
-          echo "Application is available at: ${{ env.NGROK_URL }}"
-          echo "---------------------------------"
-          echo "Unit Test Summary:"
-          grep -i "tests found" test_results.log || echo "N/A"
-          echo "---------------------------------"
-          echo "Resource Usage from container (vmstat):"
-          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
-          echo "Memory Usage from container (free -h):"
-          docker exec tomcat free -h
-          echo "---------------------------------"
-          echo "----- End of Metrics Display -----"
+          # Calculate deployment duration and total pipeline time
+          DEPLOY_DURATION=$(($(echo $DEPLOY_END_TIME) - $(echo $DEPLOY_START_TIME)))
+          PIPELINE_END_TIME=$(date +%s)
+          TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
+          # Calculate lead time using the last commit time
+          COMMIT_TIME=$(git log -1 --format=%ct)
+          LEAD_TIME=$(($(echo $DEPLOY_END_TIME) - $COMMIT_TIME))
+          echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
+          echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
+          echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
+          echo "Deployment Duration (sec): $DEPLOY_DURATION"
+          echo "Total Pipeline Time (sec): $TOTAL_PIPELINE_TIME"
+          echo "Lead Time for Changes (sec): $LEAD_TIME"
+
+      - name: Display CI/CD Metrics
+        run: |
+          echo "-------------------------------------------------"
+          echo "              CI/CD Metrics Summary              "
+          echo "-------------------------------------------------"
+          echo "| Metric                             | Value          |"
+          echo "-------------------------------------------------"
+          printf "| %-35s | %-15s |\n" "Public URL" "${NGROK_URL}"
+          printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "${TOTAL_PIPELINE_TIME}"
+          printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "${DEPLOY_DURATION}"
+          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "${LEAD_TIME}"
+          TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
+          printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
+          echo "-------------------------------------------------"
+          echo "Memory Usage BEFORE:"
+          cat mem_before.log
+          echo "-------------------------------------------------"
+          echo "Memory Usage AFTER:"
+          cat mem_after.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage BEFORE (vmstat):"
+          cat resource_usage_before.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage AFTER (vmstat):"
+          cat resource_usage_after.log
+          echo "-------------------------------------------------"
 
       - name: Stop Tomcat Container (Cleanup)
         if: always()
