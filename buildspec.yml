@@ -50,7 +50,7 @@ phases:
       - echo "Deploying WAR file to Tomcat server..."
       - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
       - echo "Restarting Tomcat..."
-      - |
+      - >
         ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
         rm -rf /opt/tomcat10/webapps/JobManagement /opt/tomcat10/webapps/JobManagement.war
         sleep 5
@@ -59,9 +59,9 @@ phases:
         exit
         EOF
       - echo "Waiting for deployment to finish..."
-      - |
+      - >
         tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-          echo "$line" | grep -q "Deployment of web application archive" && break;
+        echo "$line" | grep -q "Deployment of web application archive" && break;
         done
       - export DEPLOY_END_TIME=$(date +%s)
       - export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
@@ -74,25 +74,14 @@ phases:
       - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
       - echo "Total Pipeline Time: $TOTAL_PIPELINE_TIME seconds." >> pipeline_metrics.log
       - echo "Aggregating Metrics..."
-      - |
-        cat <<'EOM' > metrics_summary.log
-        -------------------------------------------------
-              CI/CD Metrics Summary              
-        -------------------------------------------------
-        | Metric                             | Value          |
-        -------------------------------------------------
-        EOM
+      - >
+        echo "-------------------------------------------------" > metrics_summary.log && echo "              CI/CD Metrics Summary              " >> metrics_summary.log && echo "-------------------------------------------------" >> metrics_summary.log && echo "| Metric                             | Value          |" >> metrics_summary.log && echo "-------------------------------------------------" >> metrics_summary.log
       - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
       - printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
       - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
       - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
-      - |
-        if grep -qi "Tests run:" test_results.log; then
-          TEST_SUMMARY=$(grep -i "Tests run:" test_results.log | head -n 1)
-        else
-          TEST_SUMMARY="N/A"
-        fi
-      - printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
+      - >
+        if grep -qi "Tests run:" test_results.log; then TEST_SUMMARY=$(grep -i "Tests run:" test_results.log | head -n 1); else TEST_SUMMARY="N/A"; fi && printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
       - echo "-------------------------------------------------" >> metrics_summary.log
       - echo "Metrics Summary:"
       - cat metrics_summary.log
