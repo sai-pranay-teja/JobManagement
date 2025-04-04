@@ -52,8 +52,8 @@ jobs:
 
       - name: Record pre-deployment resource usage
         run: |
-          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
-          free -h > mem_before.log
+          - ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_before.log
+          - ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_before.log
 
       - name: Record deployment start time & calculate Lead Time
         run: |
@@ -79,8 +79,8 @@ jobs:
       - name: Record post-deployment resource usage
         run: |
           echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
-          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-          free -h > mem_after.log
+          - ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log
+          - ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_after.log
 
       - name: Calculate deployment time and total pipeline time
         run: |
