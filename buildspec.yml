@@ -29,16 +29,7 @@ phases:
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
-  # post_build:
-  #   commands:
-  #     - echo "Deploying WAR file to Tomcat server..."
-  #     - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
-  #     - echo "Stopping Tomcat..."
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sudo pkill -f 'org.apache.catalina.startup.Bootstrap' || true"
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sleep 5"
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sudo /opt/tomcat10/bin/shutdown.sh || true"
-  #     - echo "Starting Tomcat..."
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sudo /opt/tomcat10/bin/startup.sh"
+
   post_build:
     commands:
       - echo "Deploying WAR file to Tomcat server..."
