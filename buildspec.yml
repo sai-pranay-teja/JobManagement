@@ -19,7 +19,7 @@ phases:
     - echo "Preview of key.pem (first 5 lines):"
     - head -n 5 key.pem
     - echo "Testing SSH connection..."
-    - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "echo Connected!"
+    - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "echo Connected!"
       
   build:
     commands:
@@ -32,19 +32,19 @@ phases:
   # post_build:
   #   commands:
   #     - echo "Deploying WAR file to Tomcat server..."
-  #     - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@18.60.142.88:/opt/tomcat10/webapps/
+  #     - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
   #     - echo "Stopping Tomcat..."
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sudo pkill -f 'org.apache.catalina.startup.Bootstrap' || true"
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sleep 5"
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sudo /opt/tomcat10/bin/shutdown.sh || true"
+  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sudo pkill -f 'org.apache.catalina.startup.Bootstrap' || true"
+  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sleep 5"
+  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sudo /opt/tomcat10/bin/shutdown.sh || true"
   #     - echo "Starting Tomcat..."
-  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 "sudo /opt/tomcat10/bin/startup.sh"
+  #     - ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "sudo /opt/tomcat10/bin/startup.sh"
   post_build:
     commands:
       - echo "Deploying WAR file to Tomcat server..."
-      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@18.60.142.88:/opt/tomcat10/webapps/
+      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
       - |
-        ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.142.88 <<'EOF'
+        ssh -tt -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
         pkill -f 'org.apache.catalina.startup.Bootstrap' || true
         sleep 5
         /opt/tomcat10/bin/shutdown.sh || true
@@ -57,6 +57,7 @@ phases:
 artifacts:
   files:
     - JobManagement.war
+
 
 
 
