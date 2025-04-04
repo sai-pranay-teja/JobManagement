@@ -136,17 +136,24 @@ phases:
   #   - cat metrics_summary.log
 post_build:
   commands:
+    # Measure resource usage before deployment
     - echo "Measuring resource usage BEFORE deployment..."
     - vmstat 1 5 > resource_usage_before.log
     - free -h > mem_before.log
+
+    # Record deployment start time and calculate Lead Time for Changes
     - echo "Recording deployment start time..."
     - export DEPLOY_START_TIME=$(date +%s)
     - echo "Calculating Lead Time for Changes..."
     - export COMMIT_TIME=$(git log -1 --format=%ct)
     - export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
-    - echo "Lead Time for Changes - $LEAD_TIME seconds" >> deployment_time.log
+    - echo "Lead Time for Changes - $LEAD_TIME seconds"
+
+    # Deploy the WAR file
     - echo "Deploying WAR file to Tomcat server..."
     - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
+
+    # Restart Tomcat using remote commands (using sudo to remove only the exploded directory)
     - echo "Restarting Tomcat..."
     - >
       ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
@@ -156,37 +163,45 @@ post_build:
       sudo /opt/tomcat10/bin/startup.sh
       exit
       EOF
+
+    # Wait for deployment to finish (this loops until a deployment message is seen in Tomcat logs)
     - echo "Waiting for deployment to finish..."
     - >
       tail -f /opt/tomcat10/logs/catalina.out | while read line; do
       echo "$line" | grep -q "Deployment of web application archive" && break;
       done
+
+    # Record deployment end time and calculate duration
     - export DEPLOY_END_TIME=$(date +%s)
     - export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
-    - echo "Deployment took $DEPLOY_DURATION seconds." >> deployment_time.log
+    - echo "Deployment took $DEPLOY_DURATION seconds."
+
+    # Measure resource usage after deployment
     - echo "Measuring resource usage AFTER deployment..."
     - vmstat 1 5 > resource_usage_after.log
     - free -h > mem_after.log
+
+    # Record pipeline end time and calculate total pipeline time
     - echo "Recording pipeline end time..."
     - export PIPELINE_END_TIME=$(date +%s)
     - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
-    - echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds." >> pipeline_metrics.log
-    - echo "Aggregating Metrics..."
-    - echo "-------------------------------------------------" > metrics_summary.log
-    - echo "              CI/CD Metrics Summary              " >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - echo "| Metric                             | Value          |" >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+    - echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds."
+
+    # Aggregate metrics and display them on the console
+    - echo "-------------------------------------------------"
+    - echo "              CI/CD Metrics Summary              "
+    - echo "-------------------------------------------------"
+    - echo "| Metric                             | Value          |"
+    - echo "-------------------------------------------------"
+    - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME"
+    - printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
+    - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
+    - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A"
     - >
       TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A") && \
-      printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - echo "Metrics Summary:"
-    - cat metrics_summary.log
+      printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
+    - echo "-------------------------------------------------"
+
 
 
 
