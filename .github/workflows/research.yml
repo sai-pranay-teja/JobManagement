@@ -1,0 +1,89 @@
+name: CI/CD Pipeline in Container
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build WAR File
+        run: |
+          echo "Building Job Management System..."
+          mkdir -p build/WEB-INF/classes
+          javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
+          cp -R src/main/resources/* build/WEB-INF/classes/
+          cp -R src/main/webapp/* build/
+          jar -cvf JobManagement.war -C build .
+          ls -lah JobManagement.war
+
+      - name: Run Unit Tests
+        run: |
+          echo "Running Unit Tests..."
+          mkdir -p test_output
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
+          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log 2>&1 || true
+          echo "Unit test results preview:"
+          head -n 20 test_results.log
+
+      - name: Start Tomcat Container
+        run: |
+          echo "Starting Tomcat container..."
+          docker run -d --name tomcat -p 8080:8080 tomcat:9-jdk17
+          echo "Waiting for Tomcat to initialize..."
+          sleep 15
+          echo "Copying WAR file into Tomcat container..."
+          docker cp JobManagement.war tomcat:/usr/local/tomcat/webapps/
+          echo "Waiting for deployment..."
+          sleep 20
+
+      - name: Collect Container Metrics
+        run: |
+          echo "Collecting resource usage metrics from Tomcat container..."
+          echo "Resource Usage (vmstat -s):"
+          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
+          echo "Memory Usage (free -h):"
+          docker exec tomcat free -h
+
+      - name: Expose Tomcat with Ngrok
+        id: ngrok
+        uses: w9jds/ngrok-action@v2
+        with:
+          token: ${{ secrets.NGROK_TOKEN }}
+          port: 8080
+
+      - name: Show Deployment URL and Metrics Summary
+        run: |
+          echo "----- CI/CD Metrics Summary -----"
+          # Get deployment metrics from container logs or local commands
+          echo "Application is available at: ${{ steps.ngrok.outputs.ngrok_url }}"
+          echo "---------------------------------"
+          echo "Unit Test Summary:"
+          grep -i "tests found" test_results.log || echo "N/A"
+          echo "---------------------------------"
+          echo "Resource Usage from container (vmstat):"
+          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
+          echo "Memory Usage from container (free -h):"
+          docker exec tomcat free -h
+          echo "---------------------------------"
+          echo "Total Pipeline Time and other metrics are not tracked in this workflow since the container serves as the deployment target."
+          echo "----- End of Metrics Display -----"
+
+      - name: Stop Tomcat Container (Cleanup)
+        if: always()
+        run: |
+          echo "Stopping Tomcat container..."
+          docker stop tomcat
+          docker rm tomcat
