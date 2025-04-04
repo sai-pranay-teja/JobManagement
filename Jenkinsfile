@@ -82,9 +82,7 @@ pipeline {
         stage('Measure Resource Usage Before Deployment') {
             steps {
                 // sh "echo 'Resource usage before deployment:' > ${RESOURCE_LOG}"
-                sh """
-                vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > ${RESOURCE_BEFORE_LOG}
-                """
+                sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_BEFORE_LOG}"
                 // Capture memory usage in human readable format
                 sh "free -h > ${MEM_BEFORE_LOG}"
             }
@@ -132,9 +130,7 @@ EOF
         stage('Measure Resource Usage After Deployment') {
             steps {
                 // sh "echo 'Resource usage after deployment:' > ${RESOURCE_LOG}"
-                sh """
-                vmstat -s  | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > ${RESOURCE_AFTER_LOG}
-                """
+                sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_AFTER_LOG}"
                 // Capture memory usage in human readable format after deployment
                 sh "free -h > ${MEM_AFTER_LOG}"
             }
