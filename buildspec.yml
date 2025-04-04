@@ -112,7 +112,7 @@ phases:
     # Measure resource usage before deployment
     - echo "Measuring resource usage BEFORE deployment..."
     # - vmstat 1 5 > resource_usage_before.log
-    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
+    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
     - free -h > mem_before.log
 
     # Record deployment start time and calculate Lead Time for Changes
@@ -154,7 +154,7 @@ phases:
     # Measure resource usage after deployment
     - echo "Measuring resource usage AFTER deployment..."
     # - vmstat 1 5 > resource_usage_after.log
-    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
+    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
     - free -h > mem_after.log
 
     # Record pipeline end time and calculate total pipeline time
