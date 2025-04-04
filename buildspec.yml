@@ -182,14 +182,12 @@ post_build:
     - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
     - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
     - >
-      if grep -qi "tests found" test_results.log; then \
-        TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1); \
-      else \
-        TEST_SUMMARY="N/A"; \
-      fi && printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
+      TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A") && \
+      printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
     - echo "-------------------------------------------------" >> metrics_summary.log
     - echo "Metrics Summary:"
     - cat metrics_summary.log
+
 
 
 
