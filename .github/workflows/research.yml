@@ -1,4 +1,4 @@
-name: CI/CD Pipeline in Container
+name: CI/CD Pipeline with Ngrok
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -49,26 +50,32 @@ jobs:
           echo "Waiting for deployment..."
           sleep 20
 
+      - name: Install jq (for parsing JSON)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Download and Setup Ngrok
+        run: |
+          wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+          unzip ngrok-stable-linux-amd64.zip
+          chmod +x ngrok
+          ./ngrok authtoken ${{ secrets.NGROK_TOKEN }}
+
+      - name: Start Ngrok Tunnel
+        run: |
+          nohup ./ngrok http 8080 > ngrok.log 2>&1 &
+          sleep 10
+
+      - name: Retrieve Ngrok Public URL
+        id: get-url
+        run: |
+          URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          echo "NGROK_URL=${URL}" >> $GITHUB_ENV
+          echo "Ngrok public URL: ${URL}"
+
       - name: Collect Container Metrics
         run: |
-          echo "Collecting resource usage metrics from Tomcat container..."
-          echo "Resource Usage (vmstat -s):"
-          docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}'
-          echo "Memory Usage (free -h):"
-          docker exec tomcat free -h
-
-      - name: Expose Tomcat with Ngrok
-        id: ngrok
-        uses: w9jds/ngrok-action@v2
-        with:
-          token: ${{ secrets.NGROK_TOKEN }}
-          port: 8080
-
-      - name: Show Deployment URL and Metrics Summary
-        run: |
           echo "----- CI/CD Metrics Summary -----"
-          # Get deployment metrics from container logs or local commands
-          echo "Application is available at: ${{ steps.ngrok.outputs.ngrok_url }}"
+          echo "Application is available at: ${{ env.NGROK_URL }}"
           echo "---------------------------------"
           echo "Unit Test Summary:"
           grep -i "tests found" test_results.log || echo "N/A"
@@ -78,7 +85,6 @@ jobs:
           echo "Memory Usage from container (free -h):"
           docker exec tomcat free -h
           echo "---------------------------------"
-          echo "Total Pipeline Time and other metrics are not tracked in this workflow since the container serves as the deployment target."
           echo "----- End of Metrics Display -----"
 
       - name: Stop Tomcat Container (Cleanup)
