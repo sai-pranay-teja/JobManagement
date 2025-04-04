@@ -46,7 +46,7 @@ phases:
       - echo "Calculating Lead Time for Changes..."
       - export COMMIT_TIME=$(git log -1 --format=%ct)
       - export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
-      - echo "Lead Time for Changes: $LEAD_TIME seconds" >> deployment_time.log
+      - echo "Lead Time for Changes - $LEAD_TIME seconds" >> deployment_time.log
       - echo "Deploying WAR file to Tomcat server..."
       - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
       - echo "Restarting Tomcat..."
