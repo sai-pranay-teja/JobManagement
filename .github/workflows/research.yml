@@ -1,4 +1,4 @@
-name: CI/CD Pipeline with Metrics & Ngrok
+name: CI/CD Pipeline with Extended Ngrok Debug
 
 on:
   push:
@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Record the pipeline start time.
       - name: Record Pipeline Start Time
         run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
 
@@ -82,32 +81,32 @@ jobs:
       - name: Start Ngrok Tunnel
         run: |
           nohup ./ngrok http 8080 > ngrok.log 2>&1 &
-          sleep 10
+          echo "Waiting 20 seconds for Ngrok to initialize..."
+          sleep 20
 
       - name: Retrieve Ngrok Public URL
         id: get-ngrok-url
         run: |
-          # Retry loop to wait for Ngrok tunnel to be ready
-          for i in {1..12}; do
+          echo "Attempting to retrieve Ngrok tunnel public URL..."
+          for i in {1..15}; do
             URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
             if [ ! -z "$URL" ] && [ "$URL" != "null" ]; then
               echo "Ngrok public URL: $URL"
               echo "NGROK_URL=${URL}" >> $GITHUB_ENV
               exit 0
             fi
-            echo "Waiting for Ngrok tunnel to be established..."
+            echo "Attempt $i: Ngrok tunnel not ready, waiting 5 seconds..."
             sleep 5
           done
-          echo "Failed to retrieve Ngrok URL" >&2
+          echo "Ngrok tunnel did not start as expected. Dumping ngrok.log for debugging:"
+          cat ngrok.log
           exit 1
 
       - name: Calculate Timing Metrics
         run: |
-          # Calculate deployment duration and total pipeline time
           DEPLOY_DURATION=$(($(echo $DEPLOY_END_TIME) - $(echo $DEPLOY_START_TIME)))
           PIPELINE_END_TIME=$(date +%s)
           TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
-          # Calculate lead time using the last commit time
           COMMIT_TIME=$(git log -1 --format=%ct)
           LEAD_TIME=$(($(echo $DEPLOY_END_TIME) - $COMMIT_TIME))
           echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
