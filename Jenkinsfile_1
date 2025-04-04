@@ -189,18 +189,6 @@ EOF
                     echo "-------------------------------------------------"
                     echo memAfter
                     echo "-------------------------------------------------"
-                    echo "-------------------------------------------------"
-                    echo "              Resource Usage Metrics             "
-                    echo "-------------------------------------------------"
-            
-                    if (fileExists(RESOURCE_LOG)) {
-                        def resourceUsage = readFile(RESOURCE_LOG).trim()
-                        echo "Resource Usage Summary:\n${resourceUsage}"
-                    } else {
-                        echo "Resource usage log not found!"
-                    }
-            
-                    echo "-------------------------------------------------"
                 }
             }
         }

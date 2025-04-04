@@ -149,6 +149,8 @@ EOF
                     def memBefore = readFile(MEM_BEFORE_LOG).trim()
                     def memAfter  = readFile(MEM_AFTER_LOG).trim()
 
+                    def resourceUsage = readFile(RESOURCE_LOG).trim()
+
                     // Update rollbackTime (no redeclaration)
                     rollbackTime = "N/A"
                     if (fileExists(ROLLBACK_LOG)) {
@@ -187,6 +189,10 @@ EOF
                     echo "Memory Usage AFTER Deployment (free -h):"
                     echo "-------------------------------------------------"
                     echo memAfter
+                    echo "-------------------------------------------------"
+                    echo "              Resource Usage Metrics             "
+                    echo "-------------------------------------------------"
+                    echo resourceUsage
                     echo "-------------------------------------------------"
                 }
                 
