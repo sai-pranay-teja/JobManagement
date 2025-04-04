@@ -8,19 +8,15 @@ on:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    env:
-      # You must set PIPELINE_START_TIME before the build begins.
-      # We capture it in an early step and then use it later.
-      # (Alternatively, you can set it in a separate step and pass it via outputs.)
-      JAVA_HOME: ${{ steps.setup-java.outputs.java-home }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Java 17
+        id: setup-java
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
       - name: Fetch SSH Key from AWS Secrets Manager
@@ -28,7 +24,7 @@ jobs:
           echo "Fetching SSH Key from AWS Secrets Manager..."
           aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
           echo "Fixing newlines in key.pem..."
-          sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
+          sed -i 's/\\n/\n/g' key.pem
           echo "Checking header in key.pem..."
           grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
           echo "Checking footer in key.pem..."
@@ -66,7 +62,7 @@ jobs:
       - name: Post Build - Metrics & Deployment
         run: |
           echo "----- POST BUILD: Starting metrics collection & deployment -----"
-          # Measure resource usage BEFORE deployment (using human-readable vmstat output)
+          # Measure resource usage BEFORE deployment (human-readable)
           echo "Measuring resource usage BEFORE deployment..."
           vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
           free -h > mem_before.log
@@ -79,11 +75,11 @@ jobs:
           LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
           echo "Lead Time for Changes - $LEAD_TIME seconds"
 
-          # Deploy the WAR file to Tomcat server
+          # Deploy the WAR file to the Tomcat server
           echo "Deploying WAR file to Tomcat server..."
           scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
 
-          # Restart Tomcat via SSH (using sudo to remove only the exploded directory)
+          # Restart Tomcat using remote commands (removing only the exploded directory)
           echo "Restarting Tomcat..."
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
           sudo rm -rf /opt/tomcat10/webapps/JobManagement
@@ -99,7 +95,7 @@ jobs:
             echo "$line" | grep -q "Deployment of web application archive" && break;
           done
 
-          # Record deployment end time and calculate duration
+          # Record deployment end time and calculate deployment duration
           echo "Recording deployment end time..."
           DEPLOY_END_TIME=$(date +%s)
           DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
@@ -116,7 +112,7 @@ jobs:
           TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - ${{ steps.pipeline_time.outputs.start }})
           echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds."
 
-          # Aggregate metrics into a summary log
+          # Aggregate metrics and display them
           {
             echo "-------------------------------------------------"
             echo "              CI/CD Metrics Summary              "
@@ -143,11 +139,10 @@ jobs:
             cat resource_usage_after.log
             echo "-------------------------------------------------"
           } > metrics_summary.log
-
           echo "----- Metrics Summary -----"
           cat metrics_summary.log
           echo "----- End of Metrics Display -----"
-          
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
