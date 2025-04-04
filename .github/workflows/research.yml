@@ -73,9 +73,9 @@ jobs:
 
       - name: Download and Setup Ngrok
         run: |
-          # Download a newer Ngrok binary (v3.x) that meets the minimum version requirement.
-          wget https://bin.equinox.io/c/bNyj1mQVY4i/ngrok-v3-stable-linux-amd64.zip
-          unzip ngrok-v3-stable-linux-amd64.zip
+          # Download the newer Ngrok v3 binary as a TGZ archive.
+          wget https://bin.equinox.io/c/bNyj1mQVY4i/ngrok-v3-stable-linux-amd64.tgz
+          tar -xzf ngrok-v3-stable-linux-amd64.tgz
           chmod +x ngrok
           ./ngrok authtoken ${{ secrets.NGROK_TOKEN }}
 
