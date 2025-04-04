@@ -134,8 +134,8 @@ phases:
   #   - echo "-------------------------------------------------" >> metrics_summary.log
   #   - echo "Metrics Summary:"
   #   - cat metrics_summary.log
-  post_build:
-    commands:
+post_build:
+  commands:
     - echo "Measuring resource usage BEFORE deployment..."
     - vmstat 1 5 > resource_usage_before.log
     - free -h > mem_before.log
@@ -172,12 +172,11 @@ phases:
     - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
     - echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds." >> pipeline_metrics.log
     - echo "Aggregating Metrics..."
-    - >
-      echo "-------------------------------------------------" > metrics_summary.log && \
-      echo "              CI/CD Metrics Summary              " >> metrics_summary.log && \
-      echo "-------------------------------------------------" >> metrics_summary.log && \
-      echo "| Metric                             | Value          |" >> metrics_summary.log && \
-      echo "-------------------------------------------------" >> metrics_summary.log
+    - echo "-------------------------------------------------" > metrics_summary.log
+    - echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+    - echo "-------------------------------------------------" >> metrics_summary.log
+    - echo "| Metric                             | Value          |" >> metrics_summary.log
+    - echo "-------------------------------------------------" >> metrics_summary.log
     - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
     - printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
     - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
@@ -191,6 +190,7 @@ phases:
     - echo "-------------------------------------------------" >> metrics_summary.log
     - echo "Metrics Summary:"
     - cat metrics_summary.log
+
 
 
 artifacts:
