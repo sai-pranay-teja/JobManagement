@@ -105,71 +105,23 @@ phases:
   post_build:
     commands:
       - |
-        # Generate metrics first
+        # Generate metrics template first
         echo "-------------------------------------------------" > metrics_summary.log
         echo "              CI/CD Metrics Summary              " >> metrics_summary.log
         echo "-------------------------------------------------" >> metrics_summary.log
         echo "| Metric                             | Value          |" >> metrics_summary.log
         echo "-------------------------------------------------" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$(( $(date +%s) - ${PIPELINE_START_TIME:-0} ))" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "N/A" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "N/A" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Test Summary" "${TEST_SUMMARY:-N/A}" >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
 
-        # Always calculate total time
-        PIPELINE_END=$(date +%s)
-        printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$(( PIPELINE_END - ${PIPELINE_START_TIME:-0} ))" >> metrics_summary.log
-
-        # Check for deployment metrics
-        if [ -f deploy_times.log ]; then
-          source deploy_times.log
-          printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "${DEPLOY_DURATION:-N/A}" >> metrics_summary.log
-          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "${LEAD_TIME:-N/A}" >> metrics_summary.log
-        else
-          printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "N/A" >> metrics_summary.log
-          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "N/A" >> metrics_summary.log
-        fi
-
-        # Check for rollback metrics
-        if [ -f rollback.log ]; then
-          ROLLBACK_TIME=$(grep -oP 'Rollback completed in \K\d+' rollback.log)
-          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "${ROLLBACK_TIME:-N/A}" >> metrics_summary.log
-        else
-          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
-        fi
-
-        # Handle test results safely
-        TEST_SUMMARY="N/A"
-        if [ -f test_results.log ]; then
-          TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
-        fi
-        printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
-
-        # Resource usage with fallbacks
-        add_resource_section() {
-          echo "-------------------------------------------------" >> metrics_summary.log
-          echo "$1:" >> metrics_summary.log
-          echo "-------------------------------------------------" >> metrics_summary.log
-          if [ -f "$2" ]; then
-            cat "$2" >> metrics_summary.log
-          else
-            echo "N/A" >> metrics_summary.log
-          fi
-        }
-
-        add_resource_section "Memory Usage BEFORE Deployment (free -h)" mem_before.log
-        add_resource_section "Memory Usage AFTER Deployment (free -h)" mem_after.log
-        add_resource_section "Resource Usage BEFORE Deployment (vmstat)" resource_usage_before.log
-        add_resource_section "Resource Usage AFTER Deployment (vmstat)" resource_usage_after.log
-
-        # Display metrics
+      - |
+        # Always show initial metrics
         cat metrics_summary.log
 
-      # Handle build failures after metrics
-      - >
-        if [ ! -f JobManagement_CODEBUILD.war ]; then
-          echo -e "\nBuild failed - compilation errors:"
-          cat compile_error.log
-          exit 1
-        fi
-
-      # Deployment process
       - echo "Starting deployment..."
       - DEPLOY_START=$(date +%s)
       - echo "DEPLOY_START=$DEPLOY_START" > deploy_times.log
@@ -178,32 +130,33 @@ phases:
       - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
       - free -h > mem_before.log
 
-      - >
+      - |
         if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "Deployment failed! Initiating rollback..."
           ROLLBACK_START=$(date +%s)
 
-          # Enhanced backup check
           if [ -f /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ]; then
             scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
-            ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<-EOF
+            ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
               sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
               sleep 5
               sudo /opt/tomcat10/bin/shutdown.sh || true
               sudo /opt/tomcat10/bin/startup.sh
             EOF
+
             ROLLBACK_END=$(date +%s)
             echo "Rollback completed in $((ROLLBACK_END - ROLLBACK_START)) seconds" > rollback.log
+            sed -i "/| Rollback Time (sec) /s/N\/A/$((ROLLBACK_END - ROLLBACK_START))/" metrics_summary.log
           else
             echo -e "\nNo backup available - original compilation errors:"
             cat compile_error.log
             exit 1
           fi
-
           exit 1
         fi
 
-      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<-EOF
+      - |
+        ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
           sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
           sleep 5
           sudo /opt/tomcat10/bin/shutdown.sh || true
@@ -215,13 +168,27 @@ phases:
           echo "$line" | grep -q "Deployment of web application archive" && break
         done
 
-      - DEPLOY_END=$(date +%s)
-      - echo "DEPLOY_END=$DEPLOY_END" >> deploy_times.log
-      - echo "DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))" >> deploy_times.log
-      - echo "LEAD_TIME=$((DEPLOY_START - $(git log -1 --format=%ct)))" >> deploy_times.log
+      - |
+        # Final metrics collection
+        DEPLOY_END=$(date +%s)
+        echo "DEPLOY_END=$DEPLOY_END" >> deploy_times.log
+        echo "DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))" >> deploy_times.log
+        echo "LEAD_TIME=$((DEPLOY_START - $(git log -1 --format=%ct)))" >> deploy_times.log
 
-      - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-      - free -h > mem_after.log
+        sed -i "/| Deployment Time (sec) /s/N\/A/$((DEPLOY_END - DEPLOY_START))/" metrics_summary.log
+        sed -i "/| Lead Time for Changes (sec) /s/N\/A/$((DEPLOY_START - $(git log -1 --format=%ct)))/" metrics_summary.log
+
+ 
+        [ -f mem_before.log ] && sed -i '/Memory Usage BEFORE Deployment (free -h)/,/N\/A/!b;//{r mem_before.log' -e 'd}' metrics_summary.log
+        [ -f mem_after.log ] && sed -i '/Memory Usage AFTER Deployment (free -h)/,/N\/A/!b;//{r mem_after.log' -e 'd}' metrics_summary.log
+        [ -f resource_usage_before.log ] && sed -i '/Resource Usage BEFORE Deployment (vmstat)/,/N\/A/!b;//{r resource_usage_before.log' -e 'd}' metrics_summary.log
+        [ -f resource_usage_after.log ] && sed -i '/Resource Usage AFTER Deployment (vmstat)/,/N\/A/!b;//{r resource_usage_after.log' -e 'd}' metrics_summary.log
+
+
+        echo -e "\nFinal Metrics:"
+        cat metrics_summary.log
+
+      
 
 artifacts:
   files:
