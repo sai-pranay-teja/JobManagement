@@ -50,7 +50,7 @@ phases:
           scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/
           
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
@@ -63,7 +63,7 @@ phases:
         else
           # Successful deployment steps
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
