@@ -31,6 +31,8 @@ phases:
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement_CODEBUILD.war -C build .
+      - mkdir -p /tmp/codebuild_backup
+      - cp JobManagement_CODEBUILD.war /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak
       - echo "Running Unit Tests..."
       - mkdir -p test_output
       - javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
@@ -140,7 +142,31 @@ phases:
       tail -f /opt/tomcat10/logs/catalina.out | while read line; do
         echo "$line" | grep -q "Deployment of web application archive" && break;
       done
-
+    - >
+        if [ $? -ne 0 ]; then
+          echo "Deployment failed! Rolling back..."
+          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sleep 5
+            sudo /opt/tomcat10/bin/shutdown.sh || true
+            sudo /opt/tomcat10/bin/startup.sh
+            exit
+          EOF
+          export ROLLBACK_END=$(date +%s)
+          export ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
+          echo "Rollback completed in $ROLLBACK_DURATION seconds."
+          # Add rollback time to metrics
+          echo "Rollback Time - $ROLLBACK_DURATION seconds." >> rollback_time.log
+        else
+          echo "No rollback needed" > rollback_time.log
+        fi
+    - >
+      if [ -f rollback_time.log ] && grep -q "Rollback Time" rollback_time.log; then
+        export ROLLBACK_TIME=$(grep -oP '(?<=Rollback Time - )\d+' rollback_time.log || echo "N/A")
+      else
+        export ROLLBACK_TIME="N/A"
+      fi
     # Record deployment end time and calculate deployment duration
     - echo "Recording deployment end time..."
     - export DEPLOY_END_TIME=$(date +%s)
@@ -168,7 +194,7 @@ phases:
     - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
     - printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
     - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+    - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_TIME" >> metrics_summary.log
     - >
       TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
     - printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
@@ -190,6 +216,7 @@ phases:
     - echo "Metrics Summary:"
     - cat metrics_summary.log
     - echo "----- End of Metrics Display -----"
+
 
 
 
