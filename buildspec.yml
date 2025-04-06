@@ -12,7 +12,7 @@ phases:
       - grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
       - grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
       - chmod 400 key.pem
-      - export PIPELINE_START=$(date +%s)
+      - export PIPELINE_START_TIME=$(date +%s)
 
   build:
     commands:
@@ -40,14 +40,15 @@ phases:
         fi
 
 
-        echo "Starting deployment..."
-        DEPLOY_START=$(date +%s)
+      - echo "Starting deployment..."
+      - DEPLOY_START=$(date +%s)
 
 
-        vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
-        free -h > mem_before.log
+      - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
+      - free -h > mem_before.log
 
 
+      - >
         if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "Deployment failed! Initiating rollback..."
           ROLLBACK_START=$(date +%s)
@@ -72,7 +73,7 @@ phases:
         fi
  
 
-        ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<-EOF
+      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<-EOF
           sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
           sleep 5
           sudo /opt/tomcat10/bin/shutdown.sh || true
@@ -80,18 +81,20 @@ phases:
         EOF
 
 
+      - |
         tail -f /opt/tomcat10/logs/catalina.out | while read line; do
           echo "$line" | grep -q "Deployment of web application archive" && break
         done
 
 
-        DEPLOY_END=$(date +%s)
-        vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-        free -h > mem_after.log
+      - DEPLOY_END=$(date +%s)
+      -   vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
+      -   free -h > mem_after.log
 
 
+      - |
         echo "-------------------------------------------------" > metrics_summary.log
-        echo "Total Pipeline Time - $(( $(date +%s) - $PIPELINE_START_TIME )) seconds" >> metrics_summary.log
+        echo "Total Pipeline Time - $(( $(date +%s) - ${PIPELINE_START_TIME:-0} )) seconds" >> metrics_summary.log
         echo "Deployment Duration - $((DEPLOY_END - DEPLOY_START)) seconds" >> metrics_summary.log
         echo "Lead Time - $((DEPLOY_START - $(git log -1 --format=%ct))) seconds" >> metrics_summary.log
         echo "Memory Before:" >> metrics_summary.log
