@@ -7,7 +7,7 @@ phases:
   pre_build:
     commands:
       - echo "Fetching SSH Key from AWS Secrets Manager..."
-      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
+      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_3 --query SecretString --output text > key.pem
       - echo "Fixing newlines in key.pem..."
       - sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
       - echo "Checking header in key.pem..."
@@ -19,7 +19,7 @@ phases:
       - echo "Preview of key.pem (first 5 lines):"
       - head -n 5 key.pem
       - echo "Testing SSH connection..."
-      - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 "echo Connected!"
+      - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 "echo Connected!"
       - echo "Recording pipeline start time..."
       - export PIPELINE_START_TIME=$(date +%s)
   build:
@@ -54,10 +54,7 @@ phases:
 
 
 
-  #   # Restart Tomcat using remote commands (removes only the exploded directory)
-  #   - echo "Restarting Tomcat..."
-  #   - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
-  #     sudo rm -rf /opt/tomcat10/webapps/JobManagement
+
   #     sleep 5
   #     sudo /opt/tomcat10/bin/shutdown.sh || true
   #     sudo /opt/tomcat10/bin/startup.sh
@@ -123,12 +120,12 @@ phases:
 
     # Deploy the WAR file to Tomcat server
     - echo "Deploying WAR file to Tomcat server..."
-    - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
+    - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/
 
     # Restart Tomcat using remote commands (using sudo to remove only the exploded directory)
     - echo "Restarting Tomcat..."
     - |
-      ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.55.121 <<'EOF'
+      ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
       sudo rm -rf /opt/tomcat10/webapps/JobManagement
       sleep 5
       sudo /opt/tomcat10/bin/shutdown.sh || true
