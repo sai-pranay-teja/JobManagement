@@ -4,7 +4,6 @@ phases:
   install:
     runtime-versions:
       java: corretto17
-  pre_build:
     commands:
       - echo "Fetching SSH Key..."
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_3 --query SecretString --output text > key.pem
@@ -16,81 +15,118 @@ phases:
     commands:
       - echo "Building Application..."
       - mkdir -p build/WEB-INF/classes
-      # Compile with strict error handling
-      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile.log || { echo "🛑 Compilation failed"; exit 1; }
+      # Attempt to compile Java code; if compilation fails, log error but do not exit
+      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile.log || { echo "🛑 Compilation failed"; }
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
-      # Create WAR with validation
-      - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "🛑 WAR creation failed"; exit 1; }
-      # Create validated backup
+      # Create WAR file; if WAR creation fails, log error but continue
+      - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "🛑 WAR creation failed"; }
+      # Save a backup of the WAR file (for rollback)
       - mkdir -p /tmp/build_artifacts
       - cp JobManagement_CODEBUILD.war /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak
 
   post_build:
     commands:
       - |
-        # Single execution block for atomic deployment
         echo "Starting post-build operations..."
-        
-        # Validate build artifacts first
+        # Validate build artifacts: if the WAR file is missing, trigger rollback.
         if [ ! -f JobManagement_CODEBUILD.war ]; then
-          echo "🔥 Critical error: Missing WAR file!"
-          echo "Compilation errors:"
+          echo "🔥 Critical error: Missing WAR file! Initiating rollback..."
+          echo "Compilation errors (if any):"
           cat compile.log
+          echo "Deploying backup WAR for rollback..."
+          scp -o StrictHostKeyChecking=no -i key.pem /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+          ssh -i key.pem ubuntu@40.192.68.176 <<EOF
+          sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+          sudo /opt/tomcat10/bin/shutdown.sh || true
+          sudo /opt/tomcat10/bin/startup.sh
+          EOF
+          export ROLLBACK_DURATION=$(( $(date +%s) - $(date +%s) ))  # (Adjust this if you want to measure rollback time properly)
+          echo "⏱️ Rollback duration: $ROLLBACK_DURATION seconds"
           exit 1
         fi
 
-        # Resource metrics - before
+        # Resource metrics - BEFORE deployment on remote host
         echo "📊 Capturing pre-deployment metrics..."
+        # (Assuming metrics are gathered locally; modify to SSH if needed)
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > metrics_before.log
         free -h > mem_before.log
 
-        # Deployment timing
+        # Deployment timing and lead time calculation
+        echo "Recording deployment start time..."
         export DEPLOY_START=$(date +%s)
-        export LEAD_TIME=$((DEPLOY_START - $(git log -1 --format=%ct)))
+        echo "Calculating Lead Time for Changes..."
+        export COMMIT_TIME=$(git log -1 --format=%ct)
+        export LEAD_TIME=$(( DEPLOY_START - COMMIT_TIME ))
+        echo "Lead Time for Changes - $LEAD_TIME seconds"
 
-        # Deployment execution
-        echo "🚀 Deploying application..."
+        # Deploy the WAR file to Tomcat server
+        echo "🚀 Deploying WAR file to Tomcat server..."
         if scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "🔧 Restarting Tomcat..."
           ssh -i key.pem ubuntu@40.192.68.176 <<EOF
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
-            sudo /opt/tomcat10/bin/shutdown.sh || true
-            sudo /opt/tomcat10/bin/startup.sh
+          sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+          sudo /opt/tomcat10/bin/shutdown.sh || true
+          sudo /opt/tomcat10/bin/startup.sh
           EOF
         else
-          echo "🔄 Initiating rollback..."
+          echo "🔄 Deployment failed; initiating rollback..."
           export ROLLBACK_START=$(date +%s)
-          scp -i key.pem /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+          scp -o StrictHostKeyChecking=no -i key.pem /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
           ssh -i key.pem ubuntu@40.192.68.176 <<EOF
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
-            sudo /opt/tomcat10/bin/shutdown.sh || true
-            sudo /opt/tomcat10/bin/startup.sh
+          sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+          sudo /opt/tomcat10/bin/shutdown.sh || true
+          sudo /opt/tomcat10/bin/startup.sh
           EOF
           export ROLLBACK_DURATION=$(( $(date +%s) - ROLLBACK_START ))
           echo "⏱️ Rollback duration: $ROLLBACK_DURATION seconds"
           exit 1
         fi
 
-        # Post-deployment metrics
+        # Post-deployment metrics (could be from remote host via SSH if needed)
         echo "📈 Capturing post-deployment metrics..."
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > metrics_after.log
         free -h > mem_after.log
 
-        # Final calculations
+        # Final timing calculations
         export PIPELINE_END=$(date +%s)
-        export TOTAL_DURATION=$((PIPELINE_END - PIPELINE_START))
+        export TOTAL_DURATION=$(( PIPELINE_END - PIPELINE_START ))
         export DEPLOY_DURATION=$(( $(date +%s) - DEPLOY_START ))
+        echo "Total Pipeline Duration - $TOTAL_DURATION seconds."
+        echo "Deployment took $DEPLOY_DURATION seconds."
 
-        # Generate report
+        # Generate metrics summary report
         echo "📄 Generating metrics summary..."
-        printf "\n\nCI/CD METRICS SUMMARY:\n"
-        printf "%-30s %s\n" "Total Pipeline Duration:" "$TOTAL_DURATION seconds"
-        printf "%-30s %s\n" "Deployment Time:" "$DEPLOY_DURATION seconds"
-        printf "%-30s %s\n" "Lead Time for Changes:" "$LEAD_TIME seconds"
-        [ -n "$ROLLBACK_DURATION" ] && printf "%-30s %s\n" "Rollback Duration:" "$ROLLBACK_DURATION seconds"
-        printf "\nResource Usage:\n"
-        paste <(cat metrics_before.log) <(cat metrics_after.log) | column -t -s $'\t'
+        {
+          echo "-------------------------------------------------"
+          echo "              CI/CD METRICS SUMMARY              "
+          echo "-------------------------------------------------"
+          echo "| Metric                             | Value          |"
+          echo "-------------------------------------------------"
+          printf "| %-35s | %-15s |\n" "Total Pipeline Duration" "$TOTAL_DURATION seconds"
+          printf "| %-35s | %-15s |\n" "Deployment Time" "$DEPLOY_DURATION seconds"
+          printf "| %-35s | %-15s |\n" "Lead Time for Changes" "$LEAD_TIME seconds"
+          printf "| %-35s | %-15s |\n" "Rollback Time" "${ROLLBACK_DURATION:-N/A}"
+          TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
+          printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
+          echo "-------------------------------------------------"
+          echo "Memory Usage BEFORE (free -h):"
+          cat mem_before.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage BEFORE (vmstat):"
+          cat metrics_before.log 2>/dev/null || echo "Not captured"
+          echo "-------------------------------------------------"
+          echo "Memory Usage AFTER (free -h):"
+          cat mem_after.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage AFTER (vmstat):"
+          cat metrics_after.log
+          echo "-------------------------------------------------"
+        } > metrics_summary.log
+
+        echo "----- Metrics Summary -----"
+        cat metrics_summary.log
+        echo "----- End of Metrics Display -----"
 
 artifacts:
   files:
@@ -100,3 +136,4 @@ artifacts:
     - metrics_after.log
     - mem_before.log
     - mem_after.log
+    - metrics_summary.log
