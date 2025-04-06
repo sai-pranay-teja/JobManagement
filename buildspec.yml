@@ -30,81 +30,72 @@ phases:
 
   post_build:
     commands:
-    # Consolidated deployment block
-    - >
-      if [ -f JobManagement_CODEBUILD.war ]; then
-        # Pre-deployment metrics
-        echo "Measuring resource usage BEFORE deployment..."
+      - >
+        if [ ! -f JobManagement_CODEBUILD.war ]; then
+          echo "Build failed - showing compilation errors:"
+          cat compile_error.log
+          exit 1
+        fi
+
+
+        echo "Starting deployment..."
+        DEPLOY_START=$(date +%s)
+
+
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
         free -h > mem_before.log
 
-        # Deployment timing
-        DEPLOY_START=$(date +%s)
-        COMMIT_TIME=$(git log -1 --format=%ct)
-        LEAD_TIME=$((DEPLOY_START - COMMIT_TIME))
 
-        # Attempt deployment
-        if scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
-          # Successful deployment
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<EOF
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
-            sleep 5
-            sudo /opt/tomcat10/bin/shutdown.sh || true
-            sudo /opt/tomcat10/bin/startup.sh
-          EOF
-
-          # Wait for deployment
-          tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-            echo "\$line" | grep -q "Deployment of web application archive" && break
-          done
-
-          # Post-deployment metrics
-          DEPLOY_END=$(date +%s)
-          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
-          echo "Deployment took $DEPLOY_DURATION seconds"
-        else
-          # Rollback logic
-          echo "Deployment failed! Rolling back..."
+        if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
+          echo "Deployment failed! Initiating rollback..."
           ROLLBACK_START=$(date +%s)
-          
+
           if [ -f /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ]; then
             scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
-            ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<EOF
+            ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<-EOF
               sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
               sleep 5
               sudo /opt/tomcat10/bin/shutdown.sh || true
               sudo /opt/tomcat10/bin/startup.sh
             EOF
           else
-            echo "No backup found! Showing compilation errors:"
+            echo "No backup available - showing original errors:"
             cat compile_error.log
             exit 1
           fi
 
           ROLLBACK_END=$(date +%s)
-          ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
-          echo "Rollback completed in $ROLLBACK_DURATION seconds"
+          echo "Rollback completed in $((ROLLBACK_END - ROLLBACK_START)) seconds"
           exit 1
         fi
+ 
 
-        # Final metrics
-        echo "Measuring resource usage AFTER deployment..."
+        ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<-EOF
+          sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+          sleep 5
+          sudo /opt/tomcat10/bin/shutdown.sh || true
+          sudo /opt/tomcat10/bin/startup.sh
+        EOF
+
+
+        tail -f /opt/tomcat10/logs/catalina.out | while read line; do
+          echo "$line" | grep -q "Deployment of web application archive" && break
+        done
+
+
+        DEPLOY_END=$(date +%s)
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
         free -h > mem_after.log
-        PIPELINE_END=$(date +%s)
-        TOTAL_PIPELINE_TIME=$((PIPELINE_END - PIPELINE_START))
 
-        # Generate metrics summary
+
         echo "-------------------------------------------------" > metrics_summary.log
-        echo "Total Pipeline Time: $TOTAL_PIPELINE_TIME seconds" >> metrics_summary.log
-        echo "Deployment Duration: $DEPLOY_DURATION seconds" >> metrics_summary.log
-        echo "Lead Time for Changes: $LEAD_TIME seconds" >> metrics_summary.log
-        cat mem_before.log mem_after.log >> metrics_summary.log
-      else
-        echo "Build failed! Compilation errors:"
-        cat compile_error.log
-        exit 1
-      fi
+        echo "Total Pipeline Time - $(( $(date +%s) - $PIPELINE_START_TIME )) seconds" >> metrics_summary.log
+        echo "Deployment Duration - $((DEPLOY_END - DEPLOY_START)) seconds" >> metrics_summary.log
+        echo "Lead Time - $((DEPLOY_START - $(git log -1 --format=%ct))) seconds" >> metrics_summary.log
+        echo "Memory Before:" >> metrics_summary.log
+        cat mem_before.log >> metrics_summary.log
+        echo "Memory After:" >> metrics_summary.log
+        cat mem_after.log >> metrics_summary.log
 
 artifacts:
   files:
