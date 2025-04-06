@@ -142,7 +142,7 @@ phases:
       tail -f /opt/tomcat10/logs/catalina.out | while read line; do
         echo "$line" | grep -q "Deployment of web application archive" && break;
       done
-    - >
+    - |
         if [ $? -ne 0 ]; then
           echo "Deployment failed! Rolling back..."
           scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
@@ -161,7 +161,7 @@ phases:
         else
           echo "No rollback needed" > rollback_time.log
         fi
-    - >
+    - |
       if [ -f rollback_time.log ] && grep -q "Rollback Time" rollback_time.log; then
         export ROLLBACK_TIME=$(grep -oP '(?<=Rollback Time - )\d+' rollback_time.log || echo "N/A")
       else
