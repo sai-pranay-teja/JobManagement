@@ -1,7 +1,6 @@
 // Global variables to capture overall metrics
 def pipelineStartTime = 0
 def leadTimeForChanges = 0
-// rollbackTime is declared elsewhere; do not redeclare it here
 def rollbackTime = "N/A"
 
 pipeline {
@@ -20,7 +19,7 @@ pipeline {
         LOG_FILE             = "${WORKSPACE}/deployment.log"
         DEPLOYMENT_TIME_FILE = "${WORKSPACE}/deployment_time.log"
         ROLLBACK_LOG         = "${WORKSPACE}/rollback.log"
-        // New file to record rollback deployment time
+        // File to record rollback deployment time
         ROLLBACK_DEPLOYMENT_TIME_FILE = "${WORKSPACE}/rollback_deployment_time.log"
 
         // Memory usage log files in human readable format
@@ -41,7 +40,6 @@ pipeline {
 
         stage('Clean Workspace') {
             steps {
-                // Clean the workspace to ensure a fresh start
                 cleanWs()
             }
         }
@@ -49,7 +47,6 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
-                    // Record the pipeline start time for automation overhead metrics
                     pipelineStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                     echo "Pipeline start time recorded: ${pipelineStartTime}"
                 }
@@ -75,7 +72,6 @@ pipeline {
         stage('Backup WAR') {
             steps {
                 script {
-                    // Create a backup of the WAR file in the workspace using _BACKUP if it exists.
                     if (fileExists("${WAR_STORAGE}/${WAR_NAME}")) {
                         sh "cp ${WAR_STORAGE}/${WAR_NAME} ${WAR_STORAGE}/${WAR_NAME}_BACKUP"
                         echo "Backup created: ${WAR_STORAGE}/${WAR_NAME}_BACKUP"
@@ -90,13 +86,10 @@ pipeline {
             steps {
                 sh """
                     mkdir -p ${WORKSPACE}/test_output
-                    # Compile tests from src/main/test to test_output
                     javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output \$(find ${WORKSPACE}/src/main/test -name "*.java")
-                    # Run tests and redirect both stdout and stderr to the TEST_RESULTS_LOG.
                     java -cp "${WORKSPACE}/test_output:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output --details summary > ${TEST_RESULTS_LOG} 2>&1 || true
                 """
                 script {
-                    // Read the entire test results log and display it
                     def testResults = readFile(TEST_RESULTS_LOG).trim()
                     echo "Test Results Summary:\n${testResults}"
                 }
@@ -106,7 +99,6 @@ pipeline {
         stage('Measure Resource Usage Before Deployment') {
             steps {
                 sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_BEFORE_LOG}"
-                // Capture memory usage in human readable format
                 sh "free -h > ${MEM_BEFORE_LOG}"
             }
         }
@@ -114,15 +106,13 @@ pipeline {
         stage('Deploy and Restart Tomcat') {
             steps {
                 script {
-                    // Record deployment start time
-                    def deployStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-
-                    // Calculate Lead Time for Changes (difference between last commit timestamp and deployment start time)
+                    // Store deployment start time in env variable so it can be used later even if job fails
+                    env.DEPLOY_START_TIME = sh(script: "date +%s", returnStdout: true).trim()
                     def commitTime = sh(script: "git log -1 --format=%ct", returnStdout: true).trim().toInteger()
+                    def deployStartTime = env.DEPLOY_START_TIME.toInteger()
                     leadTimeForChanges = deployStartTime - commitTime
                     echo "Lead Time for Changes (sec): ${leadTimeForChanges}"
-
-                    // Deploy the WAR file and restart Tomcat via SSH
+                    
                     sh """
                         echo "Starting deployment at \$(date)" >> ${LOG_FILE}
                         scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
@@ -135,15 +125,14 @@ ${TOMCAT_HOME}/bin/startup.sh
 exit
 EOF
 
-                        # Wait until a deployment message is logged
                         tail -f ${TOMCAT_HOME}/logs/catalina.out | while read line; do
                           echo "\${line}" | grep -q "Deployment of web application archive" && break;
                         done
                     """
 
-                    // Record deployment end time and calculate deployment duration
-                    def deployEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-                    def deployDuration = deployEndTime - deployStartTime
+                    // Record deployment end time and save it in env
+                    env.DEPLOY_END_TIME = sh(script: "date +%s", returnStdout: true).trim()
+                    def deployDuration = env.DEPLOY_END_TIME.toInteger() - deployStartTime
                     sh "echo \"Deployment took ${deployDuration} seconds.\" >> ${DEPLOYMENT_TIME_FILE}"
                     echo "Deployment completed in ${deployDuration} seconds."
                 }
@@ -153,7 +142,6 @@ EOF
         stage('Measure Resource Usage After Deployment') {
             steps {
                 sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_AFTER_LOG}"
-                // Capture memory usage in human readable format after deployment
                 sh "free -h > ${MEM_AFTER_LOG}"
             }
         }
@@ -167,9 +155,7 @@ EOF
             echo 'Deployment failed! Performing rollback...'
             script {
                 def rollbackStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-                // In rollback, check if the backup file exists. If yes, use it; otherwise, capture the compile error.
                 if (fileExists("${WAR_STORAGE}/${WAR_NAME}_BACKUP")) {
-                    // Use the backup file to restore the deployed WAR.
                     sh """
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}_BACKUP ${DEPLOY_DIR}/"
@@ -189,30 +175,28 @@ EOF
                 }
                 def rollbackEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                 def computedRollbackTime = rollbackEndTime - rollbackStartTime
-                // Save rollback deployment time to file
+                // Write rollback deployment time to file (do not echo directly)
                 sh "echo \"${computedRollbackTime}\" > ${ROLLBACK_DEPLOYMENT_TIME_FILE}"
-                sh "echo \"Rollback took ${computedRollbackTime} seconds.\" >> ${ROLLBACK_LOG}"
-                echo "Rollback completed in ${computedRollbackTime} seconds."
             }
         }
-        // Always display metrics even if the job fails
         always {
             script {
                 def pipelineEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                 def totalPipelineTime = pipelineEndTime - pipelineStartTime
 
-                def deploymentTime = fileExists(DEPLOYMENT_TIME_FILE) ? readFile(DEPLOYMENT_TIME_FILE).trim() : "N/A"
+                // Calculate deployment time from stored env variables if available
+                def deploymentTime = "N/A"
+                if (env.DEPLOY_START_TIME && env.DEPLOY_END_TIME) {
+                    deploymentTime = env.DEPLOY_END_TIME.toInteger() - env.DEPLOY_START_TIME.toInteger()
+                } else if (fileExists(DEPLOYMENT_TIME_FILE)) {
+                    deploymentTime = readFile(DEPLOYMENT_TIME_FILE).trim()
+                }
+
                 def memBefore = fileExists(MEM_BEFORE_LOG) ? readFile(MEM_BEFORE_LOG).trim() : "N/A"
                 def memAfter = fileExists(MEM_AFTER_LOG) ? readFile(MEM_AFTER_LOG).trim() : "N/A"
                 def resourceUsageBefore = fileExists(RESOURCE_BEFORE_LOG) ? readFile(RESOURCE_BEFORE_LOG).trim() : "N/A"
                 def resourceUsageAfter = fileExists(RESOURCE_AFTER_LOG) ? readFile(RESOURCE_AFTER_LOG).trim() : "N/A"
-                
-                rollbackTime = "N/A"
-                if (fileExists(ROLLBACK_LOG)) {
-                    def rollbackContent = readFile(ROLLBACK_LOG).trim()
-                    rollbackTime = rollbackContent.replaceAll("[^0-9]", "").isEmpty() ? "N/A" : rollbackContent.replaceAll("[^0-9]", "")
-                }
-                
+
                 def rollbackDeployTime = "N/A"
                 if (fileExists(ROLLBACK_DEPLOYMENT_TIME_FILE)) {
                     rollbackDeployTime = readFile(ROLLBACK_DEPLOYMENT_TIME_FILE).trim()
@@ -232,10 +216,8 @@ EOF
                 echo String.format("| %-35s | %-15s |", "Metric", "Value")
                 echo "-------------------------------------------------"
                 echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", totalPipelineTime)
-                def deployTimeValue = deploymentTime.tokenize().find { it.isNumber() } ?: "N/A"
-                echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deployTimeValue)
+                echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deploymentTime)
                 echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
-                echo String.format("| %-35s | %-15s |", "Rollback Time (sec)", rollbackTime)
                 echo String.format("| %-35s | %-15s |", "Rollback Deployment Time (sec)", rollbackDeployTime)
                 echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
                 echo "-------------------------------------------------"
