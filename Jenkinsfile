@@ -63,7 +63,9 @@ pipeline {
         stage('Build WAR') {
             steps {
                 sh 'mkdir -p build/WEB-INF/classes'
-                sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
+                sh '''
+                javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")' 2> ${WORKSPACE}/compile_error.log
+                '''
                 sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                 sh 'cp -R src/main/webapp/* build/'
                 sh 'jar -cvf ${WAR_NAME} -C build .'
@@ -181,7 +183,7 @@ EOF
                 } else {
                     // If backup not found, run a compile to capture the error output
                     echo "Backup file ${WAR_NAME}_bak not found. Capturing compile error..."
-                    sh "javac src/main/java/model/Job.java 2> ${WORKSPACE}/compile_error.log || true"
+                    // sh "javac src/main/java/model/Job.java 2> ${WORKSPACE}/compile_error.log || true"
                     def compileError = readFile("${WORKSPACE}/compile_error.log").trim()
                     echo "Compile error captured:\n${compileError}"
                 }
