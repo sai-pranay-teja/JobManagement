@@ -22,14 +22,14 @@ phases:
       - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
-      - jar -cvf JobManagement.war -C build . || { echo "WAR creation failed!"; exit 1; }
+      - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
       - mkdir -p /tmp/codebuild_backup
-      - cp JobManagement.war /tmp/codebuild_backup/JobManagement.war_bak
+      - cp JobManagement_CODEBUILD.war /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak
 
   post_build:
     commands:
       - |
-        if [ ! -f JobManagement.war ]; then
+        if [ ! -f JobManagement_CODEBUILD.war ]; then
           echo "Build failed - showing compilation errors:"
           cat compile_error.log
           exit 1
@@ -48,12 +48,12 @@ phases:
 
         # Deployment attempt
         echo "Deploying WAR file..."
-        if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
+        if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "Deployment failed! Rolling back..."
           export ROLLBACK_START=$(date +%s)
           
           # Rollback with backup
-          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement.war
+          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
           
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
             sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
@@ -69,7 +69,7 @@ phases:
         else
           # Restart Tomcat on success
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
@@ -125,7 +125,7 @@ phases:
 
 artifacts:
   files:
-    - JobManagement.war
+    - JobManagement_CODEBUILD.war
     - test_results.log
     - compile_error.log
     - metrics_summary.log
