@@ -33,7 +33,7 @@ pipeline {
         SSH_USER             = "root"
         SSH_HOST             = "40.192.68.176"
         SSH_OPTS             = "-o StrictHostKeyChecking=no"
-        BACKUP_DIR = "/var/jenkins_backups"
+        BACKUP_DIR = "/home/ubuntu/jenkins_bak"
     }
 
     stages {
