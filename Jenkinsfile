@@ -46,7 +46,9 @@ pipeline {
         stage('Clean Workspace') {
             steps {
                 // Clean the workspace to ensure a fresh start
-                cleanWs(patterns: [[pattern: '**/*_bak', type: 'EXCLUDE']])
+                // cleanWs(patterns: [[pattern: '**/*_bak', type: 'EXCLUDE']])
+                cleanWs(deleteDirs: true, notFailBuild: true, patterns: [[pattern: '**/*_bak', type: 'EXCLUDE']])
+
 
             }
         }
