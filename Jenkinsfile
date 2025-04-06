@@ -200,11 +200,12 @@ EOF
             echo 'Deployment failed! Performing rollback...'
             script {
                 def rollbackStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                def BackupFile="/tmp/jenkins_bak"
                 // In rollback, check if the backup file exists. If yes, use it; otherwise, capture compile error.
-                if (fileExists("${WAR_STORAGE}/${WAR_NAME}_bak")) {
+                if (fileExists("${BackupFile}/${WAR_NAME}_bak")) {
                     sh """
-                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
-                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}_bak ${DEPLOY_DIR}/"
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${BackupFile}/${WAR_NAME}"
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp /tmp/jenkins_bak/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}"
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
 sleep 5
