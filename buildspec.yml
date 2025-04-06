@@ -32,9 +32,11 @@ phases:
     commands:
       - >
         if [ ! -f JobManagement_CODEBUILD.war ]; then
-          echo "Build failed - showing compilation errors:"
+          echo "Build failed - compilation errors:"
           cat compile_error.log
-          exit 1
+          # Allow metrics collection while marking build as failed
+          echo "METRIC|Total Pipeline Time|$(( $(date +%s) - $PIPELINE_START_TIME ))" >> metrics_summary.log
+          exit 1  # This intentionally fails the ENTIRE build
         fi
 
 
