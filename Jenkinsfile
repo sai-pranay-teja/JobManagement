@@ -70,6 +70,20 @@ pipeline {
             }
         }
 
+        stage('Backup WAR') {
+            steps {
+                script {
+                    // Create a backup of the WAR file in the workspace if it exists.
+                    if (fileExists("${WAR_STORAGE}/${WAR_NAME}")) {
+                        sh "cp ${WAR_STORAGE}/${WAR_NAME} ${WAR_STORAGE}/${WAR_NAME}.backup"
+                        echo "Backup created: ${WAR_STORAGE}/${WAR_NAME}.backup"
+                    } else {
+                        echo "ERROR: WAR file ${WAR_NAME} not found; backup not created."
+                    }
+                }
+            }
+        }
+
         stage('Run Unit Tests') {
             steps {
                 sh """
@@ -220,17 +234,26 @@ EOF
             echo 'Deployment failed! Performing rollback...'
             script {
                 def rollbackStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-                sh """
-                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
-                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}.backup ${DEPLOY_DIR}/"
-                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                // In rollback, check if the backup file exists. If yes, use it; otherwise, capture and print the compile error.
+                if (fileExists("${WAR_STORAGE}/${WAR_NAME}.backup")) {
+                    sh """
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}.backup ${DEPLOY_DIR}/"
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
 sleep 5
 ${TOMCAT_HOME}/bin/shutdown.sh || true
 ${TOMCAT_HOME}/bin/startup.sh
 exit
 EOF
-                """
+                    """
+                } else {
+                    // If backup not found, run a compile to capture the error output
+                    echo "Backup file ${WAR_NAME}.backup not found. Attempting to capture compile error..."
+                    sh "javac src/main/java/model/Job.java 2> ${WORKSPACE}/compile_error.log || true"
+                    def compileError = readFile("${WORKSPACE}/compile_error.log").trim()
+                    echo "Compile error captured:\n${compileError}"
+                }
                 def rollbackEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                 def computedRollbackTime = rollbackEndTime - rollbackStartTime
                 sh "echo \"Rollback took ${computedRollbackTime} seconds.\" >> ${ROLLBACK_LOG}"
