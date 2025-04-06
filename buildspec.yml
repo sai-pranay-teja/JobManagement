@@ -1,6 +1,5 @@
 version: 0.2
 
-
 phases:
   install:
     runtime-versions:
@@ -8,227 +7,129 @@ phases:
   pre_build:
     commands:
       - echo "Fetching SSH Key from AWS Secrets Manager..."
-      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_3 --query SecretString --output text > key.pem
-      - echo "Fixing newlines in key.pem..."
-      - sed -i 's/\\n/\n/g' key.pem  # Replace literal \n with actual newlines
-      - echo "Checking header in key.pem..."
+      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_2 --query SecretString --output text > key.pem
+      - sed -i 's/\\n/\n/g' key.pem
       - grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
-      - echo "Checking footer in key.pem..."
       - grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
       - chmod 400 key.pem
-      - ls -lah key.pem
-      - echo "Preview of key.pem (first 5 lines):"
-      - head -n 5 key.pem
-      - echo "Testing SSH connection..."
-      - ssh -vvv -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 "echo Connected!"
       - echo "Recording pipeline start time..."
       - export PIPELINE_START_TIME=$(date +%s)
+
   build:
     commands:
       - echo "Building Job Management System..."
       - mkdir -p build/WEB-INF/classes
-      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
+      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
-      - jar -cvf JobManagement_CODEBUILD.war -C build .
+      - jar -cvf JobManagement.war -C build . || { echo "WAR creation failed!"; exit 1; }
       - mkdir -p /tmp/codebuild_backup
-      - cp JobManagement_CODEBUILD.war /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak
-      - echo "Running Unit Tests..."
-      - mkdir -p test_output
-      - javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
-      - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log 2>&1 || true
-      - echo "Unit tests completed. Preview of test results:"
-      - head -n 20 test_results.log
-  # post_build:
-  #   commands:
-  #   - echo "----- POST BUILD - Starting metrics collection -----"
-  #   # Measure resource usage before deployment
-  #   - echo "Measuring resource usage BEFORE deployment..."
-  #   - vmstat 1 5 > resource_usage_before.log
-  #   - free -h > mem_before.log
-
-  #   # Record deployment start time and calculate Lead Time for Changes
-  #   - echo "Recording deployment start time..."
-  #   - export DEPLOY_START_TIME=$(date +%s)
-  #   - echo "Calculating Lead Time for Changes..."
-  #   - export COMMIT_TIME=$(git log -1 --format=%ct)
-  #   - export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
-  #   - echo "Lead Time for Changes - $LEAD_TIME seconds"
-
-
-
-
-  #     sleep 5
-  #     sudo /opt/tomcat10/bin/shutdown.sh || true
-  #     sudo /opt/tomcat10/bin/startup.sh
-  #     exit
-  #     EOF
-
-  #   # Wait for deployment to finish by monitoring the catalina.out log
-  #   - echo "Waiting for deployment to finish..."
-  #   - >
-  #     tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-  #       echo "$line" | grep -q "Deployment of web application archive" && break;
-  #     done
-
-  #   # Record deployment end time and calculate deployment duration
-  #   - echo "Recording deployment end time..."
-  #   - export DEPLOY_END_TIME=$(date +%s)
-  #   - export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
-  #   - echo "Deployment took $DEPLOY_DURATION seconds."
-
-  #   # Measure resource usage after deployment
-  #   - echo "Measuring resource usage AFTER deployment..."
-  #   - vmstat 1 5 > resource_usage_after.log
-  #   - free -h > mem_after.log
-
-  #   # Record pipeline end time and calculate total pipeline time
-  #   - echo "Recording pipeline end time..."
-  #   - export PIPELINE_END_TIME=$(date +%s)
-  #   - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
-  #   - echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds."
-
-  #   # Aggregate and display metrics on the console
-  #   - echo "----- Aggregating Metrics -----"
-  #   - echo "-------------------------------------------------"
-  #   - echo "              CI/CD Metrics Summary              "
-  #   - echo "-------------------------------------------------"
-  #   - echo "| Metric                             | Value          |"
-  #   - echo "-------------------------------------------------"
-  #   - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME"
-  #   - printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
-  #   - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
-  #   - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A"
-  #   - >
-  #     TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
-  #   - printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
-  #   - echo "-------------------------------------------------"
-  #   - echo "----- Metrics Collection Complete -----"
+      - cp JobManagement.war /tmp/codebuild_backup/JobManagement.war_bak
 
   post_build:
     commands:
-    # Measure resource usage before deployment
-    - echo "Measuring resource usage BEFORE deployment..."
-    # - vmstat 1 5 > resource_usage_before.log
-    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
-    - free -h > mem_before.log
+      - |
+        if [ ! -f JobManagement.war ]; then
+          echo "Build failed - showing compilation errors:"
+          cat compile_error.log
+          exit 1
+        fi
 
-    # Record deployment start time and calculate Lead Time for Changes
-    - echo "Recording deployment start time..."
-    - export DEPLOY_START_TIME=$(date +%s)
-    - echo "Calculating Lead Time for Changes..."
-    - export COMMIT_TIME=$(git log -1 --format=%ct)
-    - export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
-    - echo "Lead Time for Changes - $LEAD_TIME seconds"
+        # Resource measurement before deployment
+        echo "Measuring resource usage BEFORE deployment..."
+        vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
+        free -h > mem_before.log
 
-    # Deploy the WAR file to Tomcat server
-    - echo "Deploying WAR file to Tomcat server..."
-    - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/
+        # Deployment timing
+        echo "Recording deployment start time..."
+        export DEPLOY_START=$(date +%s)
+        export COMMIT_TIME=$(git log -1 --format=%ct)
+        export LEAD_TIME=$((DEPLOY_START - COMMIT_TIME))
 
-    # Restart Tomcat using remote commands (using sudo to remove only the exploded directory)
-    - echo "Restarting Tomcat..."
-    - |
-      ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
-      sudo rm -rf /opt/tomcat10/webapps/JobManagement
-      sleep 5
-      sudo /opt/tomcat10/bin/shutdown.sh || true
-      sudo /opt/tomcat10/bin/startup.sh
-      exit
-      EOF
-
-    # Wait for deployment to finish (monitoring Tomcat logs)
-    - echo "Waiting for deployment to finish..."
-    - |
-      tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-        echo "$line" | grep -q "Deployment of web application archive" && break;
-      done
-    - |
-        if [ $? -ne 0 ]; then
+        # Deployment attempt
+        echo "Deploying WAR file..."
+        if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "Deployment failed! Rolling back..."
-          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+          export ROLLBACK_START=$(date +%s)
+          
+          # Rollback with backup
+          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement.war
+          
+          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+            sleep 5
+            sudo /opt/tomcat10/bin/shutdown.sh || true
+            sudo /opt/tomcat10/bin/startup.sh
+          EOF
+          
+          export ROLLBACK_END=$(date +%s)
+          export ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
+          echo "Rollback completed in $ROLLBACK_DURATION seconds"
+          export DEPLOY_STATUS="failed"
+        else
+          # Restart Tomcat on success
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
             sudo rm -rf /opt/tomcat10/webapps/JobManagement
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
-            exit
           EOF
-          export ROLLBACK_END=$(date +%s)
-          export ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
-          echo "Rollback completed in $ROLLBACK_DURATION seconds."
-          # Add rollback time to metrics
-          echo "Rollback Time - $ROLLBACK_DURATION seconds." >> rollback_time.log
-        else
-          echo "No rollback needed" > rollback_time.log
+          export DEPLOY_STATUS="success"
         fi
-    - |
-      if [ -f rollback_time.log ] && grep -q "Rollback Time" rollback_time.log; then
-        export ROLLBACK_TIME=$(grep -oP '(?<=Rollback Time - )\d+' rollback_time.log || echo "N/A")
-      else
-        export ROLLBACK_TIME="N/A"
-      fi
-    # Record deployment end time and calculate deployment duration
-    - echo "Recording deployment end time..."
-    - export DEPLOY_END_TIME=$(date +%s)
-    - export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
-    - echo "Deployment took $DEPLOY_DURATION seconds."
 
-    # Measure resource usage after deployment
-    - echo "Measuring resource usage AFTER deployment..."
-    # - vmstat 1 5 > resource_usage_after.log
-    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-    - free -h > mem_after.log
+        # Final timing calculations
+        export DEPLOY_END=$(date +%s)
+        export DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+        export PIPELINE_END=$(date +%s)
+        export TOTAL_PIPELINE_TIME=$((PIPELINE_END - PIPELINE_START_TIME))
 
-    # Record pipeline end time and calculate total pipeline time
-    - echo "Recording pipeline end time..."
-    - export PIPELINE_END_TIME=$(date +%s)
-    - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
-    - echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds."
+        # Post-deployment metrics
+        echo "Measuring resource usage AFTER deployment..."
+        vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
+        free -h > mem_after.log
 
-    # Aggregate metrics and display them on the console
-    - echo "-------------------------------------------------" > metrics_summary.log
-    - echo "              CI/CD Metrics Summary              " >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - echo "| Metric                             | Value          |" >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
-    - printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_TIME" >> metrics_summary.log
-    - >
-      TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
-    - printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - echo "Memory Usage BEFORE (free -h):" >> metrics_summary.log
-    - cat mem_before.log >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - echo "Resource Usage BEFORE (vmstat):" >> metrics_summary.log
-    - cat resource_usage_before.log >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - echo "Memory Usage AFTER (free -h):" >> metrics_summary.log
-    - cat mem_after.log >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
-    - echo "Resource Usage AFTER (vmstat):" >> metrics_summary.log
-    - cat resource_usage_after.log >> metrics_summary.log
-    - echo "-------------------------------------------------" >> metrics_summary.log
+        # Metrics aggregation
+        echo "-------------------------------------------------" > metrics_summary.log
+        echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+        echo "| Metric                             | Value          |" >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
+        printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
+        
+        if [ "$DEPLOY_STATUS" = "failed" ]; then
+          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_DURATION" >> metrics_summary.log
+        else
+          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+        fi
 
-    # Display the aggregated metrics to the console
-    - echo "Metrics Summary:"
-    - cat metrics_summary.log
-    - echo "----- End of Metrics Display -----"
+        TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
+        printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
+        
+        echo "-------------------------------------------------" >> metrics_summary.log
+        echo "Memory Usage BEFORE:" >> metrics_summary.log
+        cat mem_before.log >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+        echo "Resource Usage BEFORE:" >> metrics_summary.log
+        cat resource_usage_before.log >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+        echo "Memory Usage AFTER:" >> metrics_summary.log
+        cat mem_after.log >> metrics_summary.log
+        echo "-------------------------------------------------" >> metrics_summary.log
+        echo "Resource Usage AFTER:" >> metrics_summary.log
+        cat resource_usage_after.log >> metrics_summary.log
 
-
-
-
+        # Final exit code
+        if [ "$DEPLOY_STATUS" = "failed" ]; then exit 1; fi
 
 artifacts:
   files:
-    - JobManagement_CODEBUILD.war
+    - JobManagement.war
     - test_results.log
-    - deployment_time.log
-    - pipeline_metrics.log
+    - compile_error.log
+    - metrics_summary.log
     - resource_usage_before.log
     - resource_usage_after.log
     - mem_before.log
     - mem_after.log
-    - metrics_summary.log
