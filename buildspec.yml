@@ -27,8 +27,8 @@ phases:
 
   post_build:
     commands:
+      - echo "Starting post-build operations..."
       - |
-        echo "Starting post-build operations..."
         # Validate build artifacts: if the WAR file is missing, trigger rollback.
         if [ ! -f JobManagement_CODEBUILD.war ]; then
           echo "🔥 Critical error: Missing WAR file! Initiating rollback..."
@@ -36,19 +36,19 @@ phases:
           cat compile.log
           echo "Deploying backup WAR for rollback..."
           scp -o StrictHostKeyChecking=no -i key.pem /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
-          ssh -i key.pem ubuntu@40.192.68.176 <<EOF
+          ssh -i key.pem ubuntu@40.192.68.176 <<'EOF'
           sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
           sudo /opt/tomcat10/bin/shutdown.sh || true
           sudo /opt/tomcat10/bin/startup.sh
           EOF
-          export ROLLBACK_DURATION=$(( $(date +%s) - $(date +%s) ))  # (Adjust this if you want to measure rollback time properly)
+          # Placeholder for rollback timing – adjust as needed
+          export ROLLBACK_DURATION=0
           echo "⏱️ Rollback duration: $ROLLBACK_DURATION seconds"
           exit 1
         fi
 
-        # Resource metrics - BEFORE deployment on remote host
+        # Resource metrics BEFORE deployment on remote host
         echo "📊 Capturing pre-deployment metrics..."
-        # (Assuming metrics are gathered locally; modify to SSH if needed)
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > metrics_before.log
         free -h > mem_before.log
 
@@ -64,7 +64,7 @@ phases:
         echo "🚀 Deploying WAR file to Tomcat server..."
         if scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "🔧 Restarting Tomcat..."
-          ssh -i key.pem ubuntu@40.192.68.176 <<EOF
+          ssh -i key.pem ubuntu@40.192.68.176 <<'EOF'
           sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
           sudo /opt/tomcat10/bin/shutdown.sh || true
           sudo /opt/tomcat10/bin/startup.sh
@@ -73,17 +73,17 @@ phases:
           echo "🔄 Deployment failed; initiating rollback..."
           export ROLLBACK_START=$(date +%s)
           scp -o StrictHostKeyChecking=no -i key.pem /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
-          ssh -i key.pem ubuntu@40.192.68.176 <<EOF
+          ssh -i key.pem ubuntu@40.192.68.176 <<'EOF'\
           sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
           sudo /opt/tomcat10/bin/shutdown.sh || true
           sudo /opt/tomcat10/bin/startup.sh
           EOF
-          export ROLLBACK_DURATION=$(( $(date +%s) - ROLLBACK_START ))
+          export ROLLBACK_DURATION=$(( $(date +%s) - $ROLLBACK_START ))
           echo "⏱️ Rollback duration: $ROLLBACK_DURATION seconds"
           exit 1
         fi
 
-        # Post-deployment metrics (could be from remote host via SSH if needed)
+        # Post-deployment metrics (can be modified to capture remote metrics via SSH if needed)
         echo "📈 Capturing post-deployment metrics..."
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > metrics_after.log
         free -h > mem_after.log
