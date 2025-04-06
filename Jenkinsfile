@@ -155,75 +155,6 @@ EOF
                 sh "free -h > ${MEM_AFTER_LOG}"
             }
         }
-
-        stage('Display Metrics') {
-            steps {
-                script {
-                    // Record the pipeline end time
-                    def pipelineEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-                    def totalPipelineTime = pipelineEndTime - pipelineStartTime
-
-                    // Read deployment time from file
-                    def deploymentTime = readFile(DEPLOYMENT_TIME_FILE).trim()
-
-                    // Read memory usage logs
-                    def memBefore = readFile(MEM_BEFORE_LOG).trim()
-                    def memAfter  = readFile(MEM_AFTER_LOG).trim()
-
-                    def resourceUsageBefore = readFile(RESOURCE_BEFORE_LOG).trim()
-                    def resourceUsageAfter = readFile(RESOURCE_AFTER_LOG).trim()
-
-                    // Update rollbackTime (no redeclaration)
-                    rollbackTime = "N/A"
-                    if (fileExists(ROLLBACK_LOG)) {
-                        def rollbackContent = readFile(ROLLBACK_LOG).trim()
-                        rollbackTime = rollbackContent.replaceAll("[^0-9]", "").isEmpty() ? "N/A" : rollbackContent.replaceAll("[^0-9]", "")
-                    }
-
-                    // Read Test Summary from test results log
-                    def testSummary = "N/A"
-                    if (fileExists(TEST_RESULTS_LOG)) {
-                        def testResults = readFile(TEST_RESULTS_LOG).trim()
-                        // Adjust filter: capture lines that mention "tests" (case insensitive)
-                        def summaryLines = testResults.readLines().findAll { it.toLowerCase().contains("tests") }
-                        testSummary = summaryLines ? summaryLines.join(" | ") : "N/A"
-                    }
-
-                    echo ""
-                    echo "-------------------------------------------------"
-                    echo "              CI/CD Metrics Summary              "
-                    echo "-------------------------------------------------"
-                    echo String.format("| %-35s | %-15s |", "Metric", "Value")
-                    echo "-------------------------------------------------"
-                    echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", totalPipelineTime)
-                    
-                    def deployTimeValue = deploymentTime.tokenize().find { it.isNumber() } ?: "N/A"
-                    echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deployTimeValue)
-                    echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
-                    echo String.format("| %-35s | %-15s |", "Rollback Time (sec)", rollbackTime)
-                    echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
-                    echo "-------------------------------------------------"
-                    echo ""
-                    echo "Memory Usage BEFORE Deployment (free -h):"
-                    echo "-------------------------------------------------"
-                    echo memBefore
-                    echo "-------------------------------------------------"
-                    echo "Memory Usage AFTER Deployment (free -h):"
-                    echo "-------------------------------------------------"
-                    echo memAfter
-                    echo "-------------------------------------------------"
-                    echo ""
-                    echo "Resource Usage BEFORE Deployment (vmstat):"
-                    echo "-------------------------------------------------"
-                    echo resourceUsageBefore
-                    echo "-------------------------------------------------"
-                    echo "Resource Usage AFTER Deployment (vmstat):"
-                    echo "-------------------------------------------------"
-                    echo resourceUsageAfter
-                    echo "-------------------------------------------------"
-                }
-            }
-        }
     }
 
     post {
@@ -234,7 +165,7 @@ EOF
             echo 'Deployment failed! Performing rollback...'
             script {
                 def rollbackStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-                // In rollback, check if the backup file exists. If yes, use it; otherwise, capture and print the compile error.
+                // In rollback, check if the backup file exists. If yes, use it; otherwise, capture compile error.
                 if (fileExists("${WAR_STORAGE}/${WAR_NAME}.backup")) {
                     sh """
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
@@ -249,7 +180,7 @@ EOF
                     """
                 } else {
                     // If backup not found, run a compile to capture the error output
-                    echo "Backup file ${WAR_NAME}.backup not found. Attempting to capture compile error..."
+                    echo "Backup file ${WAR_NAME}.backup not found. Capturing compile error..."
                     sh "javac src/main/java/model/Job.java 2> ${WORKSPACE}/compile_error.log || true"
                     def compileError = readFile("${WORKSPACE}/compile_error.log").trim()
                     echo "Compile error captured:\n${compileError}"
@@ -258,6 +189,64 @@ EOF
                 def computedRollbackTime = rollbackEndTime - rollbackStartTime
                 sh "echo \"Rollback took ${computedRollbackTime} seconds.\" >> ${ROLLBACK_LOG}"
                 echo "Rollback completed in ${computedRollbackTime} seconds."
+            }
+        }
+        // Always display metrics even if the job fails
+        always {
+            script {
+                def pipelineEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                def totalPipelineTime = pipelineEndTime - pipelineStartTime
+
+                def deploymentTime = fileExists(DEPLOYMENT_TIME_FILE) ? readFile(DEPLOYMENT_TIME_FILE).trim() : "N/A"
+                def memBefore = fileExists(MEM_BEFORE_LOG) ? readFile(MEM_BEFORE_LOG).trim() : "N/A"
+                def memAfter = fileExists(MEM_AFTER_LOG) ? readFile(MEM_AFTER_LOG).trim() : "N/A"
+                def resourceUsageBefore = fileExists(RESOURCE_BEFORE_LOG) ? readFile(RESOURCE_BEFORE_LOG).trim() : "N/A"
+                def resourceUsageAfter = fileExists(RESOURCE_AFTER_LOG) ? readFile(RESOURCE_AFTER_LOG).trim() : "N/A"
+                
+                rollbackTime = "N/A"
+                if (fileExists(ROLLBACK_LOG)) {
+                    def rollbackContent = readFile(ROLLBACK_LOG).trim()
+                    rollbackTime = rollbackContent.replaceAll("[^0-9]", "").isEmpty() ? "N/A" : rollbackContent.replaceAll("[^0-9]", "")
+                }
+                
+                def testSummary = "N/A"
+                if (fileExists(TEST_RESULTS_LOG)) {
+                    def testResults = readFile(TEST_RESULTS_LOG).trim()
+                    def summaryLines = testResults.readLines().findAll { it.toLowerCase().contains("tests") }
+                    testSummary = summaryLines ? summaryLines.join(" | ") : "N/A"
+                }
+                
+                echo ""
+                echo "-------------------------------------------------"
+                echo "              CI/CD Metrics Summary              "
+                echo "-------------------------------------------------"
+                echo String.format("| %-35s | %-15s |", "Metric", "Value")
+                echo "-------------------------------------------------"
+                echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", totalPipelineTime)
+                def deployTimeValue = deploymentTime.tokenize().find { it.isNumber() } ?: "N/A"
+                echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deployTimeValue)
+                echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
+                echo String.format("| %-35s | %-15s |", "Rollback Time (sec)", rollbackTime)
+                echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
+                echo "-------------------------------------------------"
+                echo ""
+                echo "Memory Usage BEFORE Deployment (free -h):"
+                echo "-------------------------------------------------"
+                echo memBefore
+                echo "-------------------------------------------------"
+                echo "Memory Usage AFTER Deployment (free -h):"
+                echo "-------------------------------------------------"
+                echo memAfter
+                echo "-------------------------------------------------"
+                echo ""
+                echo "Resource Usage BEFORE Deployment (vmstat):"
+                echo "-------------------------------------------------"
+                echo resourceUsageBefore
+                echo "-------------------------------------------------"
+                echo "Resource Usage AFTER Deployment (vmstat):"
+                echo "-------------------------------------------------"
+                echo resourceUsageAfter
+                echo "-------------------------------------------------"
             }
         }
     }
