@@ -106,7 +106,7 @@ pipeline {
         stage('Deploy and Restart Tomcat') {
             steps {
                 script {
-                    // Store deployment start time in env variable so it can be used later even if job fails
+                    // Save deployment start time in environment variable (for use later)
                     env.DEPLOY_START_TIME = sh(script: "date +%s", returnStdout: true).trim()
                     def commitTime = sh(script: "git log -1 --format=%ct", returnStdout: true).trim().toInteger()
                     def deployStartTime = env.DEPLOY_START_TIME.toInteger()
@@ -124,13 +124,12 @@ ${TOMCAT_HOME}/bin/shutdown.sh || true
 ${TOMCAT_HOME}/bin/startup.sh
 exit
 EOF
-
+                        
                         tail -f ${TOMCAT_HOME}/logs/catalina.out | while read line; do
                           echo "\${line}" | grep -q "Deployment of web application archive" && break;
                         done
                     """
-
-                    // Record deployment end time and save it in env
+                    
                     env.DEPLOY_END_TIME = sh(script: "date +%s", returnStdout: true).trim()
                     def deployDuration = env.DEPLOY_END_TIME.toInteger() - deployStartTime
                     sh "echo \"Deployment took ${deployDuration} seconds.\" >> ${DEPLOYMENT_TIME_FILE}"
@@ -175,7 +174,6 @@ EOF
                 }
                 def rollbackEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                 def computedRollbackTime = rollbackEndTime - rollbackStartTime
-                // Write rollback deployment time to file (do not echo directly)
                 sh "echo \"${computedRollbackTime}\" > ${ROLLBACK_DEPLOYMENT_TIME_FILE}"
             }
         }
@@ -184,24 +182,13 @@ EOF
                 def pipelineEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                 def totalPipelineTime = pipelineEndTime - pipelineStartTime
 
-                // Calculate deployment time from stored env variables if available
-                def deploymentTime = "N/A"
-                if (env.DEPLOY_START_TIME && env.DEPLOY_END_TIME) {
-                    deploymentTime = env.DEPLOY_END_TIME.toInteger() - env.DEPLOY_START_TIME.toInteger()
-                } else if (fileExists(DEPLOYMENT_TIME_FILE)) {
-                    deploymentTime = readFile(DEPLOYMENT_TIME_FILE).trim()
-                }
+                // Determine build result. If currentBuild.result is null, treat as SUCCESS.
+                def buildResult = currentBuild.result ?: "SUCCESS"
 
-                def memBefore = fileExists(MEM_BEFORE_LOG) ? readFile(MEM_BEFORE_LOG).trim() : "N/A"
-                def memAfter = fileExists(MEM_AFTER_LOG) ? readFile(MEM_AFTER_LOG).trim() : "N/A"
-                def resourceUsageBefore = fileExists(RESOURCE_BEFORE_LOG) ? readFile(RESOURCE_BEFORE_LOG).trim() : "N/A"
-                def resourceUsageAfter = fileExists(RESOURCE_AFTER_LOG) ? readFile(RESOURCE_AFTER_LOG).trim() : "N/A"
+                // For lead time, we already calculated it in the deploy stage (if available)
+                def leadTime = leadTimeForChanges
 
-                def rollbackDeployTime = "N/A"
-                if (fileExists(ROLLBACK_DEPLOYMENT_TIME_FILE)) {
-                    rollbackDeployTime = readFile(ROLLBACK_DEPLOYMENT_TIME_FILE).trim()
-                }
-                
+                // Test summary from test results
                 def testSummary = "N/A"
                 if (fileExists(TEST_RESULTS_LOG)) {
                     def testResults = readFile(TEST_RESULTS_LOG).trim()
@@ -209,36 +196,56 @@ EOF
                     testSummary = summaryLines ? summaryLines.join(" | ") : "N/A"
                 }
                 
+                // Read deployment time if available
+                def deploymentTime = "N/A"
+                if (fileExists(DEPLOYMENT_TIME_FILE)) {
+                    deploymentTime = readFile(DEPLOYMENT_TIME_FILE).trim()
+                }
+                
+                // Read rollback deployment time if available
+                def rollbackDeployTime = "N/A"
+                if (fileExists(ROLLBACK_DEPLOYMENT_TIME_FILE)) {
+                    rollbackDeployTime = readFile(ROLLBACK_DEPLOYMENT_TIME_FILE).trim()
+                }
+                
                 echo ""
-                echo "-------------------------------------------------"
-                echo "              CI/CD Metrics Summary              "
-                echo "-------------------------------------------------"
-                echo String.format("| %-35s | %-15s |", "Metric", "Value")
-                echo "-------------------------------------------------"
-                echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", totalPipelineTime)
-                echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deploymentTime)
-                echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
-                echo String.format("| %-35s | %-15s |", "Rollback Deployment Time (sec)", rollbackDeployTime)
-                echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
-                echo "-------------------------------------------------"
+                if (buildResult == "SUCCESS") {
+                    echo "------------------- SUCCESS METRICS -------------------"
+                    echo String.format("| %-35s | %-15s |", "Metric", "Value")
+                    echo "--------------------------------------------------------"
+                    echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", totalPipelineTime)
+                    echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deploymentTime)
+                    echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTime)
+                    echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
+                    echo "--------------------------------------------------------"
+                } else {
+                    echo "------------------ FAILURE METRICS --------------------"
+                    echo String.format("| %-35s | %-15s |", "Metric", "Value")
+                    echo "--------------------------------------------------------"
+                    echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", totalPipelineTime)
+                    echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deploymentTime)
+                    echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTime)
+                    echo String.format("| %-35s | %-15s |", "Rollback Deployment Time (sec)", rollbackDeployTime)
+                    echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
+                    echo "--------------------------------------------------------"
+                }
                 echo ""
                 echo "Memory Usage BEFORE Deployment (free -h):"
-                echo "-------------------------------------------------"
-                echo memBefore
-                echo "-------------------------------------------------"
+                echo "--------------------------------------------------------"
+                echo fileExists(MEM_BEFORE_LOG) ? readFile(MEM_BEFORE_LOG).trim() : "N/A"
+                echo "--------------------------------------------------------"
                 echo "Memory Usage AFTER Deployment (free -h):"
-                echo "-------------------------------------------------"
-                echo memAfter
-                echo "-------------------------------------------------"
-                echo ""
+                echo "--------------------------------------------------------"
+                echo fileExists(MEM_AFTER_LOG) ? readFile(MEM_AFTER_LOG).trim() : "N/A"
+                echo "--------------------------------------------------------"
                 echo "Resource Usage BEFORE Deployment (vmstat):"
-                echo "-------------------------------------------------"
-                echo resourceUsageBefore
-                echo "-------------------------------------------------"
+                echo "--------------------------------------------------------"
+                echo fileExists(RESOURCE_BEFORE_LOG) ? readFile(RESOURCE_BEFORE_LOG).trim() : "N/A"
+                echo "--------------------------------------------------------"
                 echo "Resource Usage AFTER Deployment (vmstat):"
-                echo "-------------------------------------------------"
-                echo resourceUsageAfter
-                echo "-------------------------------------------------"
+                echo "--------------------------------------------------------"
+                echo fileExists(RESOURCE_AFTER_LOG) ? readFile(RESOURCE_AFTER_LOG).trim() : "N/A"
+                echo "--------------------------------------------------------"
             }
         }
     }
