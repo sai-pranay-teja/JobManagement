@@ -15,13 +15,10 @@ phases:
     commands:
       - echo "Building Application..."
       - mkdir -p build/WEB-INF/classes
-      # Attempt to compile Java code; if compilation fails, log error but do not exit
       - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile.log || { echo "🛑 Compilation failed"; }
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
-      # Create WAR file; if WAR creation fails, log error but continue
       - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "🛑 WAR creation failed"; }
-      # Save a backup of the WAR file (for rollback)
       - mkdir -p /tmp/build_artifacts
       - cp JobManagement_CODEBUILD.war /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak
 
@@ -29,7 +26,6 @@ phases:
     commands:
       - echo "Starting post-build operations..."
       - |
-        # Validate build artifacts: if the WAR file is missing, trigger rollback.
         if [ ! -f JobManagement_CODEBUILD.war ]; then
           echo "🔥 Critical error: Missing WAR file! Initiating rollback..."
           echo "Compilation errors (if any):"
@@ -41,18 +37,15 @@ phases:
           sudo /opt/tomcat10/bin/shutdown.sh || true
           sudo /opt/tomcat10/bin/startup.sh
           EOF
-          # Placeholder for rollback timing – adjust as needed
           export ROLLBACK_DURATION=0
           echo "⏱️ Rollback duration: $ROLLBACK_DURATION seconds"
           exit 1
         fi
 
-        # Resource metrics BEFORE deployment on remote host
         echo "📊 Capturing pre-deployment metrics..."
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > metrics_before.log
         free -h > mem_before.log
 
-        # Deployment timing and lead time calculation
         echo "Recording deployment start time..."
         export DEPLOY_START=$(date +%s)
         echo "Calculating Lead Time for Changes..."
@@ -60,7 +53,6 @@ phases:
         export LEAD_TIME=$(( DEPLOY_START - COMMIT_TIME ))
         echo "Lead Time for Changes - $LEAD_TIME seconds"
 
-        # Deploy the WAR file to Tomcat server
         echo "🚀 Deploying WAR file to Tomcat server..."
         if scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "🔧 Restarting Tomcat..."
@@ -68,12 +60,12 @@ phases:
           sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
           sudo /opt/tomcat10/bin/shutdown.sh || true
           sudo /opt/tomcat10/bin/startup.sh
-          EOF
+        EOF
         else
           echo "🔄 Deployment failed; initiating rollback..."
           export ROLLBACK_START=$(date +%s)
           scp -o StrictHostKeyChecking=no -i key.pem /tmp/build_artifacts/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
-          ssh -i key.pem ubuntu@40.192.68.176 <<'EOF'\
+          ssh -i key.pem ubuntu@40.192.68.176 <<'EOF'
           sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
           sudo /opt/tomcat10/bin/shutdown.sh || true
           sudo /opt/tomcat10/bin/startup.sh
@@ -83,19 +75,16 @@ phases:
           exit 1
         fi
 
-        # Post-deployment metrics (can be modified to capture remote metrics via SSH if needed)
         echo "📈 Capturing post-deployment metrics..."
         vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > metrics_after.log
         free -h > mem_after.log
 
-        # Final timing calculations
         export PIPELINE_END=$(date +%s)
         export TOTAL_DURATION=$(( PIPELINE_END - PIPELINE_START ))
         export DEPLOY_DURATION=$(( $(date +%s) - DEPLOY_START ))
         echo "Total Pipeline Duration - $TOTAL_DURATION seconds."
         echo "Deployment took $DEPLOY_DURATION seconds."
 
-        # Generate metrics summary report
         echo "📄 Generating metrics summary..."
         {
           echo "-------------------------------------------------"
