@@ -10,7 +10,7 @@ pipeline {
     environment {
         // Tomcat and deployment variables
         TOMCAT_HOME          = "/opt/tomcat10"
-        WAR_NAME             = "JobManagement.war"
+        WAR_NAME             = "JobManagement_JENKINS.war"
         DEPLOY_DIR           = "${TOMCAT_HOME}/webapps"
         WAR_STORAGE          = "${WORKSPACE}"  // WAR built in workspace
 
