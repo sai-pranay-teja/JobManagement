@@ -12,51 +12,45 @@ phases:
       - grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
       - grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
       - chmod 400 key.pem
-      - echo "Recording pipeline start time..."
       - export PIPELINE_START_TIME=$(date +%s)
 
   build:
     commands:
       - echo "Building Job Management System..."
       - mkdir -p build/WEB-INF/classes
-      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
+      # Compile with error capture (critical fix)
+      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log
+      - if [ -s compile_error.log ]; then echo "Compilation failed"; cat compile_error.log; exit 1; fi
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
-      - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
+      - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed"; exit 1; }
+      # Create backup only if build succeeds
       - mkdir -p /tmp/codebuild_backup
-      - cp JobManagement_CODEBUILD.war /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak
+      - cp JobManagement_CODEBUILD.war /tmp/codebuild_backup/
 
   post_build:
     commands:
+      - echo "Starting metrics collection..."
+      # Resource measurement before deployment
+      - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
+      - free -h > mem_before.log
+
+      # Deployment timing
+      - export DEPLOY_START=$(date +%s)
+      - export COMMIT_TIME=$(git log -1 --format=%ct)
+      - export LEAD_TIME=$((DEPLOY_START - COMMIT_TIME))
+
+      # Deployment attempt with rollback support
       - |
-        if [ ! -f JobManagement_CODEBUILD.war ]; then
-          echo "Build failed - showing compilation errors:"
-          cat compile_error.log
-          exit 1
-        fi
-
-        # Resource measurement before deployment
-        echo "Measuring resource usage BEFORE deployment..."
-        vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_before.log
-        free -h > mem_before.log
-
-        # Deployment timing
-        echo "Recording deployment start time..."
-        export DEPLOY_START=$(date +%s)
-        export COMMIT_TIME=$(git log -1 --format=%ct)
-        export LEAD_TIME=$((DEPLOY_START - COMMIT_TIME))
-
-        # Deployment attempt
-        echo "Deploying WAR file..."
         if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
           echo "Deployment failed! Rolling back..."
           export ROLLBACK_START=$(date +%s)
           
           # Rollback with backup
-          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/
           
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
@@ -67,9 +61,9 @@ phases:
           echo "Rollback completed in $ROLLBACK_DURATION seconds"
           export DEPLOY_STATUS="failed"
         else
-          # Restart Tomcat on success
+          # Successful deployment steps
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
@@ -77,18 +71,18 @@ phases:
           export DEPLOY_STATUS="success"
         fi
 
-        # Final timing calculations
-        export DEPLOY_END=$(date +%s)
-        export DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
-        export PIPELINE_END=$(date +%s)
-        export TOTAL_PIPELINE_TIME=$((PIPELINE_END - PIPELINE_START_TIME))
+      # Final timing calculations
+      - export DEPLOY_END=$(date +%s)
+      - export DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+      - export PIPELINE_END=$(date +%s)
+      - export TOTAL_PIPELINE_TIME=$((PIPELINE_END - PIPELINE_START_TIME))
 
-        # Post-deployment metrics
-        echo "Measuring resource usage AFTER deployment..."
-        vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-        free -h > mem_after.log
+      # Post-deployment metrics
+      - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
+      - free -h > mem_after.log
 
-        # Metrics aggregation
+      # Metrics aggregation
+      - |
         echo "-------------------------------------------------" > metrics_summary.log
         echo "              CI/CD Metrics Summary              " >> metrics_summary.log
         echo "-------------------------------------------------" >> metrics_summary.log
@@ -104,24 +98,24 @@ phases:
           printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
         fi
 
-        TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
+        TEST_SUMMARY=$(grep -iE "tests found|tests successful" test_results.log | head -n 1 || echo "N/A")
         printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY" >> metrics_summary.log
         
-        echo "-------------------------------------------------" >> metrics_summary.log
+        # Add resource usage to metrics
         echo "Memory Usage BEFORE:" >> metrics_summary.log
         cat mem_before.log >> metrics_summary.log
-        echo "-------------------------------------------------" >> metrics_summary.log
         echo "Resource Usage BEFORE:" >> metrics_summary.log
         cat resource_usage_before.log >> metrics_summary.log
-        echo "-------------------------------------------------" >> metrics_summary.log
         echo "Memory Usage AFTER:" >> metrics_summary.log
         cat mem_after.log >> metrics_summary.log
-        echo "-------------------------------------------------" >> metrics_summary.log
         echo "Resource Usage AFTER:" >> metrics_summary.log
         cat resource_usage_after.log >> metrics_summary.log
 
-        # Final exit code
-        if [ "$DEPLOY_STATUS" = "failed" ]; then exit 1; fi
+        # Display metrics
+        cat metrics_summary.log
+
+      # Final exit code
+      - if [ "$DEPLOY_STATUS" = "failed" ]; then exit 1; fi
 
 artifacts:
   files:
