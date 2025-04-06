@@ -126,7 +126,7 @@ phases:
     # Restart Tomcat using remote commands (using sudo to remove only the exploded directory)
     - echo "Restarting Tomcat..."
     - |
-      ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
+      ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@4.192.68.176 <<'EOF'
       sudo rm -rf /opt/tomcat10/webapps/JobManagement
       sleep 5
       sudo /opt/tomcat10/bin/shutdown.sh || true
