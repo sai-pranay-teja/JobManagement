@@ -63,9 +63,9 @@ pipeline {
         stage('Build WAR') {
             steps {
                 sh 'mkdir -p build/WEB-INF/classes'
-                sh '''
+                sh """
                 javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")' 2> ${WORKSPACE}/compile_error.log
-                '''
+                """
                 sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                 sh 'cp -R src/main/webapp/* build/'
                 sh 'jar -cvf ${WAR_NAME} -C build .'
