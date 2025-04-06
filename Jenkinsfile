@@ -64,7 +64,7 @@ pipeline {
             steps {
                 sh 'mkdir -p build/WEB-INF/classes'
                 // sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
-                sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> ${WORKSPACE}/compile_error.log || true'
+                sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> ${WORKSPACE}/compile_error.log'
 
                 sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                 sh 'cp -R src/main/webapp/* build/'
