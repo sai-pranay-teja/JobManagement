@@ -20,6 +20,8 @@ pipeline {
         LOG_FILE             = "${WORKSPACE}/deployment.log"
         DEPLOYMENT_TIME_FILE = "${WORKSPACE}/deployment_time.log"
         ROLLBACK_LOG         = "${WORKSPACE}/rollback.log"
+        // New file to record rollback deployment time
+        ROLLBACK_DEPLOYMENT_TIME_FILE = "${WORKSPACE}/rollback_deployment_time.log"
 
         // Memory usage log files in human readable format
         MEM_BEFORE_LOG       = "${WORKSPACE}/mem_before.log"
@@ -73,10 +75,10 @@ pipeline {
         stage('Backup WAR') {
             steps {
                 script {
-                    // Create a backup of the WAR file in the workspace if it exists.
+                    // Create a backup of the WAR file in the workspace using _BACKUP if it exists.
                     if (fileExists("${WAR_STORAGE}/${WAR_NAME}")) {
-                        sh "cp ${WAR_STORAGE}/${WAR_NAME} ${WAR_STORAGE}/${WAR_NAME}.backup"
-                        echo "Backup created: ${WAR_STORAGE}/${WAR_NAME}.backup"
+                        sh "cp ${WAR_STORAGE}/${WAR_NAME} ${WAR_STORAGE}/${WAR_NAME}_BACKUP"
+                        echo "Backup created: ${WAR_STORAGE}/${WAR_NAME}_BACKUP"
                     } else {
                         echo "ERROR: WAR file ${WAR_NAME} not found; backup not created."
                     }
@@ -115,12 +117,12 @@ pipeline {
                     // Record deployment start time
                     def deployStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
 
-                    // Calculate Lead Time for Changes: (difference between the last commit timestamp and deployment start time)
+                    // Calculate Lead Time for Changes (difference between last commit timestamp and deployment start time)
                     def commitTime = sh(script: "git log -1 --format=%ct", returnStdout: true).trim().toInteger()
                     leadTimeForChanges = deployStartTime - commitTime
-                    echo "Lead Time for Changes (time from last commit to deployment start): ${leadTimeForChanges} seconds"
+                    echo "Lead Time for Changes (sec): ${leadTimeForChanges}"
 
-                    // Transfer the WAR file and restart Tomcat via SSH
+                    // Deploy the WAR file and restart Tomcat via SSH
                     sh """
                         echo "Starting deployment at \$(date)" >> ${LOG_FILE}
                         scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
@@ -165,11 +167,12 @@ EOF
             echo 'Deployment failed! Performing rollback...'
             script {
                 def rollbackStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-                // In rollback, check if the backup file exists. If yes, use it; otherwise, capture compile error.
-                if (fileExists("${WAR_STORAGE}/${WAR_NAME}.backup")) {
+                // In rollback, check if the backup file exists. If yes, use it; otherwise, capture the compile error.
+                if (fileExists("${WAR_STORAGE}/${WAR_NAME}_BACKUP")) {
+                    // Use the backup file to restore the deployed WAR.
                     sh """
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${DEPLOY_DIR}/${WAR_NAME}"
-                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}.backup ${DEPLOY_DIR}/"
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "cp ${WAR_STORAGE}/${WAR_NAME}_BACKUP ${DEPLOY_DIR}/"
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
 sleep 5
@@ -179,14 +182,15 @@ exit
 EOF
                     """
                 } else {
-                    // If backup not found, run a compile to capture the error output
-                    echo "Backup file ${WAR_NAME}.backup not found. Capturing compile error..."
+                    echo "Backup file ${WAR_NAME}_BACKUP not found. Capturing compile error..."
                     sh "javac src/main/java/model/Job.java 2> ${WORKSPACE}/compile_error.log || true"
                     def compileError = readFile("${WORKSPACE}/compile_error.log").trim()
                     echo "Compile error captured:\n${compileError}"
                 }
                 def rollbackEndTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                 def computedRollbackTime = rollbackEndTime - rollbackStartTime
+                // Save rollback deployment time to file
+                sh "echo \"${computedRollbackTime}\" > ${ROLLBACK_DEPLOYMENT_TIME_FILE}"
                 sh "echo \"Rollback took ${computedRollbackTime} seconds.\" >> ${ROLLBACK_LOG}"
                 echo "Rollback completed in ${computedRollbackTime} seconds."
             }
@@ -209,6 +213,11 @@ EOF
                     rollbackTime = rollbackContent.replaceAll("[^0-9]", "").isEmpty() ? "N/A" : rollbackContent.replaceAll("[^0-9]", "")
                 }
                 
+                def rollbackDeployTime = "N/A"
+                if (fileExists(ROLLBACK_DEPLOYMENT_TIME_FILE)) {
+                    rollbackDeployTime = readFile(ROLLBACK_DEPLOYMENT_TIME_FILE).trim()
+                }
+                
                 def testSummary = "N/A"
                 if (fileExists(TEST_RESULTS_LOG)) {
                     def testResults = readFile(TEST_RESULTS_LOG).trim()
@@ -227,6 +236,7 @@ EOF
                 echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deployTimeValue)
                 echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
                 echo String.format("| %-35s | %-15s |", "Rollback Time (sec)", rollbackTime)
+                echo String.format("| %-35s | %-15s |", "Rollback Deployment Time (sec)", rollbackDeployTime)
                 echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
                 echo "-------------------------------------------------"
                 echo ""
