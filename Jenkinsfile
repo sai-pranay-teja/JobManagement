@@ -38,21 +38,20 @@ pipeline {
 
     stages {
 
-        stage('Clean Workspace') {
-            steps {
-                // Clean the workspace to ensure a fresh start
-                cleanWs()
-            }
-        }
         // stage('Clean Workspace') {
         //     steps {
         //         // Clean the workspace to ensure a fresh start
-        //         // cleanWs(patterns: [[pattern: '**/*_bak', type: 'EXCLUDE']])
-        //         cleanWs(deleteDirs: true, notFailBuild: true, patterns: [[pattern: '**/*_bak', type: 'EXCLUDE']])
-
-
+        //         cleanWs()
         //     }
         // }
+        stage('Clean Workspace') {
+            steps {
+        // Clean workspace but retain the backups directory
+               cleanWs(
+                patterns: [[pattern: 'backups/**', type: 'EXCLUDE']]
+        )
+      }
+    }
 
         stage('Initialize') {
             steps {
@@ -96,14 +95,21 @@ pipeline {
         //         }
         //     }
         // }
+
         stage('Backup WAR') {
             steps {
                 script {
                     // Create a backup of the WAR file in the workspace if it exists.
                     if (fileExists("${WAR_STORAGE}/${WAR_NAME}")) {
-                        sh "mkdir -p ${BACKUP_DIR}"
-                        sh "cp ${WAR_STORAGE}/${WAR_NAME} ${BACKUP_DIR}/${WAR_NAME}_bak"
-                        echo "Backup created: ${BACKUP_DIR}/${WAR_NAME}_bak"
+                        // sh "mkdir -p ${BACKUP_DIR}"
+                        // sh "cp ${WAR_STORAGE}/${WAR_NAME} ${BACKUP_DIR}/${WAR_NAME}_bak"
+                        // echo "Backup created: ${BACKUP_DIR}/${WAR_NAME}_bak"
+                              def backupDir = "${WORKSPACE}/backups"
+                              def warFile = "${WAR_STORAGE}/${WAR_NAME}"
+                              def backupFile = "${backupDir}/${WAR_NAME}_bak"
+                              sh "mkdir -p ${backupDir}"
+                              sh "cp ${warFile} ${backupFile}"
+                              echo "Backup saved: ${backupFile}"
                         // archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}_bak", fingerprint: true
                     } else {
                         echo "ERROR: WAR file ${WAR_NAME} not found; backup not created."
