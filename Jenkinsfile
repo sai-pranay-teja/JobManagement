@@ -37,10 +37,17 @@ pipeline {
 
     stages {
 
+        // stage('Clean Workspace') {
+        //     steps {
+        //         // Clean the workspace to ensure a fresh start
+        //         cleanWs()
+        //     }
+        // }
         stage('Clean Workspace') {
             steps {
                 // Clean the workspace to ensure a fresh start
-                cleanWs()
+                cleanWs(patterns: [[pattern: '**/*_BACKUP', type: 'EXCLUDE']])
+
             }
         }
 
