@@ -103,7 +103,7 @@ jobs:
           TOTAL_TIME=$(( $(date +%s) - $PIPELINE_START ))
 
           # Resource Metrics
-          vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > vmstat.log
+          vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > vmstat.log
           free -h > memory.log
           ps -o %cpu,%mem,cmd > processes.log
 

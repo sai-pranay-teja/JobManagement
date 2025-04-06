@@ -15,8 +15,8 @@ pipeline {
         WAR_STORAGE          = "${WORKSPACE}"  // WAR built in workspace
 
         // Log file variables
-        RESOURCE_BEFORE_LOG         = "${WORKSPACE}/resource_before_usage.log"
-        RESOURCE_AFTER_LOG         = "${WORKSPACE}/resource_after_usage.log"
+        RESOURCE_BEFORE_LOG  = "${WORKSPACE}/resource_before_usage.log"
+        RESOURCE_AFTER_LOG   = "${WORKSPACE}/resource_after_usage.log"
         LOG_FILE             = "${WORKSPACE}/deployment.log"
         DEPLOYMENT_TIME_FILE = "${WORKSPACE}/deployment_time.log"
         ROLLBACK_LOG         = "${WORKSPACE}/rollback.log"
@@ -31,11 +31,19 @@ pipeline {
         // SSH variables for accessing the server as root
         SSH_KEY              = "/var/lib/jenkins/.ssh/id_rsa"
         SSH_USER             = "root"
-        SSH_HOST             = "40.192.55.121"
+        SSH_HOST             = "40.192.68.176"
         SSH_OPTS             = "-o StrictHostKeyChecking=no"
     }
 
     stages {
+
+        stage('Clean Workspace') {
+            steps {
+                // Clean the workspace to ensure a fresh start
+                cleanWs()
+            }
+        }
+
         stage('Initialize') {
             steps {
                 script {
@@ -81,7 +89,6 @@ pipeline {
 
         stage('Measure Resource Usage Before Deployment') {
             steps {
-                // sh "echo 'Resource usage before deployment:' > ${RESOURCE_LOG}"
                 sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_BEFORE_LOG}"
                 // Capture memory usage in human readable format
                 sh "free -h > ${MEM_BEFORE_LOG}"
@@ -129,7 +136,6 @@ EOF
 
         stage('Measure Resource Usage After Deployment') {
             steps {
-                // sh "echo 'Resource usage after deployment:' > ${RESOURCE_LOG}"
                 sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_AFTER_LOG}"
                 // Capture memory usage in human readable format after deployment
                 sh "free -h > ${MEM_AFTER_LOG}"
@@ -201,11 +207,8 @@ EOF
                     echo "-------------------------------------------------"
                     echo resourceUsageAfter
                     echo "-------------------------------------------------"
-
                 }
-                
             }
-
         }
     }
 
@@ -236,4 +239,3 @@ EOF
         }
     }
 }
-
