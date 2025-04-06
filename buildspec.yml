@@ -29,7 +29,7 @@ phases:
       - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
-      - jar -cvf JobManagement.war -C build .
+      - jar -cvf JobManagement_CODEBUILD.war -C build .
       - echo "Running Unit Tests..."
       - mkdir -p test_output
       - javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
@@ -52,9 +52,7 @@ phases:
   #   - export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
   #   - echo "Lead Time for Changes - $LEAD_TIME seconds"
 
-  #   # Deploy the WAR file to Tomcat server
-  #   - echo "Deploying WAR file to Tomcat server..."
-  #   - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
+
 
   #   # Restart Tomcat using remote commands (removes only the exploded directory)
   #   - echo "Restarting Tomcat..."
@@ -125,7 +123,7 @@ phases:
 
     # Deploy the WAR file to Tomcat server
     - echo "Deploying WAR file to Tomcat server..."
-    - scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
+    - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.55.121:/opt/tomcat10/webapps/
 
     # Restart Tomcat using remote commands (using sudo to remove only the exploded directory)
     - echo "Restarting Tomcat..."
@@ -200,7 +198,7 @@ phases:
 
 artifacts:
   files:
-    - JobManagement.war
+    - JobManagement_CODEBUILD.war
     - test_results.log
     - deployment_time.log
     - pipeline_metrics.log
