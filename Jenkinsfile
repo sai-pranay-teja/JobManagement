@@ -48,6 +48,7 @@ pipeline {
             steps {
         // Clean workspace but retain the backups directory
                cleanWs(
+                deleteDirs: true,
                 patterns: [[pattern: 'backups/**', type: 'EXCLUDE']]
         )
       }
@@ -104,7 +105,7 @@ pipeline {
                         // sh "mkdir -p ${BACKUP_DIR}"
                         // sh "cp ${WAR_STORAGE}/${WAR_NAME} ${BACKUP_DIR}/${WAR_NAME}_bak"
                         // echo "Backup created: ${BACKUP_DIR}/${WAR_NAME}_bak"
-                              def backupDir = "${WORKSPACE}/backups"
+                              def backupDir = "/tmp/jenkins_bak"
                               def warFile = "${WAR_STORAGE}/${WAR_NAME}"
                               def backupFile = "${backupDir}/${WAR_NAME}_bak"
                               sh "mkdir -p ${backupDir}"
