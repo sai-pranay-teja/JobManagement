@@ -1,7 +1,7 @@
 package model;
 
 public class Job {
-    private int jobId
+    private int jobId;
     private String title;
     private String description;
     private String location;
