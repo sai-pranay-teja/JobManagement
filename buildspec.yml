@@ -22,9 +22,10 @@ phases:
   post_build:
     commands:
       - >
-        if [ ! -f JobManagement_CODEBUILD.war ]; then
+        if [ -f JobManagement_CODEBUILD.war ]; then
           echo "Build succeeded! Creating backup..."
           scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+        else  
           echo -e "\nBuild failed - compilation errors:"
           cat compile_error.log
           echo "Rolling back..."
