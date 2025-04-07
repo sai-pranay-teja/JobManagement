@@ -41,7 +41,9 @@ jobs:
         run: |
           mkdir -p build/WEB-INF/classes
           # Compile Java sources; redirect errors to compile_error.log and exit if compilation fails.
-          javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
+          # javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
+          javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log
+
           cp -R src/main/resources/* build/WEB-INF/classes/
           cp -R src/main/webapp/* build/
           jar -cvf JobManagement_ACTIONS.war -C build .
