@@ -8,15 +8,15 @@ hooks:
     - location: scripts/stop_tomcat.sh
       timeout: 300
       runas: root
-  BeforeInstall:
-    - location: scripts/backup_current.sh
-      timeout: 300
-      runas: root
+  # BeforeInstall:
+  #   - location: scripts/backup_current.sh
+  #     timeout: 300
+  #     runas: root
   AfterInstall:
     - location: scripts/restart_tomcat.sh
       timeout: 300
       runas: root
-  RollBack:
+  Rollback:
     - location: scripts/rollback.sh
       timeout: 300
       runas: root

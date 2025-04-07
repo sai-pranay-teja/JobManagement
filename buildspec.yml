@@ -33,6 +33,11 @@ phases:
           exit 1
         fi
       - echo "Packaging artifact for CodeDeploy..."
+      - >
+        if [ -f JobManagement_CODEBUILD.war ]; then
+          echo "Uploading WAR backup to S3..."
+          aws s3 cp JobManagement_CODEBUILD.war s3://codepipeline-ap-south-2-395016a2288a-4697-b4c9-fd77f4ff680a/backups/JobManagement_CODEBUILD.war_bak
+        fi
 artifacts:
   files:
     - JobManagement_CODEBUILD.war
