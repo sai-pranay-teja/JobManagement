@@ -6,38 +6,33 @@ phases:
       java: corretto17
   pre_build:
     commands:
-      - echo "Fetching SSH Key from AWS Secrets Manager..."
+      - echo "Fetching SSH Key..."
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_3 --query SecretString --output text > key.pem
       - sed -i 's/\\n/\n/g' key.pem
-      - grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
-      - grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
       - chmod 400 key.pem
-      - export PIPELINE_START_TIME=$(date +%s)
+      - echo "Backing up current WAR..."
+      - ssh -i key.pem ubuntu@40.192.33.107 "cp /opt/tomcat10/webapps/JobManagement_CODEBUILD.war /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak"
   build:
     commands:
-      - echo "Building Job Management System..."
+      - echo "Building..."
       - mkdir -p build/WEB-INF/classes
       - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
-      - echo "Copying backup of WAR file to remote server..."
-      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "mkdir -p /tmp/codebuild_bak"
-      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
   post_build:
     commands:
       - >
         if [ ! -f JobManagement_CODEBUILD.war ]; then
           echo -e "\nBuild failed - compilation errors:"
           cat compile_error.log
+          echo "Rolling back..."
+          ssh -i key.pem ubuntu@40.192.33.107 "sudo systemctl stop tomcat && cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war && sudo systemctl start tomcat"
           exit 1
         fi
-      - echo "Packaging artifact for CodeDeploy..."
-      - >
-        if [ -f JobManagement_CODEBUILD.war ]; then
-          echo "Uploading WAR backup to S3..."
-          aws s3 cp JobManagement_CODEBUILD.war s3://codepipeline-ap-south-2-395016a2288a-4697-b4c9-fd77f4ff680a/backups/JobManagement_CODEBUILD.war_bak
-        fi
+      - echo "Deploying new WAR..."
+      - scp -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/opt/tomcat10/webapps/
+      - ssh -i key.pem ubuntu@40.192.33.107 "sudo systemctl restart tomcat"
 artifacts:
   files:
     - JobManagement_CODEBUILD.war
