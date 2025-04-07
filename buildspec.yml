@@ -16,7 +16,7 @@ phases:
       # Capture the pipeline start time and store it to a file for later use.
       - export PIPELINE_START_TIME=$(date +%s)
       - echo $PIPELINE_START_TIME > pipeline_start_time.txt
-      - echo "Fetched pipeline start time: $PIPELINE_START_TIME"
+      - echo "Fetched pipeline start time - $PIPELINE_START_TIME"
       - echo "Fetching SSH Key..."
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_3 --query SecretString --output text > key.pem
       - sed -i 's/\\n/\n/g' key.pem
