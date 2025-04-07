@@ -15,7 +15,7 @@ public class Application {
 
     // Parameterized constructor
     public Application(int jobId, int applicantId, String status) {
-        this.jobId = jobId;
+        this.jobId = jobId
         this.applicantId = applicantId;
         this.status = status;
     }
