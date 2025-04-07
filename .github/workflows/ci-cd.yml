@@ -115,6 +115,9 @@ jobs:
       - name: Rollback if deployment failed
         if: failure()
         run: |
+          echo $'The error is:\n '
+          cat compile_error.log
+
           echo "Deployment failed! Initiating rollback..."
           ROLLBACK_START=$(date +%s)
 
@@ -168,3 +171,4 @@ jobs:
           echo "Resource Usage AFTER (vmstat):"
           cat resource_usage_after.log
           echo "-------------------------------------------------"
+          
