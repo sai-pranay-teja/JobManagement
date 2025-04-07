@@ -39,7 +39,6 @@ jobs:
       - name: Build WAR file
         run: |
           mkdir -p build/WEB-INF/classes
-          # Compile sources and capture errors in compile_error.log
           javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
           cp -R src/main/resources/* build/WEB-INF/classes/
           cp -R src/main/webapp/* build/
@@ -56,14 +55,14 @@ jobs:
           mkdir -p test_output
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
           java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
-          head -n 20 test_results.log
+          head -n 20 test_results.log || true
 
       - name: Record pre-deployment resource usage
         run: |
           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_before.log
           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_before.log
 
-      - name: Record deployment start time & calculate Lead Time
+      - name: Record deployment start time & calculate lead time
         run: |
           echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
           COMMIT_TIME=$(git log -1 --format=%ct)
@@ -79,6 +78,7 @@ jobs:
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
+            exit
           EOF
         continue-on-error: true
 
@@ -87,7 +87,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "timeout 60 bash -c 'until grep -q \"Deployment of web application archive\" <(tail -n 50 /opt/tomcat10/logs/catalina.out); do sleep 5; done'"
 
-      - name: Record post-deployment resource usage
+      - name: Record deployment end time & post-deployment resource usage
         if: always()
         run: |
           echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
@@ -97,9 +97,10 @@ jobs:
       - name: Calculate deployment & pipeline time
         if: always()
         run: |
-          DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
+          # Ensure DEPLOY_START_TIME and DEPLOY_END_TIME are defined
+          DEPLOY_DURATION=$(( $(echo $DEPLOY_END_TIME) - $(echo $DEPLOY_START_TIME) ))
           PIPELINE_END_TIME=$(date +%s)
-          TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
+          TOTAL_PIPELINE_TIME=$(( $PIPELINE_END_TIME - $(echo $PIPELINE_START_TIME) ))
           echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
           echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
 
@@ -115,6 +116,7 @@ jobs:
               sleep 5
               sudo /opt/tomcat10/bin/shutdown.sh || true
               sudo /opt/tomcat10/bin/startup.sh
+              exit
             EOF
           else
             echo "No backup available - displaying compile error:"
@@ -122,7 +124,7 @@ jobs:
             exit 1
           fi
           ROLLBACK_END=$(date +%s)
-          ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
+          ROLLBACK_DURATION=$(( $(echo $ROLLBACK_END) - $(echo $ROLLBACK_START) ))
           echo "ROLLBACK_DURATION=$ROLLBACK_DURATION" >> $GITHUB_ENV
 
       - name: Display CI/CD Metrics
@@ -134,25 +136,24 @@ jobs:
           echo "| Metric                             | Value          |"
           echo "-------------------------------------------------"
           echo "| Total Pipeline Time (sec)          | $TOTAL_PIPELINE_TIME          |"
-          if [ -f deployment_time.log ]; then
-            echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"
-          else
+          if [ -f "$BACKUP_DIR/JobManagement.war_bak" ]; then
             echo "| Rollback Deployment Time (sec)     | $ROLLBACK_DURATION          |"
+          else
+            echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"
           fi
           echo "| Lead Time for Changes (sec)        | $LEAD_TIME          |"
-          TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
+          TEST_SUMMARY=$(grep -i "tests" test_results.log | head -n 1 || echo "N/A")
           echo "| Test Summary                       | $TEST_SUMMARY          |"
           echo "-------------------------------------------------"
           echo "Memory Usage BEFORE:"
-          cat mem_before.log
+          cat mem_before.log || echo "N/A"
           echo "-------------------------------------------------"
           echo "Memory Usage AFTER:"
-          cat mem_after.log
+          cat mem_after.log || echo "N/A"
           echo "-------------------------------------------------"
           echo "Resource Usage BEFORE (vmstat):"
-          cat resource_usage_before.log
+          cat resource_usage_before.log || echo "N/A"
           echo "-------------------------------------------------"
           echo "Resource Usage AFTER (vmstat):"
-          cat resource_usage_after.log
+          cat resource_usage_after.log || echo "N/A"
           echo "-------------------------------------------------"
-
