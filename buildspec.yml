@@ -1,11 +1,22 @@
 version: 0.2
 
+env:
+  # No permanent variables are declared here because
+  # we capture the pipeline start time in pre_build and persist it.
+  variables: {}
+
 phases:
   install:
     runtime-versions:
       java: corretto17
+
   pre_build:
     commands:
+      - echo "Starting build pipeline..."
+      # Capture the pipeline start time and store it to a file for later use.
+      - export PIPELINE_START_TIME=$(date +%s)
+      - echo $PIPELINE_START_TIME > pipeline_start_time.txt
+      - echo "Fetched pipeline start time: $PIPELINE_START_TIME"
       - echo "Fetching SSH Key..."
       - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_3 --query SecretString --output text > key.pem
       - sed -i 's/\\n/\n/g' key.pem
@@ -13,27 +24,86 @@ phases:
 
   build:
     commands:
-      - echo "Building..."
+      - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
       - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
+
   post_build:
     commands:
+      # Recover the PIPELINE_START_TIME from file so that it’s available in this phase.
+      - export PIPELINE_START_TIME=$(cat pipeline_start_time.txt)
       - >
         if [ -f JobManagement_CODEBUILD.war ]; then
-          echo "Build succeeded! Creating backup..."
+          echo "Build succeeded! Creating backup and recording deployment metrics..."
+          # Record the deployment start time.
+          export DEPLOY_START_TIME=$(date +%s)
+          # Calculate Lead Time for Changes using the latest commit time (fallback to DEPLOY_START_TIME if not available)
+          export COMMIT_TIME=$(git log -1 --format=%ct 2>/dev/null || echo $DEPLOY_START_TIME)
+          export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
+          echo "Lead Time for Changes: $LEAD_TIME seconds"
+          
+          # Backup the WAR file.
           scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+          
+          # (Simulated) Deployment delay—replace this with your actual deployment commands.
+          sleep 5
+          
+          # Record the deployment end time and calculate the deployment duration.
+          export DEPLOY_END_TIME=$(date +%s)
+          export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
+          echo "Deployment Duration: $DEPLOY_DURATION seconds"
+          
+          # Record the pipeline end time and calculate the overall pipeline duration.
+          export PIPELINE_END_TIME=$(date +%s)
+          export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+          
+          # Prepare a metrics summary.
+          echo "-------------------------------------------------" > metrics_summary.log
+          echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+          echo "-------------------------------------------------" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+          echo "-------------------------------------------------" >> metrics_summary.log
+          echo "Metrics Summary:" 
+          cat metrics_summary.log
         else  
           echo -e "\nBuild failed - compilation errors:"
           cat compile_error.log
-          echo "Rolling back..."
+          echo "Initiating rollback and recording rollback metrics..."
+          
+          # Record the rollback start time.
+          export ROLLBACK_START_TIME=$(date +%s)
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "
             /opt/tomcat10/bin/catalina.sh stop || true
             cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
-            /opt/tomcat10/bin/catalina.sh start
-          "
+            /opt/tomcat10/bin/catalina.sh start" 
+          # Allow time for the rollback to complete.
+          sleep 5
+          export ROLLBACK_END_TIME=$(date +%s)
+          export ROLLBACK_DURATION=$(expr $ROLLBACK_END_TIME - $ROLLBACK_START_TIME)
+          echo "Rollback Duration: $ROLLBACK_DURATION seconds"
+          
+          # Record the pipeline end time and calculate the total pipeline time.
+          export PIPELINE_END_TIME=$(date +%s)
+          export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+          
+          # Prepare a metrics summary that includes the rollback time.
+          echo "-------------------------------------------------" > metrics_summary.log
+          echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+          echo "-------------------------------------------------" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "N/A" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "N/A" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_DURATION" >> metrics_summary.log
+          printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+          echo "-------------------------------------------------" >> metrics_summary.log
+          echo "Metrics Summary:"
+          cat metrics_summary.log
+          
           exit 1
         fi
 
@@ -41,4 +111,4 @@ artifacts:
   files:
     - JobManagement_CODEBUILD.war
     - compile_error.log
-    
+    - metrics_summary.log
