@@ -23,15 +23,19 @@ phases:
     commands:
       - >
         if [ ! -f JobManagement_CODEBUILD.war ]; then
+          echo "Build succeeded! Creating backup..."
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
           echo -e "\nBuild failed - compilation errors:"
           cat compile_error.log
           echo "Rolling back..."
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "sudo systemctl stop tomcat && cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war && sudo systemctl start tomcat"
+          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "
+            /opt/tomcat10/bin/shutdown.sh || true
+            cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+            /opt/tomcat10/bin/startup.sh
+          "
           exit 1
         fi
-      - echo "Deploying new WAR..."
-      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/opt/tomcat10/webapps/
-      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "sudo systemctl restart tomcat"
+
 artifacts:
   files:
     - JobManagement_CODEBUILD.war
