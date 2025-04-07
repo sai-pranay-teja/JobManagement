@@ -103,6 +103,7 @@ jobs:
       - name: Calculate deployment & pipeline time
         if: always()
         run: |
+          source $GITHUB_ENV
           DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
           PIPELINE_END_TIME=$(date +%s)
           TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
