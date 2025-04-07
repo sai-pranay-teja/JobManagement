@@ -44,13 +44,13 @@ jobs:
           javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
           cp -R src/main/resources/* build/WEB-INF/classes/
           cp -R src/main/webapp/* build/
-          jar -cvf JobManagement.war -C build .
+          jar -cvf JobManagement_ACTIONS.war -C build .
 
       - name: Backup WAR file on remote host
         run: |
           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "mkdir -p /tmp/actions_bak"
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war $REMOTE_USER@$REMOTE_HOST:/tmp/actions_bak/JobManagement.war_bak
-          echo "Backup saved on remote host at /tmp/actions_bak/JobManagement.war_bak"
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war $REMOTE_USER@$REMOTE_HOST:/tmp/actions_bak/JobManagement_ACTIONS.war_bak
+          echo "Backup saved on remote host at /tmp/actions_bak/JobManagement_ACTIONS.war_bak"
 
       - name: Run Unit Tests
         run: |
@@ -75,9 +75,9 @@ jobs:
         id: deploy
         continue-on-error: true
         run: |
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/
           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<EOF
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
@@ -116,10 +116,10 @@ jobs:
           echo "Deployment failed! Initiating rollback..."
           ROLLBACK_START=$(date +%s)
 
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "if [ -f /tmp/actions_bak/JobManagement.war_bak ]; then sudo cp /tmp/actions_bak/JobManagement.war_bak /opt/tomcat10/webapps/JobManagement.war; else echo 'No backup available'; exit 1; fi"
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "if [ -f /tmp/actions_bak/JobManagement_ACTIONS.war_bak ]; then sudo cp /tmp/actions_bak/JobManagement_ACTIONS.war_bak /opt/tomcat10/webapps/JobManagement_ACTIONS.war; else echo 'No backup available'; exit 1; fi"
 
           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<EOF
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
             sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
