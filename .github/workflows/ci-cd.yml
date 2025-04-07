@@ -156,16 +156,3 @@ jobs:
           cat resource_usage_after.log
           echo "-------------------------------------------------"
 
-      - name: Archive Artifacts
-        uses: actions/upload-artifact@3.0.2
-        with:
-          name: ci-cd-artifacts
-          path: |
-            JobManagement.war
-            compile_error.log
-            test_results.log
-            metrics_summary.log
-            resource_usage_before.log
-            resource_usage_after.log
-            mem_before.log
-            mem_after.log
