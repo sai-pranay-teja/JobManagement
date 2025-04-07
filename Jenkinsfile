@@ -262,7 +262,7 @@ EOF
                 def deployTimeValue = deploymentTime.tokenize().find { it.isNumber() } ?: "N/A"
                 echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deployTimeValue)
                 echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
-                echo String.format("| %-35s | %-15s |", "Rollback Time (sec)", rollbackTime)
+                // echo String.format("| %-35s | %-15s |", "Rollback Time (sec)", rollbackTime)
                 echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
                 echo "-------------------------------------------------"
                 echo ""
