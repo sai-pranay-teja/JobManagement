@@ -157,7 +157,7 @@ jobs:
           echo "-------------------------------------------------"
 
       - name: Archive Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@3d2d3f76d9a1e8c0d678ec8c69d3f45fcd6d9d90
         with:
           name: ci-cd-artifacts
           path: |
