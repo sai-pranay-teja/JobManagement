@@ -13,126 +13,93 @@ phases:
       - grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
       - chmod 400 key.pem
       - export PIPELINE_START_TIME=$(date +%s)
-
   build:
     commands:
       - echo "Building Job Management System..."
       - mkdir -p build/WEB-INF/classes
-      # Compile with error capture
       - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
-      # Create WAR with validation
       - jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
-      # Create backup only if build succeeds
-      - mkdir -p /tmp/codebuild_backup
-      - cp JobManagement_CODEBUILD.war /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak
-
-
+      - echo "Copying WAR backup to remote server..."
+      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "mkdir -p /tmp/codebuild_bak"
+      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
   post_build:
     commands:
-    - >
-      if [ ! -f JobManagement_CODEBUILD.war ]; then
-        echo -e "\nBuild failed - compilation errors:"
-        cat compile_error.log
-        echo "-------------------------------------------------"
-        echo "              CI/CD Metrics Summary              "
-        echo "-------------------------------------------------"
-        echo "| Total Pipeline Time | $(( $(date +%s) - ${PIPELINE_START_TIME:-0} )) seconds"
-        echo "| Compilation Errors  | Found (see above)"
-        exit 1
-      fi
-
-    # Deployment preparation (matches Jenkins' deployment stage)
-    - echo "Starting deployment..."
-    - DEPLOY_START=$(date +%s)
-    - COMMIT_TIME=$(git log -1 --format=%ct)
-    - LEAD_TIME=$((DEPLOY_START - COMMIT_TIME))
-
-    # Resource monitoring (before)
-    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_before.log
-    - free -h > mem_before.log
-
-    # Deployment execution
-    - >
-      if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.68.176:/opt/tomcat10/webapps/; then
-        echo "Deployment failed! Initiating rollback..."
-        ROLLBACK_START=$(date +%s)
-        
-        # Jenkins-like backup check
-        if [ -f /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ]; then
-          scp -o StrictHostKeyChecking=no -i key.pem /tmp/codebuild_backup/JobManagement_CODEBUILD.war_bak ubuntu@40.192.68.176:/opt/tomcat10/webapps/
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
-            sleep 5
-            sudo /opt/tomcat10/bin/shutdown.sh || true
-            sudo /opt/tomcat10/bin/startup.sh
-          EOF
-          ROLLBACK_DURATION=$(( $(date +%s) - ROLLBACK_START ))
-          echo "Rollback completed in $ROLLBACK_DURATION seconds"
-        else
-          echo "No backup found! Showing original errors:"
+      - >
+        if [ ! -f JobManagement_CODEBUILD.war ]; then
+          echo -e "\nBuild failed - compilation errors:"
           cat compile_error.log
           exit 1
         fi
-        exit 1
-      fi
-
-    # Successful deployment steps
-    - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.68.176 <<'EOF'
+      - echo "Starting deployment..."
+      - DEPLOY_START=$(date +%s)
+      - COMMIT_TIME=$(git log -1 --format=%ct)
+      - LEAD_TIME=$((DEPLOY_START - COMMIT_TIME))
+      - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_before.log
+      - free -h > mem_before.log
+      - >
+        if ! scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/opt/tomcat10/webapps/; then
+          echo "Deployment failed! Initiating rollback..."
+          ROLLBACK_START=$(date +%s)
+          if ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "[ -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak ]"; then
+            scp -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak ubuntu@40.192.33.107:/opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+            ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 <<'EOF'
+              sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
+              sleep 5
+              sudo /opt/tomcat10/bin/shutdown.sh || true
+              sudo /opt/tomcat10/bin/startup.sh
+            EOF
+            ROLLBACK_DURATION=$(( $(date +%s) - ROLLBACK_START ))
+            echo "Rollback completed in $ROLLBACK_DURATION seconds"
+          else
+            echo "No backup found on remote server! Cannot rollback."
+            cat compile_error.log
+            exit 1
+          fi
+          exit 1
+        fi
+      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 <<'EOF'
         sudo rm -rf /opt/tomcat10/webapps/JobManagement_CODEBUILD
         sleep 5
         sudo /opt/tomcat10/bin/shutdown.sh || true
         sudo /opt/tomcat10/bin/startup.sh
-      EOF
-
-    # Wait for deployment (like Jenkins' tail command)
-    - >
-      tail -f /opt/tomcat10/logs/catalina.out | while read line; do
-        echo "$line" | grep -q "Deployment of web application archive" && break
-      done
-
-    # Post-deployment metrics
-    - DEPLOY_END=$(date +%s)
-    - DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
-    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_after.log
-    - free -h > mem_after.log
-
-    # Generate final metrics (Jenkins-style formatting)
-    - >
-      echo "-------------------------------------------------"
-      echo "              CI/CD Metrics Summary              "
-      echo "-------------------------------------------------"
-      echo "| Metric                             | Value          |"
-      echo "-------------------------------------------------"
-      printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$(( $(date +%s) - ${PIPELINE_START_TIME:-0} ))"
-      printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
-      printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
-      printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "${ROLLBACK_DURATION:-N/A}"
-      echo "-------------------------------------------------"
-      echo "Memory Usage BEFORE Deployment (free -h):"
-      cat mem_before.log
-      echo "-------------------------------------------------"
-      echo "Memory Usage AFTER Deployment (free -h):"
-      cat mem_after.log
-      echo "-------------------------------------------------"
-      echo "Resource Usage BEFORE Deployment (vmstat):"
-      cat resource_before.log
-      echo "-------------------------------------------------"
-      echo "Resource Usage AFTER Deployment (vmstat):"
-      cat resource_after.log
-
-
-      
-
+        EOF
+      - >
+        tail -f /opt/tomcat10/logs/catalina.out | while read line; do
+          echo "$line" | grep -q "Deployment of web application archive" && break;
+        done
+      - DEPLOY_END=$(date +%s)
+      - DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+      - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_after.log
+      - free -h > mem_after.log
+      - >
+        echo "-------------------------------------------------"
+        && echo "              CI/CD Metrics Summary              "
+        && echo "-------------------------------------------------"
+        && printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$(( $(date +%s) - ${PIPELINE_START_TIME:-0} ))"
+        && printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
+        && printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
+        && printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "${ROLLBACK_DURATION:-N/A}"
+        && echo "-------------------------------------------------"
+        && echo "Memory Usage BEFORE Deployment (free -h):"
+        && cat mem_before.log
+        && echo "-------------------------------------------------"
+        && echo "Memory Usage AFTER Deployment (free -h):"
+        && cat mem_after.log
+        && echo "-------------------------------------------------"
+        && echo "Resource Usage BEFORE Deployment (vmstat):"
+        && cat resource_before.log
+        && echo "-------------------------------------------------"
+        && echo "Resource Usage AFTER Deployment (vmstat):"
+        && cat resource_after.log
+        && echo "-------------------------------------------------"
 artifacts:
   files:
     - JobManagement_CODEBUILD.war
     - compile_error.log
     - test_results.log
-    - metrics_summary.log
-    - resource_usage_before.log
-    - resource_usage_after.log
+    - resource_before.log
+    - resource_after.log
     - mem_before.log
     - mem_after.log
-    
