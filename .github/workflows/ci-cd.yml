@@ -11,7 +11,6 @@ jobs:
     env:
       REMOTE_HOST: 40.192.33.107
       REMOTE_USER: ubuntu
-      # You can adjust the backup directory as needed
       BACKUP_DIR: /tmp/jenkins_bak
 
     steps:
@@ -40,7 +39,7 @@ jobs:
       - name: Build WAR file
         run: |
           mkdir -p build/WEB-INF/classes
-          # Compile and capture errors in compile_error.log
+          # Compile Java sources, redirecting errors to compile_error.log
           javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
           cp -R src/main/resources/* build/WEB-INF/classes/
           cp -R src/main/webapp/* build/
@@ -156,9 +155,9 @@ jobs:
           echo "Resource Usage AFTER (vmstat):"
           cat resource_usage_after.log
           echo "-------------------------------------------------"
-          
+
       - name: Archive Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: ci-cd-artifacts
           path: |
