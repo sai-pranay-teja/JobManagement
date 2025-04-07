@@ -1,118 +1,172 @@
-# name: CI/CD Pipeline
+name: CI/CD Pipeline
 
-# on:
-#   push:
-#     branches: [ main ]
+on:
+  push:
+    branches: [ main ]
 
-# jobs:
-#   build-and-deploy:
-#     runs-on: ubuntu-latest
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-#     env:
-#       SSH_KEY_SECRET: ${{ secrets.SSH_PRIVATE_KEY }}
-#       REMOTE_HOST: 40.192.55.121
-#       REMOTE_USER: ubuntu
+    env:
+      REMOTE_HOST: 40.192.33.107
+      REMOTE_USER: ubuntu
+      # You can adjust the backup directory as needed
+      BACKUP_DIR: /tmp/jenkins_bak
 
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
 
-#     steps:
-#       - name: Checkout source
-#         uses: actions/checkout@v3
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'corretto'
 
-#       - name: Set up Java 17
-#         uses: actions/setup-java@v3
-#         with:
-#           java-version: '17'
-#           distribution: 'corretto'
+      - name: Save SSH key to file
+        run: |
+          echo "$SSH_KEY_SECRET" > key.pem
+          sed -i 's/\\n/\n/g' key.pem
+          grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
+          grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
+          chmod 400 key.pem
+        env:
+          SSH_KEY_SECRET: ${{ secrets.SSH_PRIVATE_KEY }}
 
-#       - name: Save SSH key to file
-#         run: |
-#           echo "$SSH_KEY_SECRET" > key.pem
-#           sed -i 's/\\n/\n/g' key.pem
-#           grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
-#           grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
-#           chmod 400 key.pem
+      - name: Record pipeline start time
+        run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
 
-#       - name: Record pipeline start time
-#         run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
+      - name: Build WAR file
+        run: |
+          mkdir -p build/WEB-INF/classes
+          # Compile and capture errors in compile_error.log
+          javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
+          cp -R src/main/resources/* build/WEB-INF/classes/
+          cp -R src/main/webapp/* build/
+          jar -cvf JobManagement.war -C build .
+      
+      - name: Backup WAR file
+        run: |
+          mkdir -p $BACKUP_DIR
+          cp JobManagement.war $BACKUP_DIR/JobManagement.war_bak
+          echo "Backup saved at $BACKUP_DIR/JobManagement.war_bak"
 
-#       - name: Build WAR file
-#         run: |
-#           mkdir -p build/WEB-INF/classes
-#           javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
-#           cp -R src/main/resources/* build/WEB-INF/classes/
-#           cp -R src/main/webapp/* build/
-#           jar -cvf JobManagement.war -C build .
+      - name: Run Unit Tests
+        run: |
+          mkdir -p test_output
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
+          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
+          head -n 20 test_results.log
 
-#       - name: Run Unit Tests
-#         run: |
-#           mkdir -p test_output
-#           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
-#           java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
-#           head -n 20 test_results.log
+      - name: Record pre-deployment resource usage
+        run: |
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_before.log
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_before.log
 
-#       - name: Record pre-deployment resource usage
-#         run: |
-#           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_before.log
-#           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_before.log
+      - name: Record deployment start time & calculate Lead Time
+        run: |
+          echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
+          COMMIT_TIME=$(git log -1 --format=%ct)
+          LEAD_TIME=$(($(date +%s) - COMMIT_TIME))
+          echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
 
-#       - name: Record deployment start time & calculate Lead Time
-#         run: |
-#           echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
-#           COMMIT_TIME=$(git log -1 --format=%ct)
-#           LEAD_TIME=$(($(date +%s) - COMMIT_TIME))
-#           echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
+      - name: Deploy WAR to Tomcat
+        id: deploy
+        run: |
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<'EOF'
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement
+            sleep 5
+            sudo /opt/tomcat10/bin/shutdown.sh || true
+            sudo /opt/tomcat10/bin/startup.sh
+          EOF
+        continue-on-error: true
 
-#       - name: Deploy WAR to Tomcat
-#         run: |
-#           scp -o StrictHostKeyChecking=no -i key.pem JobManagement.war $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/
-#           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<'EOF'
-#             sudo rm -rf /opt/tomcat10/webapps/JobManagement
-#             sleep 5
-#             sudo /opt/tomcat10/bin/shutdown.sh || true
-#             sudo /opt/tomcat10/bin/startup.sh
-#           EOF
+      - name: Wait for deployment logs
+        if: always()
+        run: |
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "timeout 60 bash -c 'until grep -q \"Deployment of web application archive\" <(tail -n 50 /opt/tomcat10/logs/catalina.out); do sleep 5; done'"
 
-#       - name: Wait for deployment logs
-#         run: |
-#           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "tail -f /opt/tomcat10/logs/catalina.out | grep -m 1 'Deployment of web application archive'"
+      - name: Record post-deployment resource usage
+        if: always()
+        run: |
+          echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_after.log
 
-#       - name: Record post-deployment resource usage
-#         run: |
-#           echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
-#           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log
-#           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_after.log
+      - name: Calculate deployment & pipeline time
+        if: always()
+        run: |
+          DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
+          PIPELINE_END_TIME=$(date +%s)
+          TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
+          echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
+          echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
 
-#       - name: Calculate deployment time and total pipeline time
-#         run: |
-#           DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
-#           PIPELINE_END_TIME=$(date +%s)
-#           TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
-#           echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
-#           echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
+      - name: Rollback if deployment failed
+        if: failure()
+        run: |
+          echo "Deployment failed! Initiating rollback..."
+          ROLLBACK_START=$(date +%s)
+          if [ -f "$BACKUP_DIR/JobManagement.war_bak" ]; then
+            scp -o StrictHostKeyChecking=no -i key.pem $BACKUP_DIR/JobManagement.war_bak $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/JobManagement.war
+            ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<'EOF'
+              sudo rm -rf /opt/tomcat10/webapps/JobManagement
+              sleep 5
+              sudo /opt/tomcat10/bin/shutdown.sh || true
+              sudo /opt/tomcat10/bin/startup.sh
+            EOF
+          else
+            echo "No backup available - displaying compile error:"
+            cat compile_error.log
+            exit 1
+          fi
+          ROLLBACK_END=$(date +%s)
+          ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
+          echo "ROLLBACK_DURATION=$ROLLBACK_DURATION" >> $GITHUB_ENV
 
-#       - name: Display CI/CD Metrics
-#         run: |
-#           echo "-------------------------------------------------"
-#           echo "              CI/CD Metrics Summary              "
-#           echo "-------------------------------------------------"
-#           echo "| Metric                             | Value          |"
-#           echo "-------------------------------------------------"
-#           printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME"
-#           printf "| %-35s | %-15s |\n" "Deployment Time (sec)" "$DEPLOY_DURATION"
-#           printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME"
-#           printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A"
-#           TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
-#           printf "| %-35s | %-15s |\n" "Test Summary" "$TEST_SUMMARY"
-#           echo "-------------------------------------------------"
-#           echo "Memory Usage BEFORE:"
-#           cat mem_before.log
-#           echo "-------------------------------------------------"
-#           echo "Memory Usage AFTER:"
-#           cat mem_after.log
-#           echo "-------------------------------------------------"
-#           echo "Resource Usage BEFORE (vmstat):"
-#           cat resource_usage_before.log
-#           echo "-------------------------------------------------"
-#           echo "Resource Usage AFTER (vmstat):"
-#           cat resource_usage_after.log
-#           echo "-------------------------------------------------"
+      - name: Display CI/CD Metrics
+        if: always()
+        run: |
+          echo "-------------------------------------------------"
+          echo "              CI/CD Metrics Summary              "
+          echo "-------------------------------------------------"
+          echo "| Metric                             | Value          |"
+          echo "-------------------------------------------------"
+          echo "| Total Pipeline Time (sec)          | $TOTAL_PIPELINE_TIME          |"
+          if [ -f deployment_time.log ]; then
+            echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"
+          else
+            echo "| Rollback Deployment Time (sec)     | $ROLLBACK_DURATION          |"
+          fi
+          echo "| Lead Time for Changes (sec)        | $LEAD_TIME          |"
+          TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1 || echo "N/A")
+          echo "| Test Summary                       | $TEST_SUMMARY          |"
+          echo "-------------------------------------------------"
+          echo "Memory Usage BEFORE:"
+          cat mem_before.log
+          echo "-------------------------------------------------"
+          echo "Memory Usage AFTER:"
+          cat mem_after.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage BEFORE (vmstat):"
+          cat resource_usage_before.log
+          echo "-------------------------------------------------"
+          echo "Resource Usage AFTER (vmstat):"
+          cat resource_usage_after.log
+          echo "-------------------------------------------------"
+          
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ci-cd-artifacts
+          path: |
+            JobManagement.war
+            compile_error.log
+            test_results.log
+            metrics_summary.log
+            resource_usage_before.log
+            resource_usage_after.log
+            mem_before.log
+            mem_after.log
