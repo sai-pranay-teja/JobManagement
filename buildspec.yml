@@ -29,7 +29,7 @@ phases:
           cat compile_error.log
           echo "Rolling back..."
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "
-            /opt/tomcat10/bin/shutdown.sh || true
+            /opt/tomcat10/bin/catalina.sh stop || true
             cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
             /opt/tomcat10/bin/startup.sh
           "
