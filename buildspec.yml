@@ -30,8 +30,8 @@ phases:
           exit 1
         fi
       - echo "Deploying new WAR..."
-      - scp -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/opt/tomcat10/webapps/
-      - ssh -i key.pem ubuntu@40.192.33.107 "sudo systemctl restart tomcat"
+      - scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/opt/tomcat10/webapps/
+      - ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "sudo systemctl restart tomcat"
 artifacts:
   files:
     - JobManagement_CODEBUILD.war
