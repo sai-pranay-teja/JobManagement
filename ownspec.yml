@@ -1,7 +1,7 @@
 version: 0.2
 
 env:
-  parameter-store:
+  secrets-manager:
     NGROK_TOKEN: "arn:aws:secretsmanager:ap-south-2:581798224530:secret:NGROK_TOKEN-J969tR"
 
 phases:
