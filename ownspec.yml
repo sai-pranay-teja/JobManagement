@@ -1,92 +1,111 @@
 version: 0.2
 
+env:
+  parameter-store:
+    NGROK_TOKEN: "arn:aws:secretsmanager:ap-south-2:581798224530:secret:NGROK_TOKEN-J969tR"
+
 phases:
   install:
     runtime-versions:
       java: corretto17
     commands:
-      - echo "Installing Docker..."
-      # - yum install -y docker jq
-      - apt install -y docker jq
-      # Start Docker daemon
+      - echo "Installing dependencies..."
+      - apt install -y docker jq wget unzip
       - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
-      - timeout 15 sh -c "until docker info; do echo waiting for docker; sleep 1; done"
+      - timeout 15 sh -c "until docker info; do sleep 1; done"
+      - curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+      - echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list
+      - apt-get update && apt-get install -y ngrok
+
   pre_build:
     commands:
-      - echo "Recording pipeline start time..."
-      - export PIPELINE_START_TIME=$(date +%s)
+      - echo "Initializing timing..."
+      - echo "COMMIT_TIME=$(git log -1 --format=%ct)" >> envfile
+      - echo "PIPELINE_START=$(date +%s)"           >> envfile
+      - source envfile
+
   build:
     commands:
-      - echo "Building Job Management System..."
+      - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
-      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")
+      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name '*.java')
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
-      - echo "WAR file built:"
-      - ls -lah JobManagement.war
-      - echo "Running Unit Tests..."
+      - echo "BUILD_END=$(date +%s)" >> envfile
+      - source envfile
+
+      - echo "Running tests..."
       - mkdir -p test_output
-      - javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
-      - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log 2>&1 || true
-      - echo "Unit test results preview:"
-      - head -n 20 test_results.log
+      - javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name '*.java')
+      - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher \
+          --scan-class-path test_output --details summary > test_results.log || true
+      - echo "TESTS_END=$(date +%s)" >> envfile
+      - source envfile
+
   post_build:
     commands:
-      - echo "----- POST BUILD - Starting metrics collection & deployment -----"
-      # Start timer for deployment
-      - export DEPLOY_START=$(date +%s)
+      - echo "Starting Tomcat and ngrok..."
+      - ngrok config add-authtoken $NGROK_TOKEN
+      - ngrok http 8080 --log=stdout > ngrok.log &
+      - export SERVICES_START=$(date +%s)
+      - /usr/local/tomcat/bin/startup.sh || true
+      - echo "SERVICES_START=$SERVICES_START" >> envfile
+      - source envfile
 
-      # Start Tomcat container in detached mode, bound to 0.0.0.0:8080
-      - echo "Starting Tomcat container (accessible externally on port 8080)..."
-      - docker run -d --name tomcat -p 0.0.0.0:8080:8080 tomcat:9-jdk17
+      - echo "Retrieving public URL from ngrok..."
+      - sleep 5
+      - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+      - echo "PUBLIC_URL=$PUBLIC_URL" >> envfile
+      - echo "DEPLOY_START=$(date +%s)" >> envfile
+      - source envfile
 
-      - echo "Waiting for Tomcat to initialize..."
-      - sleep 15
+      - echo "Deploying WAR to Tomcat..."
+      - cp JobManagement.war /usr/local/tomcat/webapps/
+      - timeout 60 bash -c 'while [ ! -f /usr/local/tomcat/webapps/JobManagement.war ]; do sleep 1; done'
 
-      # Deploy WAR file
-      - echo "Deploying WAR file into Tomcat container..."
-      - docker cp JobManagement.war tomcat:/usr/local/tomcat/webapps/
-      - echo "Waiting for deployment..."
-      - sleep 20
+      - echo "Verifying deployment..."
+      - for i in {1..30}; do
+          if curl -sSf "$PUBLIC_URL/JobManagement/" >/dev/null; then
+            echo "DEPLOY_END=$(date +%s)" >> envfile
+            break
+          fi
+          sleep 2
+        done
+      - source envfile
 
-      # Stop deployment timer
-      - export DEPLOY_END=$(date +%s)
-      - export DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))
+      - echo "Calculating metrics..."
+      - |
+        BUILD_DURATION=$(( BUILD_END - PIPELINE_START ))
+        TEST_DURATION=$(( TESTS_END - BUILD_END ))
+        DEPLOY_DURATION=$(( DEPLOY_END - DEPLOY_START ))
+        LEAD_TIME=$(( DEPLOY_START - COMMIT_TIME ))
+        TOTAL_TIME=$(( $(date +%s) - PIPELINE_START ))
+        echo "Build Duration:    $BUILD_DURATION seconds"
+        echo "Test Duration:     $TEST_DURATION seconds"
+        echo "Deploy Duration:   $DEPLOY_DURATION seconds"
+        echo "Lead Time:         $LEAD_TIME seconds"
+        echo "Total Time:        $TOTAL_TIME seconds"
 
-      # Calculate lead time for changes = time from build start to end of deployment
-      - export LEAD_TIME=$((DEPLOY_END - PIPELINE_START_TIME))
+      - echo "Fetching resource metrics..."
+      - vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > vmstat.log
+      - free -h > memory.log
+      - ps -o %cpu,%mem,cmd > processes.log
 
-      # Record pipeline end time and calculate total pipeline time
-      - export PIPELINE_END=$(date +%s)
-      - export TOTAL_PIPELINE_TIME=$((PIPELINE_END - PIPELINE_START_TIME))
-
-      # Print CI/CD Metrics Summary
-      - echo "-------------------------------------------------"
-      - echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", "$TOTAL_PIPELINE_TIME")
-      - echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", "$DEPLOY_TIME")
-      - echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", "$LEAD_TIME")
-      - echo String.format("| %-35s | %-15s |", "Test Summary", "$(head -n1 test_results.log || echo 'N/A')")
-
-      # Provide access URL
       - echo ""
-      - echo "Your application is now running and accessible at:"
-      - echo "    http://$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4):8080/JobManagement/"
+      - echo "==== CI/CD Metrics Report ===="
+      - echo "Public URL - $PUBLIC_URL/JobManagement/"
+      - echo "Job will remain active until you cancel it."
       - echo ""
-      - echo "When you're done testing, you can manually stop the container with:"
-      - echo "    docker stop tomcat && docker rm tomcat"
-
-      # (Optional) still collect resource/memory metrics if you like
-      - docker exec tomcat vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > resource_usage_after.log
-      - docker exec tomcat free -h > mem_after.log
-
-      # (Optional) upload metrics as artifacts
-      - echo "Uploading metrics logs as artifacts..."
+      - echo "To stop and clean up:"
+      - echo "  docker stop tomcat && docker rm tomcat"
+      - echo "  pkill -f ngrok"
 
 artifacts:
   files:
     - JobManagement.war
     - test_results.log
-    - metrics_summary.log
-    - resource_usage_after.log
-    - mem_after.log
+    - vmstat.log
+    - memory.log
+    - processes.log
+    - ngrok.log
