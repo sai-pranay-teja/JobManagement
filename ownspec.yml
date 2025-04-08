@@ -31,7 +31,7 @@ phases:
       - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
       - |
-        javac -cp "src/main/webapp/WEB-INF/lib/*" \
+        javac -cp src/main/webapp/WEB-INF/lib/* \
               -d build/WEB-INF/classes \
               $(find src -name '*.java')
       - cp -R src/main/resources/* build/WEB-INF/classes/
@@ -41,13 +41,17 @@ phases:
 
       - echo "Running tests..."
       - mkdir -p test_output
-      - javac -cp "src/main/webapp/WEB-INF/lib/*:src" \
-          -d test_output $(find src/main/test -name '*.java')
-      - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
-          org.junit.platform.console.ConsoleLauncher \
-          --scan-class-path test_output --details summary \
-          > test_results.log || true
+      - |
+        javac -cp src/main/webapp/WEB-INF/lib/*:src \
+              -d test_output \
+              $(find src/main/test -name '*.java')
+      - |
+        java -cp test_output:src/main/webapp/WEB-INF/lib/* \
+             org.junit.platform.console.ConsoleLauncher \
+             --scan-class-path test_output --details summary \
+             > test_results.log || true
       - export TESTS_END=$(date +%s)
+
 
   post_build:
     commands:
