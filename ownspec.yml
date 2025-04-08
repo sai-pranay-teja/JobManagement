@@ -34,49 +34,54 @@ phases:
   post_build:
     commands:
       - echo "----- POST BUILD - Starting metrics collection & deployment -----"
-      # Start Tomcat container (using Docker)
-      - echo "Starting Tomcat container..."
-      - docker run -d --name tomcat -p 8080:8080 tomcat:9-jdk17
+      # Start timer for deployment
+      - export DEPLOY_START=$(date +%s)
+
+      # Start Tomcat container in detached mode, bound to 0.0.0.0:8080
+      - echo "Starting Tomcat container (accessible externally on port 8080)..."
+      - docker run -d --name tomcat -p 0.0.0.0:8080:8080 tomcat:9-jdk17
+
       - echo "Waiting for Tomcat to initialize..."
       - sleep 15
-      # Deploy WAR file into the Tomcat container
+
+      # Deploy WAR file
       - echo "Deploying WAR file into Tomcat container..."
       - docker cp JobManagement.war tomcat:/usr/local/tomcat/webapps/
       - echo "Waiting for deployment..."
       - sleep 20
-      # Collect remote metrics from the container (human-readable)
-      - echo "Collecting container metrics BEFORE deployment (if needed, not used here)..."
-      # (In this example, we only collect AFTER deployment. Adjust as needed.)
-      - echo "Collecting container metrics AFTER deployment..."
-      - docker exec tomcat vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > resource_usage_after.log
-      - docker exec tomcat free -h > mem_after.log
+
+      # Stop deployment timer
+      - export DEPLOY_END=$(date +%s)
+      - export DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))
+
+      # Calculate lead time for changes = time from build start to end of deployment
+      - export LEAD_TIME=$((DEPLOY_END - PIPELINE_START_TIME))
+
       # Record pipeline end time and calculate total pipeline time
-      - echo "Recording pipeline end time..."
-      - export PIPELINE_END_TIME=$(date +%s)
-      - export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
-      - echo "Total Pipeline Time - $TOTAL_PIPELINE_TIME seconds."
-      # Aggregate and display metrics
-      - echo "-------------------------------------------------" > metrics_summary.log
-      - echo "              CI/CD Metrics Summary              " >> metrics_summary.log
-      - echo "-------------------------------------------------" >> metrics_summary.log
-      - echo "| Metric                             | Value          |" >> metrics_summary.log
-      - echo "-------------------------------------------------" >> metrics_summary.log
-      - printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
-      # In this example, Deployment Time and Lead Time are not separately measured because the container is local.
-      - echo "-------------------------------------------------" >> metrics_summary.log
-      - echo "Memory Usage AFTER (free -h):" >> metrics_summary.log
-      - cat mem_after.log >> metrics_summary.log
-      - echo "-------------------------------------------------" >> metrics_summary.log
-      - echo "Resource Usage AFTER (vmstat):" >> metrics_summary.log
-      - cat resource_usage_after.log >> metrics_summary.log
-      - echo "-------------------------------------------------" >> metrics_summary.log
-      - echo "Metrics Summary:" 
-      - cat metrics_summary.log
-      - echo "----- End of Metrics Display -----"
-      # Clean up: stop and remove the container
-      - echo "Stopping Tomcat container..."
-      - docker stop tomcat
-      - docker rm tomcat
+      - export PIPELINE_END=$(date +%s)
+      - export TOTAL_PIPELINE_TIME=$((PIPELINE_END - PIPELINE_START_TIME))
+
+      # Print CI/CD Metrics Summary
+      - echo "-------------------------------------------------"
+      - echo String.format("| %-35s | %-15s |", "Total Pipeline Time (sec)", "$TOTAL_PIPELINE_TIME")
+      - echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", "$DEPLOY_TIME")
+      - echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", "$LEAD_TIME")
+      - echo String.format("| %-35s | %-15s |", "Test Summary", "$(head -n1 test_results.log || echo 'N/A')")
+
+      # Provide access URL
+      - echo ""
+      - echo "Your application is now running and accessible at:"
+      - echo "    http://$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4):8080/JobManagement/"
+      - echo ""
+      - echo "When you're done testing, you can manually stop the container with:"
+      - echo "    docker stop tomcat && docker rm tomcat"
+
+      # (Optional) still collect resource/memory metrics if you like
+      - docker exec tomcat vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > resource_usage_after.log
+      - docker exec tomcat free -h > mem_after.log
+
+      # (Optional) upload metrics as artifacts
+      - echo "Uploading metrics logs as artifacts..."
 
 artifacts:
   files:
