@@ -22,7 +22,7 @@ phases:
       - echo "Initializing timing..."
       - echo "COMMIT_TIME=$(git log -1 --format=%ct)" >> envfile
       - echo "PIPELINE_START=$(date +%s)"           >> envfile
-      - source envfile
+      - . envfile
 
   build:
     commands:
@@ -33,7 +33,7 @@ phases:
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
       - echo "BUILD_END=$(date +%s)" >> envfile
-      - source envfile
+      - . envfile
 
       - echo "Running tests..."
       - mkdir -p test_output
@@ -41,7 +41,7 @@ phases:
       - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher \
           --scan-class-path test_output --details summary > test_results.log || true
       - echo "TESTS_END=$(date +%s)" >> envfile
-      - source envfile
+      - . envfile
 
   post_build:
     commands:
@@ -51,14 +51,14 @@ phases:
       - export SERVICES_START=$(date +%s)
       - /usr/local/tomcat/bin/startup.sh || true
       - echo "SERVICES_START=$SERVICES_START" >> envfile
-      - source envfile
+      - . envfile
 
       - echo "Retrieving public URL from ngrok..."
       - sleep 5
       - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
       - echo "PUBLIC_URL=$PUBLIC_URL" >> envfile
       - echo "DEPLOY_START=$(date +%s)" >> envfile
-      - source envfile
+      - . envfile
 
       - echo "Deploying WAR to Tomcat..."
       - cp JobManagement.war /usr/local/tomcat/webapps/
@@ -72,7 +72,7 @@ phases:
           fi
           sleep 2
         done
-      - source envfile
+      - . envfile
 
       - echo "Calculating metrics..."
       - |
