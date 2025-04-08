@@ -97,7 +97,7 @@ phases:
 
       - echo ""
       - echo "==== CI/CD Metrics Report ===="
-      - echo "Public URL: $PUBLIC_URL/JobManagement/"
+      - echo "Public URL - $PUBLIC_URL/JobManagement/"
       - echo "Job will remain active until you cancel it."
       - echo ""
       - echo "To stop and clean up:"
