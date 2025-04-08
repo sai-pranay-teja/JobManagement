@@ -30,8 +30,10 @@ phases:
     commands:
       - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
-      - javac -cp "src/main/webapp/WEB-INF/lib/*" \
-          -d build/WEB-INF/classes $(find src -name '*.java')
+      - |
+        javac -cp "src/main/webapp/WEB-INF/lib/*" \
+              -d build/WEB-INF/classes \
+              $(find src -name '*.java')
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
