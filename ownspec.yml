@@ -32,7 +32,7 @@ phases:
       - head -n 20 test_results.log
   post_build:
     commands:
-      - echo "----- POST BUILD: Starting metrics collection & deployment -----"
+      - echo "----- POST BUILD - Starting metrics collection & deployment -----"
       # Start Tomcat container (using Docker)
       - echo "Starting Tomcat container..."
       - docker run -d --name tomcat -p 8080:8080 tomcat:9-jdk17
