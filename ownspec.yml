@@ -6,7 +6,8 @@ phases:
       java: corretto17
     commands:
       - echo "Installing Docker..."
-      - yum install -y docker jq
+      # - yum install -y docker jq
+      - apt install -y docker jq
       # Start Docker daemon
       - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
       - timeout 15 sh -c "until docker info; do echo waiting for docker; sleep 1; done"
