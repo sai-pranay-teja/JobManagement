@@ -10,69 +10,70 @@ phases:
       java: corretto17
     commands:
       - echo "Installing dependencies..."
-      - apt install -y docker jq wget unzip
+      - apt-get update
+      - apt-get install -y docker jq wget unzip
       - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
       - timeout 15 sh -c "until docker info; do sleep 1; done"
-      - curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-      - echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list
+      - curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+          | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+      - echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
+          | tee /etc/apt/sources.list.d/ngrok.list
       - apt-get update && apt-get install -y ngrok
 
   pre_build:
     commands:
       - echo "Initializing timing..."
-      - echo "COMMIT_TIME=$(git log -1 --format=%ct)" >> envfile
-      - echo "PIPELINE_START=$(date +%s)"           >> envfile
-      - . envfile
+      - export COMMIT_TIME=$(git log -1 --format=%ct)
+      - export PIPELINE_START=$(date +%s)
 
   build:
     commands:
       - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
-      - javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name '*.java')
+      - javac -cp "src/main/webapp/WEB-INF/lib/*" \
+          -d build/WEB-INF/classes $(find src -name '*.java')
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
-      - echo "BUILD_END=$(date +%s)" >> envfile
-      - . envfile
+      - export BUILD_END=$(date +%s)
 
       - echo "Running tests..."
       - mkdir -p test_output
-      - javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name '*.java')
-      - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher \
-          --scan-class-path test_output --details summary > test_results.log || true
-      - echo "TESTS_END=$(date +%s)" >> envfile
-      - . envfile
+      - javac -cp "src/main/webapp/WEB-INF/lib/*:src" \
+          -d test_output $(find src/main/test -name '*.java')
+      - java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+          org.junit.platform.console.ConsoleLauncher \
+          --scan-class-path test_output --details summary \
+          > test_results.log || true
+      - export TESTS_END=$(date +%s)
 
   post_build:
     commands:
       - echo "Starting Tomcat and ngrok..."
       - ngrok config add-authtoken $NGROK_TOKEN
       - ngrok http 8080 --log=stdout > ngrok.log &
-      - export SERVICES_START=$(date +%s)
       - /usr/local/tomcat/bin/startup.sh || true
-      - echo "SERVICES_START=$SERVICES_START" >> envfile
-      - . envfile
+      - export SERVICES_START=$(date +%s)
 
-      - echo "Retrieving public URL from ngrok..."
+      - echo "Waiting for ngrok..."
       - sleep 5
-      - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-      - echo "PUBLIC_URL=$PUBLIC_URL" >> envfile
-      - echo "DEPLOY_START=$(date +%s)" >> envfile
-      - . envfile
+      - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels \
+          | jq -r '.tunnels[0].public_url')
+      - export DEPLOY_START=$(date +%s)
 
       - echo "Deploying WAR to Tomcat..."
       - cp JobManagement.war /usr/local/tomcat/webapps/
-      - timeout 60 bash -c 'while [ ! -f /usr/local/tomcat/webapps/JobManagement.war ]; do sleep 1; done'
+      - timeout 60 bash -c \
+          'while [ ! -f /usr/local/tomcat/webapps/JobManagement.war ]; do sleep 1; done'
 
       - echo "Verifying deployment..."
       - for i in {1..30}; do
           if curl -sSf "$PUBLIC_URL/JobManagement/" >/dev/null; then
-            echo "DEPLOY_END=$(date +%s)" >> envfile
+            export DEPLOY_END=$(date +%s)
             break
           fi
           sleep 2
         done
-      - . envfile
 
       - echo "Calculating metrics..."
       - |
@@ -88,13 +89,15 @@ phases:
         echo "Total Time:        $TOTAL_TIME seconds"
 
       - echo "Fetching resource metrics..."
-      - vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > vmstat.log
+      - vmstat -s \
+          | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' \
+          > vmstat.log
       - free -h > memory.log
       - ps -o %cpu,%mem,cmd > processes.log
 
       - echo ""
       - echo "==== CI/CD Metrics Report ===="
-      - echo "Public URL - $PUBLIC_URL/JobManagement/"
+      - echo "Public URL: $PUBLIC_URL/JobManagement/"
       - echo "Job will remain active until you cancel it."
       - echo ""
       - echo "To stop and clean up:"
