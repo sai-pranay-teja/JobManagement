@@ -53,64 +53,61 @@ phases:
       - export TESTS_END=$(date +%s)
   post_build:
     commands:
-      - echo "Starting Tomcat and ngrok..."
-      # Configure and start ngrok to tunnel port 8080
-      - ngrok config add-authtoken $NGROK_TOKEN
-      - ngrok http 8080 --log=stdout > ngrok.log &
-      # Start Tomcat
-      - echo "Starting Tomcat..."
-      - /usr/local/tomcat/bin/startup.sh || true
-      - export SERVICES_START=$(date +%s)
-      - echo "Waiting for ngrok to initialize..."
-      - sleep 10
-      - echo "Querying ngrok tunnels..."
-      - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-      - echo "Public URL retrieved - $PUBLIC_URL"
-      - if [ -z "${PUBLIC_URL}" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
-      - export DEPLOY_START=$(date +%s)
-      # Ensure the Tomcat webapps directory exists.
-      - echo "Creating Tomcat webapps directory..."
-      - mkdir -p /usr/local/tomcat/webapps
-      - echo "Deploying WAR to Tomcat..."
-      - cp JobManagement.war /usr/local/tomcat/webapps/
-      - timeout 60 bash -c 'while [ ! -f /usr/local/tomcat/webapps/JobManagement.war ]; do sleep 1; done'
-      - echo "Verifying deployment..."
-      - |
-        for i in {1..30}; do
-          if curl -sSf "$PUBLIC_URL/JobManagement/" >/dev/null; then
-            export DEPLOY_END=$(date +%s)
-            break
-          fi
-          sleep 2
-        done
-      - echo "Calculating metrics..."
-      - |
-        BUILD_DURATION=$(( BUILD_END - PIPELINE_START ))
-        TEST_DURATION=$(( TESTS_END - BUILD_END ))
-        DEPLOY_DURATION=$(( DEPLOY_END - DEPLOY_START ))
-        LEAD_TIME=$(( DEPLOY_START - COMMIT_TIME ))
-        TOTAL_TIME=$(( $(date +%s) - PIPELINE_START ))
-        echo "Build Duration:    $BUILD_DURATION seconds"
-        echo "Test Duration:     $TEST_DURATION seconds"
-        echo "Deploy Duration:   $DEPLOY_DURATION seconds"
-        echo "Lead Time:         $LEAD_TIME seconds"
-        echo "Total Time:        $TOTAL_TIME seconds"
-      - echo "Fetching resource metrics..."
-      - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > vmstat.log
-      - free -h > memory.log
-      - ps -o %cpu,%mem,cmd > processes.log
-      - echo ""
-      - echo "==== CI/CD Metrics Report ===="
-      - echo "Public URL - $PUBLIC_URL/JobManagement/"
-      - echo "Job will remain active until you stop it."
-      - echo ""
-      - echo "To stop and clean up:"
-      - echo "  docker stop tomcat && docker rm tomcat"
-      - echo "  pkill -f ngrok"
-      # Add an infinite loop to keep the build active so the ngrok URL stays up.
-      - echo "Entering persistent hold mode. To exit, stop the build manually."
-      - while true; do sleep 60; done
-
+    - echo "Starting Tomcat and ngrok..."
+    # Configure and start ngrok to tunnel port 8080
+    - ngrok config add-authtoken $NGROK_TOKEN
+    - ngrok http 8080 --log=stdout > ngrok.log &
+    # Start Tomcat
+    - echo "Starting Tomcat..."
+    - /usr/local/tomcat/bin/startup.sh || true
+    - export SERVICES_START=$(date +%s)
+    - echo "Waiting for ngrok to initialize..."
+    - sleep 10
+    - echo "Querying ngrok tunnels..."
+    - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+    - echo "Public URL retrieved - $PUBLIC_URL"
+    - if [ -z "${PUBLIC_URL}" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
+    - export DEPLOY_START=$(date +%s)
+    # Ensure the Tomcat webapps directory exists and deploy the WAR
+    - echo "Creating Tomcat webapps directory..."
+    - mkdir -p /usr/local/tomcat/webapps
+    - echo "Deploying WAR to Tomcat..."
+    - cp JobManagement.war /usr/local/tomcat/webapps/
+    # Wait for Tomcat to explode the WAR
+    - echo "Waiting for application deployment..."
+    - timeout 300 bash -c 'until [ -d "/usr/local/tomcat/webapps/JobManagement" ]; do echo "Waiting for Tomcat to deploy WAR..."; sleep 5; done'
+    - echo "Deployment in Tomcat appears complete. Checking locally..."
+    - if curl -sSf http://localhost:8080/JobManagement/ >/dev/null; then echo "Local deployment verified!"; else echo "ERROR - Application not accessible locally on port 8080."; fi
+    - echo "Dumping last 50 lines of catalina.out for debugging:"
+    - tail -n 50 /usr/local/tomcat/logs/catalina.out
+    - export DEPLOY_END=$(date +%s)
+    - echo "Calculating metrics..."
+    - |
+      BUILD_DURATION=$(( BUILD_END - PIPELINE_START ))
+      TEST_DURATION=$(( TESTS_END - BUILD_END ))
+      DEPLOY_DURATION=$(( DEPLOY_END - DEPLOY_START ))
+      LEAD_TIME=$(( DEPLOY_START - COMMIT_TIME ))
+      TOTAL_TIME=$(( $(date +%s) - PIPELINE_START ))
+      echo "Build Duration:    $BUILD_DURATION seconds"
+      echo "Test Duration:     $TEST_DURATION seconds"
+      echo "Deploy Duration:   $DEPLOY_DURATION seconds"
+      echo "Lead Time:         $LEAD_TIME seconds"
+      echo "Total Time:        $TOTAL_TIME seconds"
+    - echo "Fetching resource metrics..."
+    - vmstat -s | awk '{printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}' > vmstat.log
+    - free -h > memory.log
+    - ps -o %cpu,%mem,cmd > processes.log
+    - echo ""
+    - echo "==== CI/CD Metrics Report ===="
+    - echo "Public URL - $PUBLIC_URL/JobManagement/"
+    - echo "Job will remain active until you stop it."
+    - echo ""
+    - echo "To stop and clean up:"
+    - echo "  docker stop tomcat && docker rm tomcat"
+    - echo "  pkill -f ngrok"
+    # Keep container running indefinitely
+    - echo "Entering persistent hold mode. To exit, stop the build manually."
+    - while true; do sleep 60; done
 artifacts:
   files:
     - JobManagement.war
