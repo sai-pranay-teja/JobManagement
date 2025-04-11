@@ -7,7 +7,7 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto17
+      java: corretto17   # Change to corretto21 if supported in your environment.
     commands:
       - echo "Installing dependencies..."
       - apt-get update
@@ -17,7 +17,6 @@ phases:
       - curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
       - echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list
       - apt-get update && apt-get install -y ngrok
-      
 
   pre_build:
     commands:
@@ -29,19 +28,24 @@ phases:
     commands:
       - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
+      - echo "Setting up Classpath from JARs..."
+      # Build a colon-separated list from all JAR files in the lib directory.
+      - export CP=$(echo src/main/webapp/WEB-INF/lib/*.jar | tr ' ' ':')
+      - echo "Classpath - $CP"
       - echo "Compiling Java source files..."
-      - |
-        find src -name '*.java' | xargs javac -cp src/main/webapp/WEB-INF/lib/* -d build/WEB-INF/classes
+      - find src -name '*.java' | xargs javac -cp "$CP" -d build/WEB-INF/classes
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
       - jar -cvf JobManagement.war -C build .
       - export BUILD_END=$(date +%s)
       - echo "Running tests..."
       - mkdir -p test_output
+      - echo "Setting up Test Classpath..."
+      # For tests, include both the lib JARs and the source directory.
+      - export TEST_CP=$(echo src/main/webapp/WEB-INF/lib/*.jar src | tr ' ' ':')
+      - find src/main/test -name '*.java' | xargs javac -cp "$TEST_CP" -d test_output
       - |
-        find src/main/test -name '*.java' | xargs javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output
-      - |
-        java -cp test_output:src/main/webapp/WEB-INF/lib/* \
+        java -cp test_output:"$CP" \
           org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
       - export TESTS_END=$(date +%s)
 
