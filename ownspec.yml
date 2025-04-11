@@ -7,7 +7,7 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto17    # Change to corretto21 if desired and supported.
+      java: corretto17    # You can change this to corretto21 if desired and supported.
     commands:
       - echo "Updating packages and installing dependencies..."
       - apt-get update && apt-get install -y docker jq wget unzip
@@ -16,7 +16,7 @@ phases:
       - echo "Extracting Tomcat..."
       - tar xzf apache-tomcat-9.0.73.tar.gz
       - mv apache-tomcat-9.0.73 /usr/local/tomcat
-      # (Optional) Start Docker daemon if needed by any steps
+      # (Optional) Start Docker daemon (if needed)
       - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
       - timeout 15 sh -c "until docker info; do sleep 1; done"
       - echo "Installing ngrok..."
@@ -34,7 +34,7 @@ phases:
     commands:
       - echo "Compiling the application..."
       - mkdir -p build/WEB-INF/classes
-      - echo "Generating classpath from JARs..."
+      - echo "Creating classpath from JARs..."
       - export CP=$(echo src/main/webapp/WEB-INF/lib/*.jar | tr ' ' ':')
       - echo "Classpath - $CP"
       - echo "Compiling Java source files..."
@@ -46,11 +46,15 @@ phases:
       - export BUILD_END=$(date +%s)
       - echo "Running tests..."
       - mkdir -p test_output
-      - echo "Setting up test classpath..."
+      - echo "Creating test classpath from JARs..."
       - export TEST_CP=$(echo src/main/webapp/WEB-INF/lib/*.jar src | tr ' ' ':')
+      # Download the junit-platform-console-standalone jar
+      - echo "Downloading JUnit Platform Console Standalone..."
+      - wget https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.9.3/junit-platform-console-standalone-1.9.3.jar -O junit-platform-console-standalone.jar
+      - echo "Compiling test sources..."
       - find src/main/test -name '*.java' | xargs javac -cp "$TEST_CP" -d test_output
-      - java -cp test_output:"$CP" \
-          org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
+      - echo "Running tests using JUnit Platform Console Launcher..."
+      - java -cp "test_output:$CP:junit-platform-console-standalone.jar" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
       - export TESTS_END=$(date +%s)
 
   post_build:
@@ -72,10 +76,10 @@ phases:
       - echo "Deploying WAR to Tomcat as ROOT.war..."
       - cp JobManagement.war /usr/local/tomcat/webapps/ROOT.war
       - echo "Waiting for Tomcat to deploy the application..."
-      - timeout 300 bash -c 'until [ -d "/usr/local/tomcat/webapps/ROOT" ]; do echo "Waiting for deployment..."; sleep 5; done'
-      - echo "Verifying local accessibility on port 8080..."
-      - if curl -sSf http://localhost:8080/ >/dev/null; then echo "Local deployment verified!"; else echo "ERROR - Application not accessible on localhost:8080"; fi
-      - echo "Dumping last 50 lines of catalina.out for troubleshooting:"
+      - timeout 300 bash -c 'until [ -d "/usr/local/tomcat/webapps/ROOT" ]; do echo "Waiting for Tomcat to deploy WAR..."; sleep 5; done'
+      - echo "Deployment appears complete. Verifying application locally..."
+      - curl -I http://localhost:8080/ || echo "ERROR - Application not accessible on localhost:8080."
+      - echo "Dumping last 50 lines of catalina.out for debugging:"
       - tail -n 50 /usr/local/tomcat/logs/catalina.out
       - export DEPLOY_END=$(date +%s)
       - |
