@@ -61,6 +61,8 @@ phases:
     - echo "Starting Tomcat..."
     - /usr/local/tomcat/bin/startup.sh || true
     - export SERVICES_START=$(date +%s)
+    - echo "Waiting for Tomcat to start..."
+    - sleep 10
     - echo "Waiting for ngrok to initialize..."
     - sleep 10
     - echo "Querying ngrok tunnels..."
@@ -68,17 +70,17 @@ phases:
     - echo "Public URL retrieved - $PUBLIC_URL"
     - if [ -z "${PUBLIC_URL}" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
     - export DEPLOY_START=$(date +%s)
-    # Ensure the Tomcat webapps directory exists and deploy the WAR
+    # Ensure the Tomcat webapps directory exists and deploy the WAR.
     - echo "Creating Tomcat webapps directory..."
     - mkdir -p /usr/local/tomcat/webapps
     - echo "Deploying WAR to Tomcat..."
     - cp JobManagement.war /usr/local/tomcat/webapps/
-    # Wait for Tomcat to explode the WAR
+    # Wait for Tomcat to explode the WAR (checking for the deployed directory)
     - echo "Waiting for application deployment..."
     - timeout 300 bash -c 'until [ -d "/usr/local/tomcat/webapps/JobManagement" ]; do echo "Waiting for Tomcat to deploy WAR..."; sleep 5; done'
-    - echo "Deployment in Tomcat appears complete. Checking locally..."
+    - echo "Application should be deployed. Verifying locally..."
     - if curl -sSf http://localhost:8080/JobManagement/ >/dev/null; then echo "Local deployment verified!"; else echo "ERROR - Application not accessible locally on port 8080."; fi
-    - echo "Dumping last 50 lines of catalina.out for debugging:"
+    - echo "Dumping last 50 lines of catalina.out for reference:"
     - tail -n 50 /usr/local/tomcat/logs/catalina.out
     - export DEPLOY_END=$(date +%s)
     - echo "Calculating metrics..."
@@ -101,13 +103,12 @@ phases:
     - echo "==== CI/CD Metrics Report ===="
     - echo "Public URL - $PUBLIC_URL/JobManagement/"
     - echo "Job will remain active until you stop it."
-    - echo ""
-    - echo "To stop and clean up:"
+    - echo "To stop and clean up, run:"
     - echo "  docker stop tomcat && docker rm tomcat"
     - echo "  pkill -f ngrok"
-    # Keep container running indefinitely
     - echo "Entering persistent hold mode. To exit, stop the build manually."
     - while true; do sleep 60; done
+
 artifacts:
   files:
     - JobManagement.war
