@@ -7,19 +7,19 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto17   # You can change this to corretto21 if desired.
+      java: corretto17   # Change to corretto21 if supported/needed.
     commands:
       - echo "Installing dependencies and Tomcat..."
       - apt-get update
       - apt-get install -y docker jq wget unzip
-      # Download and extract Tomcat (using the updated mirror URL)
-      - wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.73/bin/apache-tomcat-9.0.73.tar.gz
+      # Download and extract Tomcat (using the Apache Archive URL)
+      - wget https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.73/bin/apache-tomcat-9.0.73.tar.gz
       - tar xzf apache-tomcat-9.0.73.tar.gz
       - mv apache-tomcat-9.0.73 /usr/local/tomcat
-      # Start Docker daemon for ancillary purposes (if needed)
+      # Start Docker daemon (if needed for ancillary purposes)
       - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
       - timeout 15 sh -c "until docker info; do sleep 1; done"
-      # Install ngrok
+      # Install ngrok using the official repository key and mirror.
       - curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
       - echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list
       - apt-get update && apt-get install -y ngrok
@@ -35,7 +35,7 @@ phases:
       - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
       - echo "Setting up Classpath from JARs..."
-      # Combine all JARs into a colon-separated list for javac to use.
+      # Create a colon-delimited classpath from all JARs.
       - export CP=$(echo src/main/webapp/WEB-INF/lib/*.jar | tr ' ' ':')
       - echo "Classpath - $CP"
       - echo "Compiling Java source files..."
@@ -49,14 +49,15 @@ phases:
       - echo "Setting up Test Classpath..."
       - export TEST_CP=$(echo src/main/webapp/WEB-INF/lib/*.jar src | tr ' ' ':')
       - find src/main/test -name '*.java' | xargs javac -cp "$TEST_CP" -d test_output
-      - java -cp test_output:"$CP" \
+      - |
+        java -cp test_output:"$CP" \
           org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
       - export TESTS_END=$(date +%s)
 
   post_build:
     commands:
       - echo "Starting Tomcat and ngrok..."
-      # Configure and start ngrok to tunnel port 8080
+      # Configure and start ngrok to tunnel port 8080.
       - ngrok config add-authtoken $NGROK_TOKEN
       - ngrok http 8080 --log=stdout > ngrok.log &
       # Start Tomcat
@@ -70,7 +71,7 @@ phases:
       - echo "Public URL retrieved - $PUBLIC_URL"
       - if [ -z "${PUBLIC_URL}" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
       - export DEPLOY_START=$(date +%s)
-      # Ensure the webapps directory exists.
+      # Ensure the Tomcat webapps directory exists.
       - echo "Creating Tomcat webapps directory..."
       - mkdir -p /usr/local/tomcat/webapps
       - echo "Deploying WAR to Tomcat..."
