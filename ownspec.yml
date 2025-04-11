@@ -7,16 +7,16 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto17   # Change to corretto21 if needed and if supported.
+      java: corretto17   # You can change this to corretto21 if desired.
     commands:
       - echo "Installing dependencies and Tomcat..."
       - apt-get update
       - apt-get install -y docker jq wget unzip
-      # Download and extract Tomcat (Tomcat 9 used in this example)
-      - wget https://downloads.apache.org/tomcat/tomcat-9/v9.0.73/bin/apache-tomcat-9.0.73.tar.gz
+      # Download and extract Tomcat (using the updated mirror URL)
+      - wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.73/bin/apache-tomcat-9.0.73.tar.gz
       - tar xzf apache-tomcat-9.0.73.tar.gz
       - mv apache-tomcat-9.0.73 /usr/local/tomcat
-      # Start Docker daemon (if needed for other purposes)
+      # Start Docker daemon for ancillary purposes (if needed)
       - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
       - timeout 15 sh -c "until docker info; do sleep 1; done"
       # Install ngrok
@@ -35,7 +35,7 @@ phases:
       - echo "Building application..."
       - mkdir -p build/WEB-INF/classes
       - echo "Setting up Classpath from JARs..."
-      # Combine all JARs into a colon-separated list for javac to use
+      # Combine all JARs into a colon-separated list for javac to use.
       - export CP=$(echo src/main/webapp/WEB-INF/lib/*.jar | tr ' ' ':')
       - echo "Classpath - $CP"
       - echo "Compiling Java source files..."
@@ -64,11 +64,13 @@ phases:
       - /usr/local/tomcat/bin/startup.sh || true
       - export SERVICES_START=$(date +%s)
       - echo "Waiting for ngrok to initialize..."
-      - sleep 5
+      - sleep 10
+      - echo "Querying ngrok tunnels..."
       - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
       - echo "Public URL retrieved - $PUBLIC_URL"
+      - if [ -z "${PUBLIC_URL}" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
       - export DEPLOY_START=$(date +%s)
-      # Ensure the webapps directory exists
+      # Ensure the webapps directory exists.
       - echo "Creating Tomcat webapps directory..."
       - mkdir -p /usr/local/tomcat/webapps
       - echo "Deploying WAR to Tomcat..."
