@@ -37,7 +37,7 @@ phases:
       - echo "Setting up Classpath from JARs..."
       # Combine all JARs into a colon-separated list for javac to use
       - export CP=$(echo src/main/webapp/WEB-INF/lib/*.jar | tr ' ' ':')
-      - echo "Classpath: $CP"
+      - echo "Classpath - $CP"
       - echo "Compiling Java source files..."
       - find src -name '*.java' | xargs javac -cp "$CP" -d build/WEB-INF/classes
       - cp -R src/main/resources/* build/WEB-INF/classes/
