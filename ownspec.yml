@@ -7,41 +7,41 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto17    # (Change to corretto21 if needed and supported)
+      java: corretto17    # Change to corretto21 if desired and supported.
     commands:
-      - echo "Installing dependencies and downloading Tomcat..."
-      - apt-get update
-      - apt-get install -y docker jq wget unzip
-      # Download and extract Tomcat 9 from Apache's Archive
+      - echo "Updating packages and installing dependencies..."
+      - apt-get update && apt-get install -y docker jq wget unzip
+      - echo "Downloading Tomcat 9.0.73 from Apache Archive..."
       - wget https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.73/bin/apache-tomcat-9.0.73.tar.gz
+      - echo "Extracting Tomcat..."
       - tar xzf apache-tomcat-9.0.73.tar.gz
       - mv apache-tomcat-9.0.73 /usr/local/tomcat
-      # Start Docker daemon if needed (typically for other processes)
+      # (Optional) Start Docker daemon if needed by any steps
       - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
       - timeout 15 sh -c "until docker info; do sleep 1; done"
-      # Install ngrok
+      - echo "Installing ngrok..."
       - curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
       - echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list
       - apt-get update && apt-get install -y ngrok
 
   pre_build:
     commands:
-      - echo "Initializing timings..."
-      - export COMMIT_TIME=$(git log -1 --format=%ct)
+      - echo "Initializing timing variables..."
+      - export COMMIT_TIME=$(git log -1 --format=%ct 2>/dev/null || echo $(date +%s))
       - export PIPELINE_START=$(date +%s)
 
   build:
     commands:
-      - echo "Building application..."
+      - echo "Compiling the application..."
       - mkdir -p build/WEB-INF/classes
-      - echo "Building classpath from JARs..."
-      # Combine all JARs into a colon-separated list for javac
+      - echo "Generating classpath from JARs..."
       - export CP=$(echo src/main/webapp/WEB-INF/lib/*.jar | tr ' ' ':')
       - echo "Classpath - $CP"
       - echo "Compiling Java source files..."
       - find src -name '*.java' | xargs javac -cp "$CP" -d build/WEB-INF/classes
       - cp -R src/main/resources/* build/WEB-INF/classes/
       - cp -R src/main/webapp/* build/
+      - echo "Packaging the WAR file..."
       - jar -cvf JobManagement.war -C build .
       - export BUILD_END=$(date +%s)
       - echo "Running tests..."
@@ -55,29 +55,31 @@ phases:
 
   post_build:
     commands:
-      - echo "Starting Tomcat and ngrok..."
+      - echo "Starting ngrok tunnel and Tomcat..."
       # Configure and start ngrok to tunnel port 8080
       - ngrok config add-authtoken $NGROK_TOKEN
       - ngrok http 8080 --log=stdout > ngrok.log &
       # Start Tomcat
-      - echo "Starting Tomcat..."
+      - echo "Starting Tomcat server..."
       - /usr/local/tomcat/bin/startup.sh || true
       - sleep 10
+      # Retrieve the ngrok public URL
       - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-      - echo "Public URL - $PUBLIC_URL"
-      - if [ -z "${PUBLIC_URL}" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
+      - echo "Ngrok Public URL - $PUBLIC_URL"
+      - if [ -z "$PUBLIC_URL" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
       - mkdir -p /usr/local/tomcat/webapps
-      - echo "Deploying WAR to Tomcat..."
-      - cp JobManagement.war /usr/local/tomcat/webapps/
-      # Wait for Tomcat to explode the WAR (by checking the existence of the expected directory)
-      - echo "Waiting for application deployment..."
-      - timeout 300 bash -c 'until [ -d "/usr/local/tomcat/webapps/JobManagement" ]; do echo "Waiting for Tomcat to deploy WAR..."; sleep 5; done'
+      # Deploy the WAR as ROOT.war so it’s served at the root context
+      - echo "Deploying WAR to Tomcat as ROOT.war..."
+      - cp JobManagement.war /usr/local/tomcat/webapps/ROOT.war
+      - echo "Waiting for Tomcat to deploy the application..."
+      - timeout 300 bash -c 'until [ -d "/usr/local/tomcat/webapps/ROOT" ]; do echo "Waiting for deployment..."; sleep 5; done'
+      - echo "Verifying local accessibility on port 8080..."
+      - if curl -sSf http://localhost:8080/ >/dev/null; then echo "Local deployment verified!"; else echo "ERROR - Application not accessible on localhost:8080"; fi
       - echo "Dumping last 50 lines of catalina.out for troubleshooting:"
       - tail -n 50 /usr/local/tomcat/logs/catalina.out
-      # Log timing and metrics
       - export DEPLOY_END=$(date +%s)
       - |
-        echo "Calculating metrics..."
+        echo "Calculating timing metrics..."
         BUILD_DURATION=$(( BUILD_END - PIPELINE_START ))
         TEST_DURATION=$(( TESTS_END - BUILD_END ))
         DEPLOY_DURATION=$(( DEPLOY_END - PIPELINE_START ))
@@ -93,11 +95,10 @@ phases:
       - free -h > memory.log
       - ps -o %cpu,%mem,cmd > processes.log
       - echo "========================================================"
-      - echo "Access your application at - $PUBLIC_URL/JobManagement/"
-      - echo "NOTE - This CodeBuild job will remain active until manually stopped."
+      - echo "Access your application at - $PUBLIC_URL/"
+      - echo "This CodeBuild job will remain active until you manually stop it."
       - echo "========================================================"
-      # DO NOT run any docker stop or removal commands!
-      - echo "Entering persistent hold mode."
+      # Keep the container running so the public URL remains active.
       - while true; do sleep 60; done
 
 artifacts:
@@ -105,3 +106,6 @@ artifacts:
     - JobManagement.war
     - test_results.log
     - ngrok.log
+    - vmstat.log
+    - memory.log
+    - processes.log
