@@ -66,7 +66,7 @@ phases:
       - echo "Waiting for ngrok to initialize..."
       - sleep 5
       - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-      - echo "Public URL retrieved: $PUBLIC_URL"
+      - echo "Public URL retrieved - $PUBLIC_URL"
       - export DEPLOY_START=$(date +%s)
       # Ensure the webapps directory exists
       - echo "Creating Tomcat webapps directory..."
