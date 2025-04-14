@@ -7,22 +7,17 @@ env:
 phases:
   install:
     runtime-versions:
-      java: corretto17    # You can change this to corretto21 if desired and supported.
+      java: corretto17
     commands:
       - echo "Updating packages and installing dependencies..."
       - apt-get update && apt-get install -y docker jq wget unzip
-      - echo "Downloading Tomcat 9.0.73 from Apache Archive..."
-      - wget https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.73/bin/apache-tomcat-9.0.73.tar.gz
-      - echo "Extracting Tomcat..."
-      - tar xzf apache-tomcat-9.0.73.tar.gz
-      - mv apache-tomcat-9.0.73 /usr/local/tomcat
-      # (Optional) Start Docker daemon (if needed)
-      - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
-      - timeout 15 sh -c "until docker info; do sleep 1; done"
       - echo "Installing ngrok..."
       - curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
       - echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list
       - apt-get update && apt-get install -y ngrok
+      # (Optional) Start Docker daemon (if needed)
+      - nohup /usr/bin/dockerd --host=unix:///var/run/docker.sock > /dev/null 2>&1 &
+      - timeout 15 sh -c "until docker info; do sleep 1; done"
 
   pre_build:
     commands:
@@ -56,32 +51,28 @@ phases:
       - echo "Running tests using JUnit Platform Console Launcher..."
       - java -cp "test_output:$CP:junit-platform-console-standalone.jar" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
       - export TESTS_END=$(date +%s)
-      
+      # Build Docker image
+      - echo "Building Docker image..."
+      - docker build -t my-tomcat-app .
 
   post_build:
     commands:
-      - echo "Starting ngrok tunnel and Tomcat..."
+      - echo "Starting ngrok tunnel and Docker container..."
       # Configure and start ngrok to tunnel port 8080
       - ngrok config add-authtoken $NGROK_TOKEN
       - ngrok http 8080 --log=stdout > ngrok.log &
-      # Start Tomcat
-      - echo "Starting Tomcat server..."
-      - /usr/local/tomcat/bin/startup.sh || true
+      # Run the Docker container
+      - echo "Starting Docker container..."
+      - docker run -d -p 8080:8080 my-tomcat-app
       - sleep 10
       # Retrieve the ngrok public URL
       - export PUBLIC_URL=$(curl -s localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
       - echo "Ngrok Public URL - $PUBLIC_URL"
       - if [ -z "$PUBLIC_URL" ]; then echo "ERROR - PUBLIC_URL is empty! Check ngrok logs."; exit 1; fi
-      - mkdir -p /usr/local/tomcat/webapps
-      # Deploy the WAR as ROOT.war so it’s served at the root context
-      - echo "Deploying WAR to Tomcat as ROOT.war..."
-      - cp JobManagement.war /usr/local/tomcat/webapps/ROOT.war
-      - echo "Waiting for Tomcat to deploy the application..."
-      - timeout 300 bash -c 'until [ -d "/usr/local/tomcat/webapps/ROOT" ]; do echo "Waiting for Tomcat to deploy WAR..."; sleep 5; done'
-      - echo "Deployment appears complete. Verifying application locally..."
+      - echo "Waiting for application to be accessible..."
+      - timeout 300 bash -c 'until curl -I http://localhost:8080/; do echo "Waiting for application to be accessible..."; sleep 5; done'
+      - echo "Application appears accessible. Verifying locally..."
       - curl -I http://localhost:8080/ || echo "ERROR - Application not accessible on localhost:8080."
-      - echo "Dumping last 50 lines of catalina.out for debugging:"
-      - tail -n 50 /usr/local/tomcat/logs/catalina.out
       - export DEPLOY_END=$(date +%s)
       - |
         echo "Calculating timing metrics..."
