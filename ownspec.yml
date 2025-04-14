@@ -26,18 +26,18 @@ phases:
 
   pre_build:
     commands:
-      - echo "=== PRE-BUILD PHASE: Initializing timing variables ==="
+      - echo "=== PRE-BUILD PHASE - Initializing timing variables ==="
       - export COMMIT_TIME=$(git log -1 --format=%ct 2>/dev/null || echo $(date +%s))
       - export PIPELINE_START=$(date +%s)
-      - echo "COMMIT_TIME: $COMMIT_TIME, PIPELINE_START - $PIPELINE_START"
+      - echo "COMMIT_TIME - $COMMIT_TIME, PIPELINE_START - $PIPELINE_START"
 
   build:
     commands:
-      - echo "=== BUILD PHASE: Compiling Application ==="
+      - echo "=== BUILD PHASE - Compiling Application ==="
       - mkdir -p build/WEB-INF/classes
       - echo "Generating classpath from JARs in src/main/webapp/WEB-INF/lib..."
       - export CP=$(echo src/main/webapp/WEB-INF/lib/*.jar | tr ' ' ':')
-      - echo "CP: $CP"
+      - echo "CP - $CP"
       - echo "Compiling Java source files..."
       - find src -name '*.java' | xargs javac -cp "$CP" -d build/WEB-INF/classes || { echo "Compilation error"; exit 1; }
       - echo "Copying resources..."
