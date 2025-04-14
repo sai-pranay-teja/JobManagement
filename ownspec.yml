@@ -56,6 +56,7 @@ phases:
       - echo "Running tests using JUnit Platform Console Launcher..."
       - java -cp "test_output:$CP:junit-platform-console-standalone.jar" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
       - export TESTS_END=$(date +%s)
+      
 
   post_build:
     commands:
