@@ -11,7 +11,7 @@ def rollbackTime = 'N/A'
 
 pipeline {
     agent any
-    
+
 
     environment {
         TOMCAT_HOME           = '/opt/tomcat10'
@@ -135,8 +135,8 @@ pipeline {
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
                             pkill -f 'org.apache.catalina.startup.Bootstrap' || true
                             sleep 5
-                            ${TOMCAT_HOME}/bin/catalina.sh start|| true
-                            ${TOMCAT_HOME}/bin/catalina.sh stop
+                            ${TOMCAT_HOME}/bin/catalina.sh stop|| true
+                            ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
                     '''
 
@@ -155,8 +155,8 @@ EOF
                 sh '''
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
                         cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
-                        ${TOMCAT_HOME}/bin/catalina.sh start|| true
-                        ${TOMCAT_HOME}/bin/catalina.sh stop
+                        ${TOMCAT_HOME}/bin/catalina.sh stop|| true
+                        ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
                 '''
                 def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
