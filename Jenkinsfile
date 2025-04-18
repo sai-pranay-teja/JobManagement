@@ -14,7 +14,7 @@ def rollbackTime = 'N/A'
 def buildFailed = false
 def compilationError = false
 
-def mode = 'A' // 'A' = patterns enabled, 'B' = patterns disabled
+def mode = 'B' // 'A' = patterns enabled, 'B' = patterns disabled
 
 def metrics = [:]
 
