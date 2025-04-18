@@ -15,6 +15,7 @@ def compilationError = false
 
 def capturedException = null
 
+
 pipeline {
     agent any
 
@@ -108,7 +109,7 @@ EOF
                 }
             }
         }
-        
+
 
         stage('Backup WAR') {
             when {
