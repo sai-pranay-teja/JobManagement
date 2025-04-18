@@ -7,7 +7,7 @@ def rollbackTime = "N/A"
 def recordStageTiming(String stageName, int startTime, int endTime) {
     def duration = endTime - startTime
     echo "${stageName} took ${duration} seconds"
-    // Append timing info to a log for later analysis
+    // Append timing info to a log file for later analysis
     sh "echo '${stageName}: ${duration} sec' >> ${WORKSPACE}/stage_timings.log"
 }
 
@@ -41,28 +41,26 @@ pipeline {
         // Optimization toggles – set these appropriately for baseline vs. optimized runs.
         ENABLE_WORKSPACE_CACHE   = "false"
         ENABLE_INCREMENTAL_BUILD = "true"
-        // We no longer use an agent prewarm simulation.
         ENABLE_PARALLEL_TEST     = "true"
 
-        // File paths for storing measured times for each pattern
+        // File paths for storing measured times for each pattern:
         BASELINE_WS_CACHE_FILE       = "${WORKSPACE}/baseline_workspace_cache.txt"
         OPTIMIZED_WS_CACHE_FILE      = "${WORKSPACE}/optimized_workspace_cache.txt"
         BASELINE_INCREMENTAL_FILE    = "${WORKSPACE}/baseline_incremental_build.txt"
         OPTIMIZED_INCREMENTAL_FILE   = "${WORKSPACE}/optimized_incremental_build.txt"
-        // New Artifact Compression Pattern files:
         BASELINE_COMPRESSION_FILE    = "${WORKSPACE}/baseline_artifact_compression.txt"
         OPTIMIZED_COMPRESSION_FILE   = "${WORKSPACE}/optimized_artifact_compression.txt"
-        // Parallel Test Pattern files:
         BASELINE_PARALLEL_TEST_FILE  = "${WORKSPACE}/baseline_parallel_test.txt"
         OPTIMIZED_PARALLEL_TEST_FILE = "${WORKSPACE}/optimized_parallel_test.txt"
-        // Rollback Optimization Pattern files:
         BASELINE_ROLLBACK_FILE       = "${WORKSPACE}/baseline_rollback.txt"
         OPTIMIZED_ROLLBACK_FILE      = "${WORKSPACE}/optimized_rollback.txt"
     }
     
     stages {
+
         stage('Clean Workspace') {
             steps {
+                // Clean workspace (preserving backups directory if necessary)
                 cleanWs(deleteDirs: true, patterns: [[pattern: 'backups/**', type: 'EXCLUDE']])
             }
         }
@@ -79,26 +77,26 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    def stageStart = sh(script:"date +%s", returnStdout:true).trim().toInteger()
+                    def stageStart = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                     git url: 'https://github.com/sai-pranay-teja/JobManagement.git', branch: 'main'
-                    def stageEnd = sh(script:"date +%s", returnStdout:true).trim().toInteger()
+                    def stageEnd = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                     recordStageTiming("Checkout", stageStart, stageEnd)
                 }
             }
         }
-        
+
         // --- Workspace-Cache Pattern ---
         stage('Build WAR - Baseline (Workspace Cache)') {
             steps {
                 script {
-                    def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Perform a full build (without using any cache)
+                    def startTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                    // Full build without using any cache:
                     sh 'mkdir -p build/WEB-INF/classes'
-                    sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> ${WORKSPACE}/compile_error.log'
+                    sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes \\$(find src -name "*.java") 2> ${WORKSPACE}/compile_error.log'
                     sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                     sh 'cp -R src/main/webapp/* build/'
                     sh 'jar -cvf ${WAR_NAME} -C build .'
-                    def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
+                    def endTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                     def elapsed = endTime - startTime
                     echo "Baseline (Workspace Cache) build time: ${elapsed} sec"
                     sh "echo '${elapsed}' > ${BASELINE_WS_CACHE_FILE}"
@@ -109,15 +107,15 @@ pipeline {
         stage('Build WAR - Optimized (Workspace Cache)') {
             steps {
                 script {
-                    def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // If caching is enabled and marker exists, reuse cached artifacts.
+                    def startTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
+                    // If caching is enabled and a marker exists, reuse cached artifacts.
                     if (env.ENABLE_WORKSPACE_CACHE == "true" && fileExists("${WORKSPACE}/build_cache.marker")) {
-                        echo "Cache exists: using cached build artifacts."
+                        echo "Cache exists: using cached artifacts."
                         sh 'cp -R ${WORKSPACE}/build_cache/* build/'
                     } else {
-                        // Otherwise, perform full build and then update cache if enabled.
+                        // Full build then update cache if enabled.
                         sh 'mkdir -p build/WEB-INF/classes'
-                        sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> ${WORKSPACE}/compile_error.log'
+                        sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes \\$(find src -name "*.java") 2> ${WORKSPACE}/compile_error.log'
                         sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                         sh 'cp -R src/main/webapp/* build/'
                         sh 'jar -cvf ${WAR_NAME} -C build .'
@@ -128,7 +126,7 @@ pipeline {
                             echo "Workspace cache updated."
                         }
                     }
-                    def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
+                    def endTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                     def elapsed = endTime - startTime
                     echo "Optimized (Workspace Cache) build time: ${elapsed} sec"
                     sh "echo '${elapsed}' > ${OPTIMIZED_WS_CACHE_FILE}"
@@ -141,9 +139,9 @@ pipeline {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Full build process (baseline for incremental build)
+                    // Baseline: perform full build (simulate incremental build baseline)
                     sh 'mkdir -p build/WEB-INF/classes'
-                    sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
+                    sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes \\$(find src -name "*.java")'
                     sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                     sh 'cp -R src/main/webapp/* build/'
                     sh 'jar -cvf ${WAR_NAME} -C build .'
@@ -159,9 +157,9 @@ pipeline {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Simulate an incremental build (in practice, only changed files are recompiled)
+                    // Optimized: simulate incremental build (in practice, compile only changed files)
                     sh 'mkdir -p build/WEB-INF/classes'
-                    sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
+                    sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes \\$(find src -name "*.java")'
                     sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                     sh 'cp -R src/main/webapp/* build/'
                     sh 'jar -cvf ${WAR_NAME} -C build .'
@@ -173,12 +171,12 @@ pipeline {
             }
         }
         
-        // --- Artifact Compression Pattern (New Replacement) ---
+        // --- Artifact Compression Pattern ---
         stage('Artifact Compression - Baseline') {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Baseline: simply copy the WAR file (simulate uncompressed transfer)
+                    // Baseline: copy the WAR uncompressed
                     sh "cp ${WAR_STORAGE}/${WAR_NAME} ${WORKSPACE}/artifact_baseline.war"
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
@@ -192,7 +190,7 @@ pipeline {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Optimized: Compress the WAR file using gzip then decompress it.
+                    // Optimized: compress and decompress the WAR
                     sh "gzip -c ${WAR_STORAGE}/${WAR_NAME} > ${WORKSPACE}/artifact_optimized.war.gz"
                     sh "gunzip -c ${WORKSPACE}/artifact_optimized.war.gz > ${WORKSPACE}/artifact_optimized.war"
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
@@ -208,12 +206,11 @@ pipeline {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Run all tests serially.
+                    // Serial test execution
                     sh """
                         mkdir -p ${WORKSPACE}/test_output_serial
-                        javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_serial \$(find ${WORKSPACE}/src/main/test -name "*.java")
-
-                        java -cp "${WORKSPACE}/test_output_serial:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_serial --details summary > ${WORKSPACE}/test_results_serial.log 2>&1 || true
+                        javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_serial \\$(find ${WORKSPACE}/src/main/test -name "*.java")
+                        java -cp "${WORKSPACE}/test_output_serial:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_serial --details summary > ${WORKSPACE}/test_results_serial.log 2>&1
                     """
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
@@ -231,19 +228,18 @@ pipeline {
                         "Test Part 1": {
                             sh """
                                 mkdir -p ${WORKSPACE}/test_output_parallel/part1
-                                javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part1 $(find ${WORKSPACE}/src/main/test -name "*Part1*.java")
-                                java -cp "${WORKSPACE}/test_output_parallel/part1:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part1 --details summary > ${WORKSPACE}/test_results_parallel_part1.log 2>&1 || true
+                                javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part1 \\$(find ${WORKSPACE}/src/main/test -name "*Part1*.java")
+                                java -cp "${WORKSPACE}/test_output_parallel/part1:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part1 --details summary > ${WORKSPACE}/test_results_parallel_part1.log 2>&1
                             """
                         },
                         "Test Part 2": {
                             sh """
                                 mkdir -p ${WORKSPACE}/test_output_parallel/part2
-                                javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part2 $(find ${WORKSPACE}/src/main/test -name "*Part2*.java")
-                                java -cp "${WORKSPACE}/test_output_parallel/part2:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part2 --details summary > ${WORKSPACE}/test_results_parallel_part2.log 2>&1 || true
+                                javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part2 \\$(find ${WORKSPACE}/src/main/test -name "*Part2*.java")
+                                java -cp "${WORKSPACE}/test_output_parallel/part2:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part2 --details summary > ${WORKSPACE}/test_results_parallel_part2.log 2>&1
                             """
                         }
                     )
-                    // Merge the parallel logs
                     sh "cat ${WORKSPACE}/test_results_parallel_part1.log ${WORKSPACE}/test_results_parallel_part2.log > ${TEST_RESULTS_LOG}"
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
@@ -284,7 +280,7 @@ pipeline {
                     echo "Lead Time for Changes: ${leadTimeForChanges} sec"
                     // Deploy and restart Tomcat via SSH
                     sh """
-                        echo "Starting deployment at \$(date)" >> ${LOG_FILE}
+                        echo "Starting deployment at \\$(date)" >> ${LOG_FILE}
                         scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
                         
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
@@ -294,7 +290,7 @@ ${TOMCAT_HOME}/bin/startup.sh
 exit
 EOF
                         tail -f ${TOMCAT_HOME}/logs/catalina.out | while read line; do
-                           echo "\${line}" | grep -q "Deployment of web application archive" && break;
+                           echo "\\${line}" | grep -q "Deployment of web application archive" && break;
                         done
                     """
                     def deployEndTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
@@ -311,7 +307,7 @@ EOF
             steps {
                 script {
                     def stageStart = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_BEFORE_LOG}"
+                    sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \\$1/1024, substr(\\$0, index(\\$0,\\$2))}' > ${RESOURCE_BEFORE_LOG}"
                     sh "free -h > ${MEM_BEFORE_LOG}"
                     def stageEnd = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     recordStageTiming("Measure Resource Usage Before Deployment", stageStart, stageEnd)
@@ -323,7 +319,7 @@ EOF
             steps {
                 script {
                     def stageStart = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \$1/1024, substr(\$0, index(\$0,\$2))}' > ${RESOURCE_AFTER_LOG}"
+                    sh "vmstat -s | awk '{printf \"%.2f MB - %s\\n\", \\$1/1024, substr(\\$0, index(\\$0,\\$2))}' > ${RESOURCE_AFTER_LOG}"
                     sh "free -h > ${MEM_AFTER_LOG}"
                     def stageEnd = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     recordStageTiming("Measure Resource Usage After Deployment", stageStart, stageEnd)
@@ -340,7 +336,7 @@ EOF
             echo 'Deployment failed! Performing rollback...'
             script {
                 def rollbackStartTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                // Actual rollback: restore the backed-up WAR file using SSH.
+                // Actual rollback via SSH – this should measure the real time taken to restore the backup
                 if (fileExists("${BACKUP_DIR}/${WAR_NAME}_bak")) {
                     sh """
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${BACKUP_DIR}/${WAR_NAME}"
@@ -448,24 +444,18 @@ EOF
                 def deltaRollback = calcDelta(baselineRollback, optimizedRollback)
                 def pctRollback = calcPct(baselineRollback, deltaRollback)
                 
-                // Print the summary table for optimization patterns.
+                // Print the summary table for optimization patterns
                 echo ""
                 echo "-------------------------------------------------------------"
                 echo "       Optimization Patterns Summary                         "
                 echo "-------------------------------------------------------------"
-                echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", 
-                    "Pattern", "Baseline (sec)", "Optimized (sec)", "Δ (sec)", "% Reduction")
+                echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", "Pattern", "Baseline (sec)", "Optimized (sec)", "Δ (sec)", "% Reduction")
                 echo "-------------------------------------------------------------"
-                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Workspace-Cache Pattern", baselineCache.intValue(), optimizedCache.intValue(), deltaCache.intValue(), pctCache.intValue())
-                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Incremental-Build Pattern", baselineIncremental.intValue(), optimizedIncremental.intValue(), deltaIncremental.intValue(), pctIncremental.intValue())
-                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Artifact Compression Pattern", baselineCompression.intValue(), optimizedCompression.intValue(), deltaCompression.intValue(), pctCompression.intValue())
-                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Parallel Test Pattern", baselineTest.intValue(), optimizedTest.intValue(), deltaTest.intValue(), pctTest.intValue())
-                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Rollback Optimization", baselineRollback.intValue(), optimizedRollback.intValue(), deltaRollback.intValue(), pctRollback.intValue())
+                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", "Workspace-Cache Pattern", baselineCache.intValue(), optimizedCache.intValue(), calcDelta(baselineCache, optimizedCache).intValue(), calcPct(baselineCache, deltaCache).intValue())
+                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", "Incremental-Build Pattern", baselineIncremental.intValue(), optimizedIncremental.intValue(), calcDelta(baselineIncremental, optimizedIncremental).intValue(), calcPct(baselineIncremental, deltaIncremental).intValue())
+                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", "Artifact Compression Pattern", baselineCompression.intValue(), optimizedCompression.intValue(), calcDelta(baselineCompression, optimizedCompression).intValue(), calcPct(baselineCompression, deltaCompression).intValue())
+                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", "Parallel Test Pattern", baselineTest.intValue(), optimizedTest.intValue(), calcDelta(baselineTest, optimizedTest).intValue(), calcPct(baselineTest, deltaTest).intValue())
+                echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", "Rollback Optimization", baselineRollback.intValue(), optimizedRollback.intValue(), calcDelta(baselineRollback, optimizedRollback).intValue(), calcPct(baselineRollback, deltaRollback).intValue())
                 echo "-------------------------------------------------------------"
                 echo ""
             }
