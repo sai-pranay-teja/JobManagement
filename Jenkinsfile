@@ -47,7 +47,7 @@ pipeline {
             steps {
                 script {
                     sh "rm -f ${ROLLBACK_LOG}"
-                    pipelineStartTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                    pipelineStartTime = System.currentTimeMillis() // Capture the pipeline start time
                 }
             }
         }
@@ -126,6 +126,13 @@ pipeline {
                                     javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_integration src/main/test/TestAppPart2.java
                                     java -cp 'test_output_integration:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > ${TEST_RESULTS_LOG}-integration 2>&1 || true
                                 '''
+                            },
+                            'API Tests': {
+                                sh '''
+                                    mkdir -p test_output_api
+                                    javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_api src/main/test/TestAppPart3.java
+                                    java -cp 'test_output_api:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart3 --details summary > ${TEST_RESULTS_LOG}-api 2>&1 || true
+                                '''
                             }
                         )
                     } else {
@@ -167,30 +174,30 @@ EOF
     }
 
     post {
-    always {
-        script {
-            totalTime = (System.currentTimeMillis() - pipelineStartTime) / 1000
-            echo "\n=== PIPELINE METRICS (${mode}) ==="
-            echo "Build Time           : ${buildTime} sec"
-            echo "Test Time            : ${testTime} sec"
-            echo "Deploy Time          : ${deployTime} sec"
-            echo "Lead Time for Change : ${leadTimeForChanges} sec"
-            echo "Total Pipeline Time  : ${totalTime} sec"
-            echo "=============================="
+        always {
+            script {
+                def pipelineEndTime = System.currentTimeMillis() // Capture the end time of the pipeline
+                totalTime = (pipelineEndTime - pipelineStartTime) / 1000 // Calculate the total pipeline time
 
-            def header = 'Run Mode,Build Time,Test Time,Deploy Time,Lead Time,Total Time\n'
-            def line = "${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime}\n"
+                echo "\n=== PIPELINE METRICS (${mode}) ==="
+                echo "Build Time           : ${buildTime} sec"
+                echo "Test Time            : ${testTime} sec"
+                echo "Deploy Time          : ${deployTime} sec"
+                echo "Lead Time for Change : ${leadTimeForChanges} sec"
+                echo "Total Pipeline Time  : ${totalTime} sec"
+                echo "=============================="
 
-            def csvExists = fileExists(CSV_FILE)
-            if (!csvExists) {
-                writeFile file: CSV_FILE, text: header + line
-            } else {
-                // Read the existing content, append new content, and write back to the file
-                def currentContent = readFile(CSV_FILE)
-                writeFile file: CSV_FILE, text: currentContent + line
+                def header = 'Run Mode,Build Time,Test Time,Deploy Time,Lead Time,Total Time\n'
+                def line = "${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime}\n"
+
+                def csvExists = fileExists(CSV_FILE)
+                if (!csvExists) {
+                    writeFile file: CSV_FILE, text: header + line
+                } else {
+                    def currentContent = readFile(CSV_FILE)
+                    writeFile file: CSV_FILE, text: currentContent + line
+                }
             }
         }
     }
-}
-
 }
