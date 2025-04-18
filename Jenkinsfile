@@ -46,7 +46,7 @@ pipeline {
         ENABLE_INCREMENTAL_BUILD = "true"
         ENABLE_AGENT_PREWARM     = "true"
 
-        // File paths for storing measured times for each pattern:
+        // File paths to store measured times for each pattern:
         BASELINE_WS_CACHE_FILE      = "${WORKSPACE}/baseline_workspace_cache.txt"
         OPTIMIZED_WS_CACHE_FILE     = "${WORKSPACE}/optimized_workspace_cache.txt"
         BASELINE_INCREMENTAL_FILE   = "${WORKSPACE}/baseline_incremental_build.txt"
@@ -87,7 +87,7 @@ pipeline {
         }
         
         // -------------------------------------------------------------
-        // Workspace‑Cache Pattern (Baselines and Optimized)
+        // Workspace‑Cache Pattern (Baseline and Optimized)
         // -------------------------------------------------------------
         stage('Build WAR - Baseline (Workspace Cache)') {
             steps {
@@ -138,10 +138,8 @@ pipeline {
         }
         
         // -------------------------------------------------------------
-        // Incremental‑Build Pattern (Baselines and Optimized)
+        // Incremental‑Build Pattern (Baseline and Optimized)
         // For demonstration, the same build commands are used.
-        // In practice, incremental builds compile only changed files.
-        // -------------------------------------------------------------
         stage('Build WAR - Baseline (Incremental Build)') {
             steps {
                 script {
@@ -164,8 +162,7 @@ pipeline {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Simulate an incremental build process – ideally, only changed files are recompiled.
-                    // Here we use the same commands (for demonstration), but expect a lower elapsed time.
+                    // Simulate an incremental build process; here we use the same commands for demonstration purposes.
                     sh 'mkdir -p build/WEB-INF/classes'
                     sh 'javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java")'
                     sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
@@ -180,16 +177,14 @@ pipeline {
         }
         
         // -------------------------------------------------------------
-        // Agent Pre‑Warm Pattern (Baselines and Optimized)
+        // Agent Pre‑Warm Pattern (Baseline and Optimized)
         // Here we simulate deployment delays.
-        // -------------------------------------------------------------
         stage('Deploy - Baseline (Agent Pre-Warm)') {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     // Simulate a delay for cold agent provisioning (e.g., 5 seconds)
                     sh "sleep 5"
-                    // (Deploy commands would be here)
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
                     echo "Baseline (Agent Pre-Warm) deploy overhead: ${elapsed} seconds"
@@ -202,9 +197,8 @@ pipeline {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Simulate faster provisioning when using a persistent (prewarmed) agent (e.g., 2 seconds)
+                    // Simulate faster provisioning when using a prewarmed agent (e.g., 2 seconds delay)
                     sh "sleep 2"
-                    // (Deploy commands would be here)
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
                     echo "Optimized (Agent Pre-Warm) deploy overhead: ${elapsed} seconds"
@@ -214,13 +208,13 @@ pipeline {
         }
         
         // -------------------------------------------------------------
-        // Rollback Optimization Pattern (Baselines and Optimized)
+        // Rollback Optimization Pattern (Baseline and Optimized)
         // -------------------------------------------------------------
         stage('Simulate Rollback - Baseline') {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Simulate baseline rollback (e.g., 5 seconds delay)
+                    // Simulate baseline rollback process (e.g., 5 seconds delay)
                     sh "sleep 5"
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
@@ -234,7 +228,7 @@ pipeline {
             steps {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
-                    // Simulate optimized rollback (e.g., 2 seconds delay)
+                    // Simulate optimized rollback process (e.g., 2 seconds delay)
                     sh "sleep 2"
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
@@ -246,7 +240,6 @@ pipeline {
         
         // -------------------------------------------------------------
         // Other stages: Backup WAR, Run Unit Tests, Resource Measurement, etc.
-        // (These remain unchanged from your existing file.)
         // -------------------------------------------------------------
         stage('Backup WAR') {
             steps {
@@ -326,7 +319,7 @@ pipeline {
                     def stageStart = sh(script: "date +%s", returnStdout: true).trim().toInteger()
 
                     // For Agent Prewarm Pattern: if ENABLE_AGENT_PREWARM=="true", run this stage on a prewarmed node.
-                    // (Configuration for a persistent agent node is managed via node labels and Jenkins configuration.)
+                    // (This is managed via node labels and Jenkins configuration.)
                     def deployStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
                     def commitTime = sh(script: "git log -1 --format=%ct", returnStdout: true).trim().toInteger()
                     leadTimeForChanges = deployStartTime - commitTime
@@ -460,8 +453,10 @@ EOF
                 echo resourceUsageAfter
                 echo "-------------------------------------------------"
                 
-                // Helper function to read a timing from a file
-                def getTiming = { filePath -> fileExists(filePath) ? readFile(filePath).trim().toInteger() : 0 }
+                // Helper function to read a timing from a file (returns 0 if file not found)
+                def getTiming = { filePath ->
+                    return fileExists(filePath) ? readFile(filePath).trim().toInteger() : 0
+                }
                 
                 // Read baseline and optimized times for each pattern
                 def baselineCache      = getTiming(BASELINE_WS_CACHE_FILE)
@@ -486,7 +481,7 @@ EOF
                 def deltaRollback    = calcDelta(baselineRollback, optimizedRollback)
                 def pctRollback      = calcPct(baselineRollback, deltaRollback)
                 
-                // Print Optimization Patterns Summary Table dynamically.
+                // Print the Optimization Patterns summary table dynamically.
                 echo ""
                 echo "-------------------------------------------------------------"
                 echo "       Optimization Patterns Summary                         "
@@ -494,14 +489,15 @@ EOF
                 echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", 
                     "Pattern", "Baseline (sec)", "Optimized (sec)", "Δ (sec)", "% Reduction")
                 echo "-------------------------------------------------------------"
+                // Force conversion of numbers to int values to avoid BigDecimal formatting errors.
                 echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Workspace-Cache Pattern", baselineCache, optimizedCache, deltaCache, pctCache)
+                    "Workspace-Cache Pattern", baselineCache.intValue(), optimizedCache.intValue(), deltaCache.intValue(), pctCache.intValue())
                 echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Incremental-Build Pattern", baselineIncremental, optimizedIncremental, deltaIncremental, pctIncremental)
+                    "Incremental-Build Pattern", baselineIncremental.intValue(), optimizedIncremental.intValue(), deltaIncremental.intValue(), pctIncremental.intValue())
                 echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Agent Pre-Warm Pattern", baselineAgent, optimizedAgent, deltaAgent, pctAgent)
+                    "Agent Pre-Warm Pattern", baselineAgent.intValue(), optimizedAgent.intValue(), deltaAgent.intValue(), pctAgent.intValue())
                 echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
-                    "Rollback Optimization", baselineRollback, optimizedRollback, deltaRollback, pctRollback)
+                    "Rollback Optimization", baselineRollback.intValue(), optimizedRollback.intValue(), deltaRollback.intValue(), pctRollback.intValue())
                 echo "-------------------------------------------------------------"
                 echo ""
             }
