@@ -211,7 +211,6 @@ pipeline {
                     // Run all tests serially.
                     sh """
                         mkdir -p ${WORKSPACE}/test_output_serial
-                        #javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_serial $(find ${WORKSPACE}/src/main/test -name "*.java")
                         javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_serial \$(find ${WORKSPACE}/src/main/test -name "*.java")
 
                         java -cp "${WORKSPACE}/test_output_serial:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_serial --details summary > ${WORKSPACE}/test_results_serial.log 2>&1 || true
