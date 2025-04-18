@@ -1,7 +1,7 @@
 package model;
 
 public class Application {
-    private int applicationId;
+    private int applicationId
     private int jobId;
     private int applicantId;
     private String status;
