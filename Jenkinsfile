@@ -289,7 +289,7 @@ ${TOMCAT_HOME}/bin/startup.sh
 exit
 EOF
                         tail -f ${TOMCAT_HOME}/logs/catalina.out | while read line; do
-                           echo "\\${line}" | grep -q "Deployment of web application archive" && break;
+                           echo "\${line}" | grep -q "Deployment of web application archive" && break;
                         done
                     """
                     def deployEndTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
