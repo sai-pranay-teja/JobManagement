@@ -41,7 +41,7 @@ pipeline {
         BACKUP_DIR           = "/tmp/jenkins_bak"
 
         // Optimization toggles (set these to "true" or "false" as needed)
-        ENABLE_WORKSPACE_CACHE = "true"
+        ENABLE_WORKSPACE_CACHE = "false"
         ENABLE_PARALLEL_TEST   = "true"
         ENABLE_INCREMENTAL_BUILD = "true"
         ENABLE_AGENT_PREWARM   = "true"
