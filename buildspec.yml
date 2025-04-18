@@ -46,7 +46,7 @@ phases:
           echo "Lead Time for Changes: $LEAD_TIME seconds"
           
           # Backup the WAR file.
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@40.192.33.107:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@18.61.80.123:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
           
           # (Simulated) Deployment delay—replace this with your actual deployment commands.
           sleep 5
@@ -78,7 +78,7 @@ phases:
           
           # Record the rollback start time.
           export ROLLBACK_START_TIME=$(date +%s)
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@40.192.33.107 "
+          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.61.80.123 "
             /opt/tomcat10/bin/catalina.sh stop || true
             cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
             /opt/tomcat10/bin/catalina.sh start" 
