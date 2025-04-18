@@ -167,27 +167,30 @@ EOF
     }
 
     post {
-        always {
-            script {
-                totalTime = (System.currentTimeMillis() - pipelineStartTime) / 1000
-                echo "\n=== PIPELINE METRICS (${mode}) ==="
-                echo "Build Time           : ${buildTime} sec"
-                echo "Test Time            : ${testTime} sec"
-                echo "Deploy Time          : ${deployTime} sec"
-                echo "Lead Time for Change : ${leadTimeForChanges} sec"
-                echo "Total Pipeline Time  : ${totalTime} sec"
-                echo "=============================="
+    always {
+        script {
+            totalTime = (System.currentTimeMillis() - pipelineStartTime) / 1000
+            echo "\n=== PIPELINE METRICS (${mode}) ==="
+            echo "Build Time           : ${buildTime} sec"
+            echo "Test Time            : ${testTime} sec"
+            echo "Deploy Time          : ${deployTime} sec"
+            echo "Lead Time for Change : ${leadTimeForChanges} sec"
+            echo "Total Pipeline Time  : ${totalTime} sec"
+            echo "=============================="
 
-                def header = 'Run Mode,Build Time,Test Time,Deploy Time,Lead Time,Total Time\n'
-                def line = "${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime}\n"
+            def header = 'Run Mode,Build Time,Test Time,Deploy Time,Lead Time,Total Time\n'
+            def line = "${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime}\n"
 
-                def csvExists = fileExists(CSV_FILE)
-                if (!csvExists) {
-                    writeFile file: CSV_FILE, text: header + line
-                } else {
-                    appendToFile file: CSV_FILE, text: line
-                }
+            def csvExists = fileExists(CSV_FILE)
+            if (!csvExists) {
+                writeFile file: CSV_FILE, text: header + line
+            } else {
+                // Read the existing content, append new content, and write back to the file
+                def currentContent = readFile(CSV_FILE)
+                writeFile file: CSV_FILE, text: currentContent + line
             }
         }
     }
+}
+
 }
