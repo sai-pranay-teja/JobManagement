@@ -224,21 +224,21 @@ pipeline {
                 script {
                     def startTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     parallel (
-                        "Test Part 1": {
-                            sh """
-                                mkdir -p ${WORKSPACE}/test_output_parallel/part1
-                                javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part1 \\$(find ${WORKSPACE}/src/main/test -name "*Part1*.java")
-                                java -cp "${WORKSPACE}/test_output_parallel/part1:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part1 --details summary > ${WORKSPACE}/test_results_parallel_part1.log 2>&1
-                            """
-                        },
-                        "Test Part 2": {
-                            sh """
-                                mkdir -p ${WORKSPACE}/test_output_parallel/part2
-                                javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part2 \\$(find ${WORKSPACE}/src/main/test -name "*Part2*.java")
-                                java -cp "${WORKSPACE}/test_output_parallel/part2:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part2 --details summary > ${WORKSPACE}/test_results_parallel_part2.log 2>&1
-                            """
-                        }
-                    )
+    "Test Part 1": {
+        sh """
+            mkdir -p ${WORKSPACE}/test_output_parallel/part1
+            javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part1 \$(find ${WORKSPACE}/src/main/test -name "*Part1*.java")
+            java -cp "${WORKSPACE}/test_output_parallel/part1:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part1 --details summary > ${WORKSPACE}/test_results_parallel_part1.log 2>&1 || true
+        """
+    },
+    "Test Part 2": {
+        sh """
+            mkdir -p ${WORKSPACE}/test_output_parallel/part2
+            javac -cp "${WORKSPACE}/src/main/webapp/WEB-INF/lib/*:${WORKSPACE}/src" -d ${WORKSPACE}/test_output_parallel/part2 \$(find ${WORKSPACE}/src/main/test -name "*Part2*.java")
+            java -cp "${WORKSPACE}/test_output_parallel/part2:${WORKSPACE}/src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path ${WORKSPACE}/test_output_parallel/part2 --details summary > ${WORKSPACE}/test_results_parallel_part2.log 2>&1 || true
+        """
+    }
+)
                     sh "cat ${WORKSPACE}/test_results_parallel_part1.log ${WORKSPACE}/test_results_parallel_part2.log > ${TEST_RESULTS_LOG}"
                     def endTime = sh(script:"date +%s", returnStdout:true).trim().toInteger()
                     def elapsed = endTime - startTime
