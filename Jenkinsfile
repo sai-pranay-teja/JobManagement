@@ -170,7 +170,7 @@ EOF
     post {
         always {
             script {
-                totalTime = (System.currentTimeMillis() - pipelineStartTime * 1000) / 1000
+                totalTime = (System.currentTimeMillis() - pipelineStartTime) / 1000
                 echo "\n=== PIPELINE METRICS (${mode}) ==="
                 echo "Build Time           : ${buildTime} sec"
                 echo "Test Time            : ${testTime} sec"
