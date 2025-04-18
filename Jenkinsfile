@@ -4,7 +4,6 @@
  */
 
 def pipelineStartTime = 0L
-
 def buildTime = 0L
 def testTime = 0L
 def deployTime = 0L
@@ -186,7 +185,7 @@ EOF
                 if (!csvExists) {
                     writeFile file: CSV_FILE, text: header + line
                 } else {
-                    writeFile file: CSV_FILE, text: line
+                    appendToFile file: CSV_FILE, text: line
                 }
             }
         }
