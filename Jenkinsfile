@@ -13,6 +13,8 @@ def buildFailed = false
 
 def compilationError = false
 
+def capturedException = null
+
 pipeline {
     agent any
 
@@ -79,9 +81,30 @@ pipeline {
                     } catch (Exception e) {
                         buildFailed = true
                         compilationError = true
+                        capturedException = e
                         currentBuild.result = 'FAILURE'
-                        throw e
                     }
+                }
+            }
+        }
+
+        stage('Handle Compilation Error') {
+            when {
+                expression { buildFailed && compilationError }
+            }
+            steps {
+                script {
+                    echo 'Compilation failed — performing rollback.'
+                    def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                    sh '''
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                            cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
+                            ${TOMCAT_HOME}/bin/catalina.sh stop || true
+                            ${TOMCAT_HOME}/bin/catalina.sh start
+EOF
+                    '''
+                    def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                    rollbackTime = (rollbackEnd - rollbackStart).toString()
                 }
             }
         }
@@ -170,24 +193,6 @@ EOF
     }
 
     post {
-        failure {
-            script {
-                if (compilationError) {
-                    def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    sh '''
-                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
-                            cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
-                            ${TOMCAT_HOME}/bin/catalina.sh stop || true
-                            ${TOMCAT_HOME}/bin/catalina.sh start
-EOF
-                    '''
-                    def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    rollbackTime = (rollbackEnd - rollbackStart).toString()
-                } else {
-                    echo 'Failure was not due to compilation error — skipping rollback.'
-                }
-            }
-        }
         always {
             script {
                 def pipelineEnd  = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
@@ -197,7 +202,7 @@ EOF
                 echo "Total Pipeline Time   : ${totalTime} sec"
                 echo "Deployment Time       : ${deployTime} sec"
                 echo "Lead Time for Changes : ${leadTimeForChanges} sec"
-                if (compilationError && rollbackTime != 'N/A') {
+                if (rollbackTime != 'N/A') {
                     echo "Rollback Time         : ${rollbackTime} sec"
                 }
                 def unitLog = fileExists("${TEST_RESULTS_LOG}-unit") ? readFile("${TEST_RESULTS_LOG}-unit") : ''
