@@ -31,7 +31,7 @@ pipeline {
         // SSH variables for accessing the server as root
         SSH_KEY              = "/var/lib/jenkins/.ssh/id_rsa"
         SSH_USER             = "root"
-        SSH_HOST             = "40.192.33.107"
+        SSH_HOST             = "18.61.80.123"
         SSH_OPTS             = "-o StrictHostKeyChecking=no"
         BACKUP_DIR = "/home/ubuntu/jenkins_bak"
     }
