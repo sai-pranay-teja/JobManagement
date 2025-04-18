@@ -39,6 +39,8 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
+                    // Clean up any old rollback logs
+                    sh "rm -f ${ROLLBACK_LOG}"
                     pipelineStartTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                 }
             }
@@ -131,7 +133,7 @@ pipeline {
                 script {
                     def unitLog = readFile("${TEST_RESULTS_LOG}-unit").toLowerCase()
                     def intLog  = readFile("${TEST_RESULTS_LOG}-integration").toLowerCase()
-                    if ((unitLog =~ /\[\s*\d+\s*tests failed\s*\]/) || (intLog =~ /\[\s*\d+\s*tests failed\s*\]/)) {
+                    if ((unitLog =~ /\[\s*[1-9]\d*\s*tests failed\s*\]/) || (intLog =~ /\[\s*[1-9]\d*\s*tests failed\s*\]/)) {
                         error('Test failure detected — aborting pipeline.')
                     }
                 }
@@ -189,17 +191,16 @@ EOF
                 def pipelineEnd  = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                 def totalTime    = pipelineEnd - pipelineStartTime
                 def deployTime   = fileExists(DEPLOYMENT_TIME_FILE) ? readFile(DEPLOYMENT_TIME_FILE).trim() : 'N/A'
-                def rollbackVal  = fileExists(ROLLBACK_LOG) ? readFile(ROLLBACK_LOG).trim() : 'N/A'
-                def unitLog      = fileExists("${TEST_RESULTS_LOG}-unit") ? readFile("${TEST_RESULTS_LOG}-unit") : ''
-                def intLog       = fileExists("${TEST_RESULTS_LOG}-integration") ? readFile("${TEST_RESULTS_LOG}-integration") : ''
-
                 echo "\n=== CI/CD METRICS ==="
                 echo "Total Pipeline Time   : ${totalTime} sec"
                 echo "Deployment Time       : ${deployTime} sec"
                 echo "Lead Time for Changes : ${leadTimeForChanges} sec"
-                if (rollbackVal != 'N/A') {
+                if (buildFailed && fileExists(ROLLBACK_LOG)) {
+                    def rollbackVal = readFile(ROLLBACK_LOG).trim()
                     echo "Rollback Time         : ${rollbackVal} sec"
                 }
+                def unitLog      = fileExists("${TEST_RESULTS_LOG}-unit") ? readFile("${TEST_RESULTS_LOG}-unit") : ''
+                def intLog       = fileExists("${TEST_RESULTS_LOG}-integration") ? readFile("${TEST_RESULTS_LOG}-integration") : ''
                 echo "Unit Test Results:\n${unitLog}"
                 echo "Integration Test Results:\n${intLog}"
                 echo "======================"
