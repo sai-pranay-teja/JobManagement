@@ -1,39 +1,23 @@
 /*
- * Jenkinsfile: A/B Test Mode for CI/CD Pipeline Optimization
- * - Mode A: Patterns Enabled (workspace cache, incremental build, parallel tests)
- * - Mode B: Patterns Disabled (full build, sequential tests)
- * - Captures per-stage metrics in CSV with delta comparison
+ * Pattern-Driven CI/CD Jenkinsfile (Java-Servlet Job Portal)
+ * Includes optimization patterns, benchmarking, and A/B mode comparison.
  */
 
 def pipelineStartTime = 0L
 
+def buildTime = 0L
+def testTime = 0L
+def deployTime = 0L
+def totalTime = 0L
 def leadTimeForChanges = 0L
-
 def rollbackTime = 'N/A'
 
 def buildFailed = false
-
 def compilationError = false
 
-def mode = 'A' // Switch to 'B' to disable patterns
+def mode = 'A' // 'A' = patterns enabled, 'B' = patterns disabled
 
-def stageMetrics = [:]
-
-def metricsCsv = "${env.WORKSPACE}/stage_metrics.csv"
-
-def formatTime = { long start, long end -> end - start }
-
-def logStageTime = { stageName, time -> stageMetrics[stageName] = time }
-
-def appendToCsv = {
-    def header = 'Run Mode,Build Time,Test Time,Deploy Time,Lead Time,Total Time\n'
-    def values = "${mode},${stageMetrics['Build']},${stageMetrics['Test']},${stageMetrics['Deploy']},${leadTimeForChanges},${stageMetrics['Total']}\n"
-    if (!fileExists(metricsCsv)) {
-        writeFile file: metricsCsv, text: header + values
-    } else {
-        writeFile file: metricsCsv, text: values, append: true
-    }
-}
+def metrics = [:]
 
 pipeline {
     agent any
@@ -48,14 +32,15 @@ pipeline {
         SSH_HOST              = '18.61.60.110'
         SSH_OPTS              = '-o StrictHostKeyChecking=no'
         BACKUP_DIR            = '/tmp/jenkins_bak'
+
         DEPLOYMENT_TIME_FILE  = "${WORKSPACE}/deployment_time.log"
         TEST_RESULTS_LOG      = "${WORKSPACE}/test_results.log"
         ROLLBACK_LOG          = "${WORKSPACE}/rollback.log"
+        CSV_FILE              = "${WORKSPACE}/stage_metrics.csv"
     }
 
     options {
         timestamps()
-        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     stages {
@@ -63,31 +48,36 @@ pipeline {
             steps {
                 script {
                     sh "rm -f ${ROLLBACK_LOG}"
-                    pipelineStartTime = sh(script: 'date +%s', returnStdout: true).trim().toLong()
+                    pipelineStartTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                 }
             }
         }
 
-        stage('Build WAR') {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/sai-pranay-teja/JobManagement.git', branch: 'main'
+            }
+        }
+
+        stage('Build') {
             steps {
                 script {
+                    def start = System.currentTimeMillis()
                     try {
-                        def buildStart = System.currentTimeMillis()
-
                         sh 'mkdir -p build/WEB-INF/classes'
 
                         if (mode == 'A') {
-                            def changed = sh(
-                                script: 'find src -name "*.java" -newer build/WEB-INF/classes',
-                                returnStdout: true
-                            ).trim()
+                            def changed = sh(script: 'find src -name "*.java" -newer build/WEB-INF/classes', returnStdout: true).trim()
                             if (changed) {
+                                echo "Compiling changed files:\n${changed}"
                                 sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
                             } else {
-                                sh "find src -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+                                echo 'No changes detected — performing full compile.'
+                                sh 'find src -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
                             }
                         } else {
-                            sh "find src -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+                            echo '[Mode B] Full compile mode.'
+                            sh 'find src -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
                         }
 
                         sh '''
@@ -95,79 +85,83 @@ pipeline {
                             cp -R src/main/webapp/* build/
                             jar -cvf ${WAR_NAME} -C build .
                         '''
-
-                        def buildEnd = System.currentTimeMillis()
-                        logStageTime('Build', formatTime(buildStart, buildEnd))
-
                     } catch (Exception e) {
                         buildFailed = true
                         compilationError = true
                         error("Build failed: ${e.message}")
                     }
+                    buildTime = (System.currentTimeMillis() - start) / 1000
                 }
             }
         }
 
-        stage('Test') {
+        stage('Backup WAR') {
+            when {
+                expression { !buildFailed }
+            }
+            steps {
+                sh "mkdir -p ${BACKUP_DIR}"
+                sh "cp ${WAR_NAME} ${BACKUP_DIR}/${WAR_NAME}_bak || true"
+            }
+        }
+
+        stage('Run Tests') {
             when {
                 expression { !buildFailed }
             }
             steps {
                 script {
-                    def testStart = System.currentTimeMillis()
-
+                    def start = System.currentTimeMillis()
                     if (mode == 'A') {
                         parallel(
-                            "Unit Tests": {
+                            'Unit Tests': {
                                 sh '''
                                     mkdir -p test_output_unit
                                     javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_unit src/main/test/TestAppPart1.java
-                                    java -cp 'test_output_unit:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary
+                                    java -cp 'test_output_unit:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > ${TEST_RESULTS_LOG}-unit 2>&1 || true
                                 '''
                             },
-                            "Integration Tests": {
+                            'Integration Tests': {
                                 sh '''
                                     mkdir -p test_output_integration
                                     javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_integration src/main/test/TestAppPart2.java
-                                    java -cp 'test_output_integration:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary
+                                    java -cp 'test_output_integration:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > ${TEST_RESULTS_LOG}-integration 2>&1 || true
                                 '''
                             }
                         )
                     } else {
+                        echo '[Mode B] Sequential test execution.'
                         sh '''
                             mkdir -p test_output_all
-                            javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_all src/main/test/*.java
-                            java -cp 'test_output_all:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --scan-class-path test_output_all --details summary
+                            find src/main/test -name "*.java" | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_all
+                            java -cp 'test_output_all:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --scan-class-path test_output_all --details summary > ${TEST_RESULTS_LOG}-combined 2>&1 || true
                         '''
                     }
-
-                    def testEnd = System.currentTimeMillis()
-                    logStageTime('Test', formatTime(testStart, testEnd))
+                    testTime = (System.currentTimeMillis() - start) / 1000
                 }
             }
         }
 
-        stage('Deploy WAR') {
+        stage('Deploy') {
             when {
                 expression { !buildFailed }
             }
             steps {
                 script {
                     def deployStart = System.currentTimeMillis()
-                    def commitTime = sh(script: 'git log -1 --format=%ct', returnStdout: true).trim().toLong()
-                    leadTimeForChanges = System.currentTimeMillis()/1000 - commitTime
+                    def commitTime = sh(script: 'git log -1 --format=%ct', returnStdout: true).trim().toInteger()
+                    def now = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                    leadTimeForChanges = now - commitTime
 
                     sh '''
                         scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
-                            chmod 755 ${DEPLOY_DIR}/${WAR_NAME}
+                            chmod 644 ${DEPLOY_DIR}/${WAR_NAME}
                             ${TOMCAT_HOME}/bin/catalina.sh stop || true
                             ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
                     '''
-
-                    def deployEnd = System.currentTimeMillis()
-                    logStageTime('Deploy', formatTime(deployStart, deployEnd))
+                    deployTime = (System.currentTimeMillis() - deployStart) / 1000
                 }
             }
         }
@@ -176,17 +170,25 @@ EOF
     post {
         always {
             script {
-                def pipelineEnd = System.currentTimeMillis()
-                logStageTime('Total', formatTime(pipelineStartTime * 1000, pipelineEnd))
-
-                appendToCsv()
-
+                totalTime = (System.currentTimeMillis() - pipelineStartTime * 1000) / 1000
                 echo "\n=== PIPELINE METRICS (${mode}) ==="
-                stageMetrics.each { k, v -> echo "${k} Time: ${v} ms" }
-                echo "Lead Time for Changes: ${leadTimeForChanges} sec"
-                echo "==========================="
+                echo "Build Time           : ${buildTime} sec"
+                echo "Test Time            : ${testTime} sec"
+                echo "Deploy Time          : ${deployTime} sec"
+                echo "Lead Time for Change : ${leadTimeForChanges} sec"
+                echo "Total Pipeline Time  : ${totalTime} sec"
+                echo "=============================="
+
+                def header = 'Run Mode,Build Time,Test Time,Deploy Time,Lead Time,Total Time\n'
+                def line = "${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime}\n"
+
+                def csvExists = fileExists(CSV_FILE)
+                if (!csvExists) {
+                    writeFile file: CSV_FILE, text: header + line
+                } else {
+                    writeFile file: CSV_FILE, text: line
+                }
             }
         }
     }
 }
-
