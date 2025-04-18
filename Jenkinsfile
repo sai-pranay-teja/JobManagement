@@ -70,23 +70,39 @@ pipeline {
         }
 
         stage('Build WAR (Incremental)') {
-            steps {
-                script {
-                    def start = System.currentTimeMillis() / 1000
-                    // Incremental compilation: only compile newer Java files
-                    sh '''#!/bin/bash
-                    mkdir -p build/WEB-INF/classes
-                    find src -name "*.java" -newer build -print0 \
-                        | xargs -0 javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes || true
-                    cp -R src/main/resources/* build/WEB-INF/classes/
-                    cp -R src/main/webapp/* build/
-                    jar -cvf ${WAR_NAME} -C build .
-                    '''
-                    def duration = (System.currentTimeMillis() / 1000) - start
-                    echo "Stage Build WAR duration: ${duration} sec"
-                }
-            }
-        }
+  steps {
+    script {
+      // Ensure build directory exists
+      sh 'mkdir -p build/WEB-INF/classes'
+
+      // Find all .java files newer than the last build timestamp
+      def changed = sh(
+        script: 'find src -name "*.java" -newer build/WEB-INF/classes',
+        returnStdout: true
+      ).trim()
+
+      if (changed) {
+        echo "Compiling only changed files:\n${changed}"
+        // Compile the changed files only
+        sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
+      } else {
+        echo "No changes detected—doing a full compile."
+        // Full compile of all Java sources
+        sh '''
+          find src -name "*.java" | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes
+        '''
+      }
+
+      // Copy resources & package WAR
+      sh '''
+        cp -R src/main/resources/* build/WEB-INF/classes/
+        cp -R src/main/webapp/* build/
+        jar -cvf ${WAR_NAME} -C build .
+      '''
+    }
+  }
+}
+
 
         stage('Save Workspace Cache') {
             steps {
@@ -180,8 +196,8 @@ pipeline {
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
                       pkill -f 'org.apache.catalina.startup.Bootstrap' || true
                       sleep 5
-                      ${TOMCAT_HOME}/bin/shutdown.sh || true
-                      ${TOMCAT_HOME}/bin/startup.sh
+                      ${TOMCAT_HOME}/bin/catalina.sh start|| true
+                      ${TOMCAT_HOME}/bin/catalina.sh stop
 EOF
                     '''
 
@@ -200,8 +216,8 @@ EOF
                 sh '''#!/bin/bash
                 ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
                   cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
-                  ${TOMCAT_HOME}/bin/shutdown.sh || true
-                  ${TOMCAT_HOME}/bin/startup.sh
+                  ${TOMCAT_HOME}/bin/catalina.sh start|| true
+                  ${TOMCAT_HOME}/bin/catalina.sh stop
 EOF
                 '''
                 def duration = (System.currentTimeMillis() / 1000) - start
