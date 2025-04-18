@@ -105,48 +105,42 @@ pipeline {
         }
 
         stage('Run Tests') {
-            when {
-                expression { !buildFailed }
-            }
-            steps {
-                script {
-                    def start = System.currentTimeMillis()
-                    if (mode == 'A') {
-                        parallel(
-                            'Unit Tests': {
-                                sh '''
-                                    mkdir -p test_output_unit
-                                    javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_unit src/main/test/TestAppPart1.java
-                                    java -cp 'test_output_unit:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > ${TEST_RESULTS_LOG}-unit 2>&1 || true
-                                '''
-                            },
-                            'Integration Tests': {
-                                sh '''
-                                    mkdir -p test_output_integration
-                                    javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_integration src/main/test/TestAppPart2.java
-                                    java -cp 'test_output_integration:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > ${TEST_RESULTS_LOG}-integration 2>&1 || true
-                                '''
-                            },
-                            'API Tests': {
-                                sh '''
-                                    mkdir -p test_output_api
-                                    javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_api src/main/test/TestAppPart3.java
-                                    java -cp 'test_output_api:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart3 --details summary > ${TEST_RESULTS_LOG}-api 2>&1 || true
-                                '''
-                            }
-                        )
-                    } else {
-                        echo '[Mode B] Sequential test execution.'
+    when {
+        expression { !buildFailed }
+    }
+    steps {
+        script {
+            def start = System.currentTimeMillis()
+            if (mode == 'A') {
+                parallel(
+                    'Unit Tests': {
                         sh '''
-                            mkdir -p test_output_all
-                            find src/main/test -name "*.java" | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_all
-                            java -cp 'test_output_all:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --scan-class-path test_output_all --details summary > ${TEST_RESULTS_LOG}-combined 2>&1 || true
+                            mkdir -p test_output_unit
+                            javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_unit src/main/test/TestAppPart1.java
+                            java -cp 'test_output_unit:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > ${TEST_RESULTS_LOG}-unit 2>&1 || true
+                        '''
+                    },
+                    'Integration Tests': {
+                        sh '''
+                            mkdir -p test_output_integration
+                            javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_integration src/main/test/TestAppPart2.java
+                            java -cp 'test_output_integration:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > ${TEST_RESULTS_LOG}-integration 2>&1 || true
                         '''
                     }
-                    testTime = (System.currentTimeMillis() - start) / 1000
-                }
+                )
+            } else {
+                echo '[Mode B] Sequential test execution.'
+                sh '''
+                    mkdir -p test_output_all
+                    find src/main/test -name "*.java" | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_all
+                    java -cp 'test_output_all:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --scan-class-path test_output_all --details summary > ${TEST_RESULTS_LOG}-combined 2>&1 || true
+                '''
             }
+            testTime = (System.currentTimeMillis() - start) / 1000
         }
+    }
+}
+
 
         stage('Deploy') {
             when {
