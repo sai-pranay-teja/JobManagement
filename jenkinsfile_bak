@@ -1,6 +1,6 @@
 /*
  * Pattern-Driven CI/CD Jenkinsfile (Java-Servlet Job Portal)
- * Includes optimization patterns, per-stage benchmarking, and delta tracking.
+ * Includes optimization patterns and per-stage benchmarking hooks.
  */
 
 def pipelineStartTime = 0L
@@ -15,15 +15,6 @@ def compilationError = false
 
 def capturedException = null
 
-def buildTime = 0L
-
-def testTime = 0L
-
-def deployTime = 0L
-
-def stageStartTime = 0L
-
-def stageEndTime = 0L
 
 pipeline {
     agent any
@@ -42,7 +33,6 @@ pipeline {
         DEPLOYMENT_TIME_FILE  = "${WORKSPACE}/deployment_time.log"
         TEST_RESULTS_LOG      = "${WORKSPACE}/test_results.log"
         ROLLBACK_LOG          = "${WORKSPACE}/rollback.log"
-        STAGE_METRICS_FILE    = "${WORKSPACE}/stage_metrics.csv"
     }
 
     options {
@@ -69,7 +59,6 @@ pipeline {
         stage('Build WAR (Incremental)') {
             steps {
                 script {
-                    stageStartTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                     try {
                         sh 'mkdir -p build/WEB-INF/classes'
                         def changed = sh(
@@ -95,43 +84,42 @@ pipeline {
                         compilationError = true
                         capturedException = e
                         currentBuild.result = 'FAILURE'
-                    } finally {
-                        stageEndTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                        buildTime = stageEndTime - stageStartTime
                     }
                 }
             }
         }
 
         stage('Handle Compilation Error') {
-            when {
-                expression { buildFailed && compilationError }
-            }
-            steps {
-                script {
-                    def backupExists = sh(
-                        script: "ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} 'test -f ${BACKUP_DIR}/${WAR_NAME}_bak && echo exists || echo missing'",
-                        returnStdout: true
-                    ).trim()
+    when {
+        expression { buildFailed && compilationError }
+    }
+    steps {
+        script {
+            def backupExists = sh(
+                script: "ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} 'test -f ${BACKUP_DIR}/${WAR_NAME}_bak && echo exists || echo missing'",
+                returnStdout: true
+            ).trim()
 
-                    if (backupExists == 'exists') {
-                        echo 'Compilation failed — performing rollback.'
-                        def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                        sh """
-                            ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
-                                cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
-                                ${TOMCAT_HOME}/bin/catalina.sh stop || true
-                                ${TOMCAT_HOME}/bin/catalina.sh start
+            if (backupExists == 'exists') {
+                echo 'Compilation failed — performing rollback.'
+                def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                sh """
+                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                        cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
+                        ${TOMCAT_HOME}/bin/catalina.sh stop || true
+                        ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
-                        """
-                        def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                        rollbackTime = (rollbackEnd - rollbackStart).toString()
-                    } else {
-                        echo 'Compilation failed — but no backup file found, rollback not possible.'
-                    }
-                }
+                """
+                def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                rollbackTime = (rollbackEnd - rollbackStart).toString()
+            } else {
+                echo 'Compilation failed — but no backup file found, rollback not possible.'
             }
         }
+    }
+}
+
+
 
         stage('Backup WAR') {
             when {
@@ -181,14 +169,11 @@ EOF
             }
             steps {
                 script {
-                    stageStartTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                     def unitLog = readFile("${TEST_RESULTS_LOG}-unit").toLowerCase()
                     def intLog  = readFile("${TEST_RESULTS_LOG}-integration").toLowerCase()
                     if ((unitLog =~ /\[\s*[1-9]\d*\s*tests failed\s*\]/) || (intLog =~ /\[\s*[1-9]\d*\s*tests failed\s*\]/)) {
                         error('Test failure detected — aborting pipeline.')
                     }
-                    stageEndTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    testTime = stageEndTime - stageStartTime
                 }
             }
         }
@@ -199,8 +184,7 @@ EOF
             }
             steps {
                 script {
-                    stageStartTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    def deployStart = stageStartTime
+                    def deployStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                     def commitTime  = sh(script: 'git log -1 --format=%ct', returnStdout: true).trim().toInteger()
                     leadTimeForChanges = deployStart - commitTime
 
@@ -212,40 +196,33 @@ EOF
 EOF
                     '''
 
-                    stageEndTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    deployTime = stageEndTime - stageStartTime
-                    writeFile file: DEPLOYMENT_TIME_FILE, text: "${deployTime}"
+                    def deployEnd      = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                    def deployDuration = deployEnd - deployStart
+                    writeFile file: DEPLOYMENT_TIME_FILE, text: "${deployDuration}"
                 }
             }
         }
     }
+
 
     post {
         always {
             script {
                 def pipelineEnd  = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                 def totalTime    = pipelineEnd - pipelineStartTime
-                def deployTimeLog = fileExists(DEPLOYMENT_TIME_FILE) ? readFile(DEPLOYMENT_TIME_FILE).trim() : 'N/A'
-
+                def deployTime   = fileExists(DEPLOYMENT_TIME_FILE) ? readFile(DEPLOYMENT_TIME_FILE).trim() : 'N/A'
                 echo "\n=== CI/CD METRICS ==="
-                echo "Build Stage Duration   : ${buildTime} sec"
-                echo "Test Stage Duration    : ${testTime} sec"
-                echo "Deploy Stage Duration  : ${deployTime} sec"
-                echo "Total Pipeline Time    : ${totalTime} sec"
-                echo "Deployment Time        : ${deployTimeLog} sec"
-                echo "Lead Time for Changes  : ${leadTimeForChanges} sec"
+                echo "Total Pipeline Time   : ${totalTime} sec"
+                echo "Deployment Time       : ${deployTime} sec"
+                echo "Lead Time for Changes : ${leadTimeForChanges} sec"
                 if (rollbackTime != 'N/A') {
-                    echo "Rollback Time          : ${rollbackTime} sec"
+                    echo "Rollback Time         : ${rollbackTime} sec"
                 }
-
                 def unitLog = fileExists("${TEST_RESULTS_LOG}-unit") ? readFile("${TEST_RESULTS_LOG}-unit") : ''
                 def intLog  = fileExists("${TEST_RESULTS_LOG}-integration") ? readFile("${TEST_RESULTS_LOG}-integration") : ''
                 echo "Unit Test Results:\n${unitLog}"
                 echo "Integration Test Results:\n${intLog}"
                 echo "======================"
-
-                writeFile file: STAGE_METRICS_FILE, text: "Build,Test,Deploy,Total\n${buildTime},${testTime},${deployTime},${totalTime}"
-                archiveArtifacts artifacts: 'stage_metrics.csv'
             }
         }
     }
