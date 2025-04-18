@@ -24,8 +24,7 @@ pipeline {
         BACKUP_DIR            = '/tmp/jenkins_bak'
 
         DEPLOYMENT_TIME_FILE  = "${WORKSPACE}/deployment_time.log"
-        TEST_UNIT_LOG         = "${WORKSPACE}/test_results_unit.log"
-        TEST_INTEGRATION_LOG  = "${WORKSPACE}/test_results_integration.log"
+        TEST_RESULTS_LOG      = "${WORKSPACE}/test_results.log"
         ROLLBACK_LOG          = "${WORKSPACE}/rollback.log"
     }
 
@@ -95,10 +94,7 @@ pipeline {
                         sh '''
                             mkdir -p test_output_unit
                             javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_unit src/main/test/TestAppPart1.java
-                            java -cp 'test_output_unit:src/main/webapp/WEB-INF/lib/*' \
-                                org.junit.platform.console.ConsoleLauncher \
-                                --select-class TestAppPart1 --details summary \
-                                > ${TEST_UNIT_LOG} 2>&1 || true
+                            java -cp 'test_output_unit:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > ${TEST_RESULTS_LOG}-unit 2>&1 || true
                         '''
                     }
                 }
@@ -107,10 +103,7 @@ pipeline {
                         sh '''
                             mkdir -p test_output_integration
                             javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_output_integration src/main/test/TestAppPart2.java
-                            java -cp 'test_output_integration:src/main/webapp/WEB-INF/lib/*' \
-                                org.junit.platform.console.ConsoleLauncher \
-                                --select-class TestAppPart2 --details summary \
-                                > ${TEST_INTEGRATION_LOG} 2>&1 || true
+                            java -cp 'test_output_integration:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > ${TEST_RESULTS_LOG}-integration 2>&1 || true
                         '''
                     }
                 }
@@ -120,9 +113,9 @@ pipeline {
         stage('Early Test Failure Exit') {
             steps {
                 script {
-                    def unitLog = readFile(TEST_UNIT_LOG)
-                    def intLog  = readFile(TEST_INTEGRATION_LOG)
-                    if (unitLog =~ /Tests?\s+failed/i || intLog =~ /Tests?\s+failed/i) {
+                    def unitLog = readFile("${TEST_RESULTS_LOG}-unit")
+                    def intLog  = readFile("${TEST_RESULTS_LOG}-integration")
+                    if (unitLog.toLowerCase().contains('fail') || intLog.toLowerCase().contains('fail')) {
                         error('Test failure detected — aborting pipeline.')
                     }
                 }
@@ -139,8 +132,6 @@ pipeline {
                     sh '''
                         scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
-                            pkill -f 'org.apache.catalina.startup.Bootstrap' || true
-                            sleep 5
                             ${TOMCAT_HOME}/bin/catalina.sh stop || true
                             ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
@@ -159,9 +150,8 @@ EOF
             script {
                 def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                 sh '''
-                    scp ${SSH_OPTS} -i ${SSH_KEY} \
-                        ${BACKUP_DIR}/${WAR_NAME}_bak ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/${WAR_NAME}
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                        cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
                         ${TOMCAT_HOME}/bin/catalina.sh stop || true
                         ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
@@ -173,22 +163,23 @@ EOF
         }
         always {
             script {
-                def pipelineEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                def totalTime   = pipelineEnd - pipelineStartTime
-                def deployTime  = fileExists(DEPLOYMENT_TIME_FILE) ? readFile(DEPLOYMENT_TIME_FILE).trim() : 'N/A'
-                def rollbackVal = (currentBuild.currentResult == 'FAILURE' && fileExists(ROLLBACK_LOG)) 
-                                    ? readFile(ROLLBACK_LOG).trim() : 'N/A'
+                def pipelineEnd  = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                def totalTime    = pipelineEnd - pipelineStartTime
+                def deployTime   = fileExists(DEPLOYMENT_TIME_FILE) ? readFile(DEPLOYMENT_TIME_FILE).trim() : 'N/A'
+                def rollbackVal  = fileExists(ROLLBACK_LOG) ? readFile(ROLLBACK_LOG).trim() : 'N/A'
+                def unitLog      = fileExists("${TEST_RESULTS_LOG}-unit") ? readFile("${TEST_RESULTS_LOG}-unit") : ''
+                def intLog       = fileExists("${TEST_RESULTS_LOG}-integration") ? readFile("${TEST_RESULTS_LOG}-integration") : ''
 
                 echo "\n=== CI/CD METRICS ==="
-                echo "Total Pipeline Time       : ${totalTime} sec"
-                echo "Deployment Time           : ${deployTime} sec"
-                echo "Lead Time for Changes     : ${leadTimeForChanges} sec"
-                echo "Rollback Time             : ${rollbackVal} sec"
-
-                echo "Unit Test Log:"; sh("cat ${TEST_UNIT_LOG} || echo 'No unit test log found.'")
-                echo "Integration Test Log:"; sh("cat ${TEST_INTEGRATION_LOG} || echo 'No integration test log found.'")
-
-                echo "========================"
+                echo "Total Pipeline Time   : ${totalTime} sec"
+                echo "Deployment Time       : ${deployTime} sec"
+                echo "Lead Time for Changes : ${leadTimeForChanges} sec"
+                if (rollbackVal != 'N/A') {
+                    echo "Rollback Time         : ${rollbackVal} sec"
+                }
+                echo "Unit Test Results:\n${unitLog}"  
+                echo "Integration Test Results:\n${intLog}"  
+                echo "======================"
             }
         }
     }
