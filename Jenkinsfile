@@ -11,6 +11,8 @@ def rollbackTime = 'N/A'
 
 def buildFailed = false
 
+def compilationError = false
+
 pipeline {
     agent any
 
@@ -39,7 +41,6 @@ pipeline {
         stage('Initialize') {
             steps {
                 script {
-                    // Clean up any old rollback logs
                     sh "rm -f ${ROLLBACK_LOG}"
                     pipelineStartTime = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                 }
@@ -77,6 +78,7 @@ pipeline {
                         '''
                     } catch (Exception e) {
                         buildFailed = true
+                        compilationError = true
                         error("Build failed due to compilation error: ${e.message}")
                     }
                 }
@@ -169,7 +171,7 @@ EOF
     post {
         failure {
             script {
-                if (buildFailed) {
+                if (compilationError) {
                     def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
                     sh '''
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
@@ -179,10 +181,9 @@ EOF
 EOF
                     '''
                     def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    rollbackTime = rollbackEnd - rollbackStart
-                    writeFile file: ROLLBACK_LOG, text: "${rollbackTime}"
+                    rollbackTime = (rollbackEnd - rollbackStart).toString()
                 } else {
-                    echo 'Failure was not due to build error — skipping rollback.'
+                    echo 'Failure was not due to compilation error — skipping rollback.'
                 }
             }
         }
@@ -195,12 +196,11 @@ EOF
                 echo "Total Pipeline Time   : ${totalTime} sec"
                 echo "Deployment Time       : ${deployTime} sec"
                 echo "Lead Time for Changes : ${leadTimeForChanges} sec"
-                if (buildFailed && fileExists(ROLLBACK_LOG)) {
-                    def rollbackVal = readFile(ROLLBACK_LOG).trim()
-                    echo "Rollback Time         : ${rollbackVal} sec"
+                if (compilationError && rollbackTime != 'N/A') {
+                    echo "Rollback Time         : ${rollbackTime} sec"
                 }
-                def unitLog      = fileExists("${TEST_RESULTS_LOG}-unit") ? readFile("${TEST_RESULTS_LOG}-unit") : ''
-                def intLog       = fileExists("${TEST_RESULTS_LOG}-integration") ? readFile("${TEST_RESULTS_LOG}-integration") : ''
+                def unitLog = fileExists("${TEST_RESULTS_LOG}-unit") ? readFile("${TEST_RESULTS_LOG}-unit") : ''
+                def intLog  = fileExists("${TEST_RESULTS_LOG}-integration") ? readFile("${TEST_RESULTS_LOG}-integration") : ''
                 echo "Unit Test Results:\n${unitLog}"
                 echo "Integration Test Results:\n${intLog}"
                 echo "======================"
