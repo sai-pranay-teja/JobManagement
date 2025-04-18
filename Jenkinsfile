@@ -9,6 +9,8 @@ def leadTimeForChanges = 0L
 
 def rollbackTime = 'N/A'
 
+def buildFailed = false
+
 pipeline {
     agent any
 
@@ -51,30 +53,38 @@ pipeline {
         stage('Build WAR (Incremental)') {
             steps {
                 script {
-                    sh 'mkdir -p build/WEB-INF/classes'
-                    def changed = sh(
-                        script: 'find src -name "*.java" -newer build/WEB-INF/classes',
-                        returnStdout: true
-                    ).trim()
-                    if (changed) {
-                        echo "Compiling changed files:\n${changed}"
-                        sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
-                    } else {
-                        echo 'No changes detected — performing full compile.'
+                    try {
+                        sh 'mkdir -p build/WEB-INF/classes'
+                        def changed = sh(
+                            script: 'find src -name "*.java" -newer build/WEB-INF/classes',
+                            returnStdout: true
+                        ).trim()
+                        if (changed) {
+                            echo "Compiling changed files:\n${changed}"
+                            sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
+                        } else {
+                            echo 'No changes detected — performing full compile.'
+                            sh '''
+                                find src -name "*.java" | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes
+                            '''
+                        }
                         sh '''
-                            find src -name "*.java" | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes
+                            cp -R src/main/resources/* build/WEB-INF/classes/
+                            cp -R src/main/webapp/* build/
+                            jar -cvf ${WAR_NAME} -C build .
                         '''
+                    } catch (Exception e) {
+                        buildFailed = true
+                        error("Build failed due to compilation error: ${e.message}")
                     }
-                    sh '''
-                        cp -R src/main/resources/* build/WEB-INF/classes/
-                        cp -R src/main/webapp/* build/
-                        jar -cvf ${WAR_NAME} -C build .
-                    '''
                 }
             }
         }
 
         stage('Backup WAR') {
+            when {
+                expression { !buildFailed }
+            }
             steps {
                 script {
                     sh "mkdir -p ${BACKUP_DIR}"
@@ -88,6 +98,9 @@ pipeline {
         }
 
         stage('Run Parallel Tests') {
+            when {
+                expression { !buildFailed }
+            }
             parallel {
                 stage('Unit Tests (Part1)') {
                     steps {
@@ -111,11 +124,14 @@ pipeline {
         }
 
         stage('Early Test Failure Exit') {
+            when {
+                expression { !buildFailed }
+            }
             steps {
                 script {
-                    def unitLog = readFile("${TEST_RESULTS_LOG}-unit")
-                    def intLog  = readFile("${TEST_RESULTS_LOG}-integration")
-                    if (unitLog.toLowerCase().contains('fail') || intLog.toLowerCase().contains('fail')) {
+                    def unitLog = readFile("${TEST_RESULTS_LOG}-unit").toLowerCase()
+                    def intLog  = readFile("${TEST_RESULTS_LOG}-integration").toLowerCase()
+                    if ((unitLog =~ /\[\s*\d+\s*tests failed\s*\]/) || (intLog =~ /\[\s*\d+\s*tests failed\s*\]/)) {
                         error('Test failure detected — aborting pipeline.')
                     }
                 }
@@ -123,6 +139,9 @@ pipeline {
         }
 
         stage('Deploy WAR') {
+            when {
+                expression { !buildFailed }
+            }
             steps {
                 script {
                     def deployStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
@@ -148,17 +167,21 @@ EOF
     post {
         failure {
             script {
-                def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                sh '''
-                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
-                        cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
-                        ${TOMCAT_HOME}/bin/catalina.sh stop || true
-                        ${TOMCAT_HOME}/bin/catalina.sh start
+                if (buildFailed) {
+                    def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                    sh '''
+                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                            cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
+                            ${TOMCAT_HOME}/bin/catalina.sh stop || true
+                            ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
-                '''
-                def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                rollbackTime = rollbackEnd - rollbackStart
-                writeFile file: ROLLBACK_LOG, text: "${rollbackTime}"
+                    '''
+                    def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                    rollbackTime = rollbackEnd - rollbackStart
+                    writeFile file: ROLLBACK_LOG, text: "${rollbackTime}"
+                } else {
+                    echo 'Failure was not due to build error — skipping rollback.'
+                }
             }
         }
         always {
@@ -177,8 +200,8 @@ EOF
                 if (rollbackVal != 'N/A') {
                     echo "Rollback Time         : ${rollbackVal} sec"
                 }
-                echo "Unit Test Results:\n${unitLog}"  
-                echo "Integration Test Results:\n${intLog}"  
+                echo "Unit Test Results:\n${unitLog}"
+                echo "Integration Test Results:\n${intLog}"
                 echo "======================"
             }
         }
