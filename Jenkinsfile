@@ -79,7 +79,8 @@ pipeline {
                     } catch (Exception e) {
                         buildFailed = true
                         compilationError = true
-                        error("Build failed due to compilation error: ${e.message}")
+                        currentBuild.result = 'FAILURE'
+                        throw e
                     }
                 }
             }
