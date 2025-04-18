@@ -279,7 +279,7 @@ pipeline {
                     echo "Lead Time for Changes: ${leadTimeForChanges} sec"
                     // Deploy and restart Tomcat via SSH
                     sh """
-                        echo "Starting deployment at \\$(date)" >> ${LOG_FILE}
+                        echo "Starting deployment at \$(date)" >> ${LOG_FILE}
                         scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
                         
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
