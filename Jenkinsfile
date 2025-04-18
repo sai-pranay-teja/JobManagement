@@ -250,7 +250,7 @@ EOF
         echo 'Deployment failed! Performing rollback...'
         script {
             def rollbackStartTime = sh(script: "date +%s", returnStdout: true).trim().toInteger()
-            // --- Rollback Optimization Pattern (if any additional tweaks to pre-stage backup exists, implement here) ---
+            // --- Rollback Optimization Pattern ---
             if (fileExists("${BACKUP_DIR}/${WAR_NAME}_bak")) {
                 sh """
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "rm -rf ${BACKUP_DIR}/${WAR_NAME}"
@@ -328,8 +328,40 @@ EOF
             echo "-------------------------------------------------"
             echo resourceUsageAfter
             echo "-------------------------------------------------"
-
-            // Optimization Patterns Summary Table
+            
+            // Helper function to get timing from a file (returns 0 if file not found)
+            def getTiming = { filePath ->
+                return fileExists(filePath) ? readFile(filePath).trim().toInteger() : 0
+            }
+            
+            // Read baseline and optimized times for each pattern
+            def baselineCache   = getTiming("${WORKSPACE}/baseline_workspace_cache.txt")
+            def optimizedCache  = getTiming("${WORKSPACE}/optimized_workspace_cache.txt")
+            def baselineIncremental   = getTiming("${WORKSPACE}/baseline_incremental_build.txt")
+            def optimizedIncremental  = getTiming("${WORKSPACE}/optimized_incremental_build.txt")
+            def baselineAgent   = getTiming("${WORKSPACE}/baseline_agent_prewarm.txt")
+            def optimizedAgent  = getTiming("${WORKSPACE}/optimized_agent_prewarm.txt")
+            def baselineRollback = getTiming("${WORKSPACE}/baseline_rollback.txt")
+            def optimizedRollback= getTiming("${WORKSPACE}/optimized_rollback.txt")
+            
+            // Calculate differences and percentage reductions
+            def calcDelta = { baseline, optimized ->
+                return baseline - optimized
+            }
+            def calcPct = { baseline, delta ->
+                return (baseline > 0) ? (delta * 100 / baseline) : 0
+            }
+            
+            def deltaCache       = calcDelta(baselineCache, optimizedCache)
+            def pctCache         = calcPct(baselineCache, deltaCache)
+            def deltaIncremental = calcDelta(baselineIncremental, optimizedIncremental)
+            def pctIncremental   = calcPct(baselineIncremental, deltaIncremental)
+            def deltaAgent       = calcDelta(baselineAgent, optimizedAgent)
+            def pctAgent         = calcPct(baselineAgent, deltaAgent)
+            def deltaRollback    = calcDelta(baselineRollback, optimizedRollback)
+            def pctRollback      = calcPct(baselineRollback, deltaRollback)
+            
+            // Print the Optimization Patterns summary table dynamically
             echo ""
             echo "-------------------------------------------------------------"
             echo "       Optimization Patterns Summary                         "
@@ -337,18 +369,19 @@ EOF
             echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", 
                 "Pattern", "Baseline (sec)", "Optimized (sec)", "Δ (sec)", "% Reduction")
             echo "-------------------------------------------------------------"
-            echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", 
-                "Workspace-Cache Pattern", "120", "80", "40", "33%")
-            echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", 
-                "Incremental-Build Pattern", "150", "90", "60", "40%")
-            echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", 
-                "Agent Pre-Warm Pattern", "30", "10", "20", "66%")
-            echo String.format("| %-30s | %-15s | %-15s | %-10s | %-10s |", 
-                "Rollback Optimization", "60", "30", "30", "50%")
+            echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
+                "Workspace-Cache Pattern", baselineCache, optimizedCache, deltaCache, pctCache)
+            echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
+                "Incremental-Build Pattern", baselineIncremental, optimizedIncremental, deltaIncremental, pctIncremental)
+            echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
+                "Agent Pre-Warm Pattern", baselineAgent, optimizedAgent, deltaAgent, pctAgent)
+            echo String.format("| %-30s | %-15d | %-15d | %-10d | %-10d%% |", 
+                "Rollback Optimization", baselineRollback, optimizedRollback, deltaRollback, pctRollback)
             echo "-------------------------------------------------------------"
             echo ""
         }
     }
 }
+
 
 }
