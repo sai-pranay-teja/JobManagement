@@ -90,25 +90,35 @@ pipeline {
         }
 
         stage('Handle Compilation Error') {
-            when {
-                expression { buildFailed && compilationError }
-            }
-            steps {
-                script {
-                    echo 'Compilation failed — performing rollback.'
-                    def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    sh '''
-                        ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
-                            cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
-                            ${TOMCAT_HOME}/bin/catalina.sh stop || true
-                            ${TOMCAT_HOME}/bin/catalina.sh start
+    when {
+        expression { buildFailed && compilationError }
+    }
+    steps {
+        script {
+            def backupExists = sh(
+                script: "ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} 'test -f ${BACKUP_DIR}/${WAR_NAME}_bak && echo exists || echo missing'",
+                returnStdout: true
+            ).trim()
+
+            if (backupExists == 'exists') {
+                echo 'Compilation failed — performing rollback.'
+                def rollbackStart = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                sh """
+                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
+                        cp ${BACKUP_DIR}/${WAR_NAME}_bak ${DEPLOY_DIR}/${WAR_NAME}
+                        ${TOMCAT_HOME}/bin/catalina.sh stop || true
+                        ${TOMCAT_HOME}/bin/catalina.sh start
 EOF
-                    '''
-                    def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
-                    rollbackTime = (rollbackEnd - rollbackStart).toString()
-                }
+                """
+                def rollbackEnd = sh(script: 'date +%s', returnStdout: true).trim().toInteger()
+                rollbackTime = (rollbackEnd - rollbackStart).toString()
+            } else {
+                echo 'Compilation failed — but no backup file found, rollback not possible.'
             }
         }
+    }
+}
+
 
 
         stage('Backup WAR') {
@@ -193,7 +203,7 @@ EOF
             }
         }
     }
-    
+
 
     post {
         always {
