@@ -232,9 +232,11 @@ pipeline {
       steps {
         script {
           deployStartTime = System.currentTimeMillis()
+          def warBase = env.WAR_NAME.replaceAll(/\.war$/, "")
+
           sh """
             ssh ${env.SSH_OPTS} -i ${env.SSH_KEY} ${env.SSH_USER}@${env.SSH_HOST} \\
-              "sudo rm -rf /opt/tomcat10/webapps/${env.WAR_NAME%.*}*; sudo /opt/tomcat10/bin/catalina.sh stop || true; sudo /opt/tomcat10/bin/catalina.sh start"
+    "sudo rm -rf /opt/tomcat10/webapps/${warBase}*; sudo /opt/tomcat10/bin/catalina.sh stop || true; sudo /opt/tomcat10/bin/catalina.sh start"
             scp ${env.SSH_OPTS} -i ${env.SSH_KEY} ${env.WAR_NAME} ${env.SSH_USER}@${env.SSH_HOST}:/opt/tomcat10/webapps/
           """
           deployTimeSec = ((System.currentTimeMillis() - deployStartTime)/1000).toLong()
