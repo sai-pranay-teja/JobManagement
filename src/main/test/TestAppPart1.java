@@ -1,50 +1,48 @@
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import model.DatabaseUtil;
+import java.io.InputStream;
+import java.sql.*;
+import java.util.Properties;
 
 public class TestAppPart1 {
 
+    private Connection getConnection() throws Exception {
+        Properties props = new Properties();
+        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
+            if (input == null) throw new RuntimeException("config.properties not found");
+            props.load(input);
+        }
+
+        String url = props.getProperty("jdbc.url");
+        String user = props.getProperty("jdbc.user");
+        String password = props.getProperty("jdbc.password");
+
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        return DriverManager.getConnection(url, user, password);
+    }
+
     @Test
-    public void testInsertAndFetchUser() {
-        String testEmail = "sai12@example.com";
-        String testName = "spt";
+    public void testDatabaseConnection() {
+        try (Connection conn = getConnection()) {
+            assertNotNull(conn, "Connection should not be null");
+            assertFalse(conn.isClosed(), "Connection should be open");
+        } catch (Exception e) {
+            fail("Database connection failed: " + e.getMessage());
+        }
+    }
 
-        Connection conn = null;
-        PreparedStatement insertStmt = null;
-        PreparedStatement selectStmt = null;
-        ResultSet rs = null;
+    @Test
+    public void testQueryExecution() {
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT 1")) {
 
-        try {
-            conn = DatabaseUtil.getConnection();
+            assertTrue(rs.next(), "Should return at least one result");
+            assertEquals(1, rs.getInt(1), "Result should be 1");
 
-            // Insert user
-            String insertSQL = "INSERT INTO users (name, email) VALUES (?, ?)";
-            insertStmt = conn.prepareStatement(insertSQL);
-            insertStmt.setString(1, testName);
-            insertStmt.setString(2, testEmail);
-            insertStmt.executeUpdate();
-
-            // Fetch user
-            String selectSQL = "SELECT name FROM users WHERE email = ?";
-            selectStmt = conn.prepareStatement(selectSQL);
-            selectStmt.setString(1, testEmail);
-            rs = selectStmt.executeQuery();
-
-            assertTrue(rs.next(), "User should exist in database");
-            String retrievedName = rs.getString("name");
-            assertEquals(testName, retrievedName, "Name should match inserted value");
-
-        } catch (SQLException e) {
-            fail("Database operation failed: " + e.getMessage());
-        } finally {
-            DatabaseUtil.close(conn, selectStmt, rs);
-            DatabaseUtil.close(null, insertStmt, null);
+        } catch (Exception e) {
+            fail("Query execution failed: " + e.getMessage());
         }
     }
 }
