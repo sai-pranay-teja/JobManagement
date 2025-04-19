@@ -121,8 +121,8 @@ pipeline {
     stage('Backup WAR') {
       steps {
         sh """
-          ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} 'mkdir -p ${WORKSPACE}/tmp_bak'
-          scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${WORKSPACE}/tmp_bak/
+          ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} 'mkdir -p /tmp/jenkins_bak'
+          scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:/tmp/jenkins_bak/
         """
       }
     }
