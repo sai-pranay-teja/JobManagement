@@ -180,9 +180,10 @@ stage('Finalize Metrics') {
             def testCacheSaveStart = env.TEST_CACHE_SAVE_START ? env.TEST_CACHE_SAVE_START.toLong() : 0
             def testCacheSaveEnd = env.TEST_CACHE_SAVE_END ? env.TEST_CACHE_SAVE_END.toLong() : 0
 
-def jvmStartupTime = env.JVM_STARTUP_TIME ? env.JVM_STARTUP_TIME.toDouble().round() : 0
-def buildTime = env.BUILD_TIME ? env.BUILD_TIME.toDouble().round() : 0
-def testTime = env.TEST_TIME ? env.TEST_TIME.toDouble().round() : 0
+def buildTime = env.BUILD_TIME ? env.BUILD_TIME.toDouble().toInteger() : 0
+def testTime = env.TEST_TIME ? env.TEST_TIME.toDouble().toInteger() : 0
+def jvmStartupTime = env.JVM_STARTUP_TIME ? env.JVM_STARTUP_TIME.toDouble().toInteger() : 0
+
 
 
             def deployTime = (now - deployStart) / 1000
