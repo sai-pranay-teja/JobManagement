@@ -191,7 +191,7 @@ stage('Build Cache Restore') {
             sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
             sh 'cp -R src/main/webapp/* build/'
             sh "jar -cvf ${env.WAR_NAME} -C build ."
-            buildTimeSec = (long)((System.currentTimeMillis() - t0)/1000  // Safe casting
+            buildTimeSec = (long)((System.currentTimeMillis() - t0)/1000   
             echo "✅ Build took ${buildTimeSec} sec"
         }
     }
