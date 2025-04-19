@@ -37,7 +37,7 @@ jobs:
       run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
 
     - name: Show Mode
-      run: echo "🔧 Mode: Mode ${{ github.event.inputs.mode }}"
+      run: echo "🔧 Mode - Mode ${{ github.event.inputs.mode }}"
 
     # --- BUILD STAGE ---
     - name: Restore build cache (Mode A)
