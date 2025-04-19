@@ -3,7 +3,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.sql.*;
 
-public class TestAppIntegration {
+public class TestAppPart1 {
 
     private static final String JDBC_URL = System.getenv("JDBC_URL");
     private static final String JDBC_USER = System.getenv("JDBC_USER");
