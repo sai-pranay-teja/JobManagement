@@ -135,6 +135,14 @@ jobs:
       if: ${{ env.MODE == 'A' }}
       run: echo "TEST_CACHE_RESTORE_END=$(date +%s)" >> $GITHUB_ENV
 
+
+
+    - name: Copy config.properties for tests
+      run: |
+        mkdir -p test_unit
+        cp src/main/resources/config.properties test_unit/
+
+
     # --- TEST STAGE ---
     - name: Run Tests
       run: |
