@@ -11,7 +11,7 @@ on:
 
 env:
   REMOTE_BACKUP_DIR: /tmp/actions_bak
-  MODE: A
+  MODE: B
 
 jobs:
   build-test-deploy:
