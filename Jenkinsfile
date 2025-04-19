@@ -94,17 +94,23 @@ pipeline {
       }
     }
 
-    stage('Build Cache Restore') {
-      when { expression { env.MODE == 'A' } }
-      steps {
-        script {
-          env.BUILD_CACHE_RESTORE_START = System.currentTimeMillis().toString()
-          unstash 'buildClasses'
-          env.BUILD_CACHE_RESTORE_END   = System.currentTimeMillis().toString()
-          echo "☁️ BUILD_CACHE_RESTORE_START=${env.BUILD_CACHE_RESTORE_START}, END=${env.BUILD_CACHE_RESTORE_END}"
-        }
+stage('Build Cache Restore') {
+  when { expression { env.MODE == 'A' } }
+  steps {
+    script {
+      env.BUILD_CACHE_RESTORE_START = System.currentTimeMillis().toString()
+      try {
+        unstash 'buildClasses'
+        echo "✔︎ Restored 'buildClasses' stash."
+      } catch (err) {
+        echo "ℹ️  No previous 'buildClasses' stash found; skipping restore."
       }
+      env.BUILD_CACHE_RESTORE_END = System.currentTimeMillis().toString()
+      echo "☁️ BUILD_CACHE_RESTORE_START=${env.BUILD_CACHE_RESTORE_START}, END=${env.BUILD_CACHE_RESTORE_END}"
     }
+  }
+}
+
 
     stage('Build') {
       steps {
