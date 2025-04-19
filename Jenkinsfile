@@ -113,13 +113,8 @@ pipeline {
                     sh '''
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "mkdir -p ${REMOTE_BACKUP_DIR}"
                     scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${REMOTE_BACKUP_DIR}/${WAR_NAME}_bak
+                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "sudo rm -rf /opt/tomcat10/webapps/JobManagement_JENKINS || true; sudo /opt/tomcat10/bin/catalina.sh stop || true; sudo /opt/tomcat10/bin/catalina.sh start"
 
-                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} << ENDSSH
-                        sudo rm -rf /opt/tomcat10/webapps/JobManagement_JENKINS || true
-                        sudo /opt/tomcat10/bin/catalina.sh stop || true
-                        sudo /opt/tomcat10/bin/catalina.sh start
-                    ENDSSH
-                   '''
 
                 }
             }
