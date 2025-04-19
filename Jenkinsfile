@@ -50,7 +50,7 @@ stage('Measure Baseline Build+Test') {
   steps {
     script {
       echo "⏳ Baseline full build+test"
-      def t0 = System.currentTimeMillis()
+      long t0 = System.currentTimeMillis()
 
       // Clean and prepare directories
       sh 'rm -rf build test_output'
@@ -68,18 +68,23 @@ stage('Measure Baseline Build+Test') {
       // Run all tests from test_output directory
       sh '''
         java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
-        org.junit.platform.console.ConsoleLauncher \
-        --scan-class-path test_output \
-        --details summary || true
+          org.junit.platform.console.ConsoleLauncher \
+          --scan-class-path test_output \
+          --details summary || true
       '''
 
       // Time measurement
-      baselineTimeSec = ((System.currentTimeMillis() - t0) / 1000) as int
+      long elapsedMillis = System.currentTimeMillis() - t0
+      int baselineTimeSec = (int)(elapsedMillis / 1000)
+
+      // Export into env for later stages
       env.BASELINE_TIME_SEC = "${baselineTimeSec}"
+
       echo "⚖️  Baseline time = ${baselineTimeSec} sec"
     }
   }
 }
+
 
 
     stage('Decide Mode Dynamically') {
