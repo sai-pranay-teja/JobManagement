@@ -111,8 +111,8 @@ pipeline {
                     scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war ${env.REMOTE_USER}@${env.REMOTE_HOST}:${env.REMOTE_BACKUP_DIR}/JobManagement_ACTIONS.war_bak
                     ssh -o StrictHostKeyChecking=no -i key.pem ${env.REMOTE_USER}@${env.REMOTE_HOST} <<EOF
                         sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
-                        sudo /opt/tomcat10/bin/shutdown.sh || true
-                        sudo /opt/tomcat10/bin/startup.sh
+                        sudo /opt/tomcat10/bin/catalina.sh stop || true
+                        sudo /opt/tomcat10/bin/catalina.sh start
                     EOF
                     """
                 }
