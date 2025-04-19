@@ -158,30 +158,56 @@ pipeline {
             }
         }
 
-        stage('Finalize Metrics') {
-            steps {
-                script {
-                    echo "Finalizing Metrics..."
+stage('Finalize Metrics') {
+    steps {
+        script {
+            echo "Finalizing Metrics..."
 
-                    def deployStart = env.DEPLOY_START.toLong()
-                    def deployEnd = System.currentTimeMillis()
+            def now = System.currentTimeMillis()
+            def deployStart = env.DEPLOY_START.toLong()
+            def commitTime = env.COMMIT_TIME.toLong()
+            def pipelineStart = env.PIPELINE_START.toLong()
 
-                    def deployTime = (deployEnd - deployStart) / 1000
-                    echo "Deployment Time: ${deployTime} seconds"
+            def deployTime = (now - deployStart) / 1000
+            def leadTime = (now - commitTime) / 1000
+            def totalTime = (now - pipelineStart) / 1000
 
-                    def totalTime = (deployEnd - currentBuild.getStartTimeInMillis()) / 1000
+            def jvmSetupTime = (env.JVM_SETUP_END.toLong() - env.JVM_SETUP_START.toLong()) / 1000
+            def buildCacheRestoreTime = (env.BUILD_CACHE_RESTORE_END.toLong() - env.BUILD_CACHE_RESTORE_START.toLong()) / 1000
+            def buildCacheSaveTime = (env.BUILD_CACHE_SAVE_END.toLong() - env.BUILD_CACHE_SAVE_START.toLong()) / 1000
+            def testCacheRestoreTime = (env.TEST_CACHE_RESTORE_END.toLong() - env.TEST_CACHE_RESTORE_START.toLong()) / 1000
+            def testCacheSaveTime = (env.TEST_CACHE_SAVE_END.toLong() - env.TEST_CACHE_SAVE_START.toLong()) / 1000
+            def jvmStartupTime = env.JVM_STARTUP_TIME.toInteger()
 
-                    echo "Total Pipeline Time: ${totalTime} seconds"
-                    
-                    // Output final metrics
-                    echo """
-                    🚀 Mode: ${env.MODE}
-                    Build Time: ${env.BUILD_TIME} seconds
-                    Deployment Time: ${deployTime} seconds
-                    Total Time: ${totalTime} seconds
-                    """
-                }
-            }
+            def buildTime = env.BUILD_TIME.toInteger()
+            def testTime = env.TEST_TIME.toInteger()
+
+            def netBuild = buildTime - buildCacheRestoreTime - buildCacheSaveTime
+            def netTest = testTime - jvmStartupTime
+            def netTotal = totalTime - buildCacheRestoreTime - buildCacheSaveTime - testCacheRestoreTime - testCacheSaveTime - jvmSetupTime - jvmStartupTime
+
+            echo """
+🚀 Mode: Mode ${env.MODE}
+Build Time          : ${buildTime} sec
+Test Time           : ${testTime} sec
+Deploy Time         : ${deployTime} sec
+Lead Time           : ${leadTime} sec
+Total Pipeline Time : ${totalTime} sec
+Overhead (JVM Setup)              : ${jvmSetupTime} sec
+Overhead (Cache Restore - Build) : ${buildCacheRestoreTime} sec
+Overhead (Cache Save - Build)    : ${buildCacheSaveTime} sec
+Overhead (Cache Restore - Test)  : ${testCacheRestoreTime} sec
+Overhead (Cache Save - Test)     : ${testCacheSaveTime} sec
+Overhead (JVM Startup Time)      : ${jvmStartupTime} sec
+➡️ Pure Build   : ${netBuild} sec
+➡️ Pure Test    : ${netTest} sec
+➡️ Pure Total   : ${netTotal} sec
+"""
+
+            writeFile file: 'stage_metrics.csv', text: "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,JVM_SETUP,BUILD_CACHE_RESTORE,BUILD_CACHE_SAVE,TEST_CACHE_RESTORE,TEST_CACHE_SAVE,JVM_STARTUP,NET_BUILD_TIME,NET_TEST_TIME,NET_TOTAL_TIME\n"
+            appendToFile file: 'stage_metrics.csv', text: "${env.MODE},${buildTime},${testTime},${deployTime},${leadTime},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}\n"
         }
+    }
+}
     }
 }
