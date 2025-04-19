@@ -299,6 +299,7 @@ stage('Deploy') {
         }
     }
 }
+  }
 
   post {
     always {
@@ -363,4 +364,3 @@ stage('Deploy') {
         }
     }
 }}
-}
