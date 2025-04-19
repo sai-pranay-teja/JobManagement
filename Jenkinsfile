@@ -46,23 +46,41 @@ pipeline {
       }
     }
 
-    stage('Measure Baseline Build+Test') {
-      steps {
-        script {
-          echo "⏳ Baseline full build+test"
-          def t0 = System.currentTimeMillis()
-          sh 'rm -rf build test_output'
-          sh 'mkdir -p build/WEB-INF/classes test_output'
-          // full compile
-          sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
-          // full test compile & run
-          sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d test_output src/main/test/*.java'
-          sh 'java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true'
-          baselineTimeSec = ((System.currentTimeMillis() - t0) / 1000).toLong()
-          echo "⚖️  Baseline time = ${baselineTimeSec} sec"
-        }
-      }
+stage('Measure Baseline Build+Test') {
+  steps {
+    script {
+      echo "⏳ Baseline full build+test"
+      def t0 = System.currentTimeMillis()
+
+      // Clean and prepare directories
+      sh 'rm -rf build test_output'
+      sh 'mkdir -p build/WEB-INF/classes test_output'
+
+      // Full source compile
+      sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
+
+      // Compile tests
+      sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d test_output src/main/test/*.java'
+
+      // Copy config.properties for test execution
+      sh 'cp src/main/resources/config.properties test_output/'
+
+      // Run all tests from test_output directory
+      sh '''
+        java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+        org.junit.platform.console.ConsoleLauncher \
+        --scan-class-path test_output \
+        --details summary || true
+      '''
+
+      // Time measurement
+      def baselineTimeSec = ((System.currentTimeMillis() - t0) / 1000).toLong()
+      env.BASELINE_TIME_SEC = "${baselineTimeSec}"
+      echo "⚖️  Baseline time = ${baselineTimeSec} sec"
     }
+  }
+}
+
 
     stage('Decide Mode Dynamically') {
       steps {
