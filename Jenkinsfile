@@ -292,7 +292,7 @@ pipeline {
         def netTest                = testTime  - jvmStartupTime
         def netTotal               = totalPipelineTime - jvmSetupTime - bcRestore - bcSave - tcRestore - tcSave - jvmStartupTime
 
-        echo "\n=== PIPELINE METRICS (${env.MODE}) ==="
+        echo "\n=== PIPELINE METRICS Mode - (${env.MODE}) ==="
         echo "Build Time                      : ${buildTime} sec"
         echo "Test Time                       : ${testTime} sec"
         echo "Deploy Time                     : ${deployTime} sec"
