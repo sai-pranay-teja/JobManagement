@@ -96,9 +96,13 @@ stage('Decide Mode Dynamically') {
             long threshold = 11L
             if (baselineTimeSec >= threshold) {
                 writeFile file: 'pipeline_mode.txt', text: 'A'
+                env.MODE = 'A'  // Add this line
+
                 echo "✅ Using optimized Mode A"
             } else {
                 writeFile file: 'pipeline_mode.txt', text: 'B'
+                env.MODE = 'B'  // Add this line
+
                 echo "✅ Using baseline Mode B"
             }
         }
@@ -108,11 +112,11 @@ stage('Decide Mode Dynamically') {
 stage('Validate Mode') {
     steps {
         script {
-            // Access through env var for reliability
-            if (env.MODE != 'A' && env.MODE != 'B') {
-                error "❌ Invalid MODE: ${env.MODE}"
+            def mode = readFile('pipeline_mode.txt').trim()
+            if (mode != 'A' && mode != 'B') {
+                error "❌ Invalid MODE: ${mode}"
             }
-            echo "🔧 Mode = ${env.MODE}"  // Use env.MODE for consistency
+            echo "🔧 Mode = ${mode}"
         }
     }
 }
@@ -124,8 +128,8 @@ stage('Initialize & JVM Setup') {
         }
         sh 'java -version || true'
         script {
-            // Use env.MODE instead of variable
-            if (env.MODE == 'A') {
+            def mode = readFile('pipeline_mode.txt').trim()
+            if (mode == 'A') {
                 sh 'java -Xshare:auto -version > /dev/null 2>&1 || true'
             }
             jvmSetupEnd = System.currentTimeMillis()
@@ -146,13 +150,21 @@ stage('Checkout') {
 
 stage('Build Cache Restore') {
         when { 
-        expression { 
-            // Use script variable 'mode' instead of env.MODE
-            def mode = readFile('pipeline_mode.txt').trim()
-
-            return mode == 'A' 
-        } 
-    }  // Use env.MODE
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}  // Use env.MODE
     steps {
         script {
             buildCacheRestoreStart = System.currentTimeMillis()
@@ -202,13 +214,21 @@ stage('Build Cache Restore') {
 
 stage('Build Cache Save') {
         when { 
-        expression { 
-            // Use script variable 'mode' instead of env.MODE
-            def mode = readFile('pipeline_mode.txt').trim()
-
-            return mode == 'A' 
-        } 
-    }  // Use env.MODE
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}  // Use env.MODE
     steps {
         script {
             buildCacheSaveStart = System.currentTimeMillis()
@@ -233,13 +253,21 @@ stage('Backup WAR') {
 
 stage('Test Cache Restore') {
         when { 
-        expression { 
-            // Use script variable 'mode' instead of env.MODE
-            def mode = readFile('pipeline_mode.txt').trim()
-
-            return mode == 'A' 
-        } 
-    }
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}
     steps {
         script {
             testCacheRestoreStart = System.currentTimeMillis()
@@ -283,13 +311,21 @@ stage('Run Tests') {
 
 stage('Test Cache Save') {
         when { 
-        expression { 
-            // Use script variable 'mode' instead of env.MODE
-            def mode = readFile('pipeline_mode.txt').trim()
-
-            return mode == 'A' 
-        } 
-    }
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}
     steps {
         script {
             testCacheSaveStart = System.currentTimeMillis()
@@ -367,7 +403,7 @@ stage('Deploy') {
             // Generate CSV
             def csvHeader = "MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL\n"
             def csvLine = String.format("%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
-                env.MODE,
+                readFile('pipeline_mode.txt').trim(),
                 buildTimeSec,
                 testTimeSec,
                 deployTimeSec,
@@ -390,8 +426,12 @@ stage('Deploy') {
     }
 }
 
-    cleanup {
-        deleteFile('pipeline_mode.txt') // Ensure clean workspace
+cleanup {
+    script {
+        if (fileExists('pipeline_mode.txt')) {
+            sh 'rm pipeline_mode.txt'
+        }
     }
+}
 
 }
