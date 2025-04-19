@@ -93,6 +93,11 @@ jobs:
         ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "mkdir -p $REMOTE_BACKUP_DIR"
         scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:$REMOTE_BACKUP_DIR/JobManagement_ACTIONS.war_bak
 
+    - name: Prepare test cache directory
+      if: ${{ env.MODE == 'A' }}
+      run: mkdir -p test_output
+
+
     # --- TEST STAGE ---
     - name: Restore test cache (Mode A)
       if: ${{ env.MODE == 'A' }}
