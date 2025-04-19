@@ -75,7 +75,7 @@ stage('Measure Baseline Build+Test') {
 
       // Time measurement
       long elapsedMillis = System.currentTimeMillis() - t0
-      int baselineTimeSec = (int)(elapsedMillis / 1000)
+      baselineTimeSec = (int)(elapsedMillis / 1000)
 
       // Export into env for later stages
       env.BASELINE_TIME_SEC = "${baselineTimeSec}"
