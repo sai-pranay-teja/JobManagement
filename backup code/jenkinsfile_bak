@@ -2,7 +2,7 @@
 def pipelineStartTime    = 0L
 def commitTimeMs         = 0L
 def baselineTimeSec      = 0L
-def mode                 = 'A'
+// def mode                 = 'A'
 def jvmSetupStart        = 0L, jvmSetupEnd        = 0L
 def buildCacheRestoreStart = 0L, buildCacheRestoreEnd = 0L
 def buildTimeSec         = 0L
@@ -18,6 +18,7 @@ def pipelineEndTime      = 0L, totalTimeSec       = 0L
 pipeline {
   agent any
   environment {
+    MODE = 'UNSET'
     SSH_USER         = 'root'
     SSH_HOST         = '40.192.66.15'
     SSH_KEY          = '/var/lib/jenkins/.ssh/id_rsa'
@@ -98,11 +99,11 @@ stage('Measure Baseline Build+Test') {
             // Convert baselineTimeSec to long explicitly if needed
             long threshold = 11L
             if (baselineTimeSec >= threshold) {  // Both values are now primitive longs
-                mode = 'A'
+                // mode = 'A'
                 env.MODE = 'A'  // Set both var and environment
                 echo "✅ Using optimized Mode A"
             } else {
-                mode = 'B'
+                // mode = 'B'
                 env.MODE = 'B'
                 echo "✅ Using baseline Mode B"
             }
