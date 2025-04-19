@@ -74,7 +74,7 @@ stage('Measure Baseline Build+Test') {
       '''
 
       // Time measurement
-      def baselineTimeSec = ((System.currentTimeMillis() - t0) / 1000).toLong()
+      def baselineTimeSec = ((System.currentTimeMillis() - t0) / 1000) as int
       env.BASELINE_TIME_SEC = "${baselineTimeSec}"
       echo "⚖️  Baseline time = ${baselineTimeSec} sec"
     }
