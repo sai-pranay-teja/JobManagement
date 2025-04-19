@@ -303,25 +303,25 @@ stage('Deploy') {
   post {
     always {
         script {
-            // Use explicit casting instead of .toLong()
+            // Calculate total pipeline time
             pipelineEndTime = System.currentTimeMillis()
-            totalTimeSec = (long)((pipelineEndTime - pipelineStartTime) / 1000
+            totalTimeSec = (long)((pipelineEndTime - pipelineStartTime) / 1000)
 
-            // Calculate overheads with safe casting
-            long jvmSetupTime = (long)((jvmSetupEnd - jvmSetupStart) / 1000
-            long buildCacheRestoreTime = (long)((buildCacheRestoreEnd - buildCacheRestoreStart) / 1000
-            long buildCacheSaveTime = (long)((buildCacheSaveEnd - buildCacheSaveStart) / 1000)
-            long testCacheRestoreTime = (long)((testCacheRestoreEnd - testCacheRestoreStart) / 1000)
-            long testCacheSaveTime = (long)((testCacheSaveEnd - testCacheSaveStart) / 1000)
-            long jvmStartupTime = (long)((jvmStartupEnd - jvmStartupStart) / 1000)
+            // Calculate overhead durations
+            def jvmSetupTime = (long)((jvmSetupEnd - jvmSetupStart) / 1000)
+            def buildCacheRestoreTime = (long)((buildCacheRestoreEnd - buildCacheRestoreStart) / 1000)
+            def buildCacheSaveTime = (long)((buildCacheSaveEnd - buildCacheSaveStart) / 1000)
+            def testCacheRestoreTime = (long)((testCacheRestoreEnd - testCacheRestoreStart) / 1000)
+            def testCacheSaveTime = (long)((testCacheSaveEnd - testCacheSaveStart) / 1000)
+            def jvmStartupTime = (long)((jvmStartupEnd - jvmStartupStart) / 1000)
 
             // Calculate net times
-            long netBuild = buildTimeSec - buildCacheRestoreTime - buildCacheSaveTime
-            long netTest = testTimeSec - jvmStartupTime
-            long netTotal = totalTimeSec - jvmSetupTime - buildCacheRestoreTime - buildCacheSaveTime - 
-                          testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
+            def netBuild = buildTimeSec - buildCacheRestoreTime - buildCacheSaveTime
+            def netTest = testTimeSec - jvmStartupTime
+            def netTotal = totalTimeSec - jvmSetupTime - buildCacheRestoreTime - buildCacheSaveTime - 
+                         testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
 
-            // Use env.MODE for consistency across stages
+            // Print metrics
             echo "=== PIPELINE METRICS (Mode ${env.MODE}) ==="
             echo "Build Time                   : ${buildTimeSec} sec"
             echo "Test Time                    : ${testTimeSec} sec"
@@ -338,9 +338,9 @@ stage('Deploy') {
             echo "➡️ Pure Test Time            : ${netTest} sec"
             echo "➡️ Pure Total Time           : ${netTotal} sec"
 
-            // CSV writing with safe values
-            String hdr = "MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL\n"
-            String line = String.format("%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+            // Generate CSV
+            def csvHeader = "MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL\n"
+            def csvLine = String.format("%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
                 env.MODE,
                 buildTimeSec,
                 testTimeSec,
@@ -358,7 +358,7 @@ stage('Deploy') {
                 netTotal
             )
             
-            writeFile file: env.CSV_FILE, text: hdr + line
+            writeFile file: env.CSV_FILE, text: csvHeader + csvLine + "\n"
             archiveArtifacts artifacts: env.CSV_FILE, onlyIfSuccessful: false
         }
     }
