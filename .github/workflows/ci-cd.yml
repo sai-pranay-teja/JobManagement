@@ -33,7 +33,11 @@ jobs:
         chmod 400 key.pem
 
     - name: Record pipeline start
-      run: echo "PIPELINE_START=$(date +%s)" >> $GITHUB_ENV
+      id: pipeline_start
+      run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+
+    - name: Show Mode
+      run: echo "🔧 Mode: Mode ${{ github.event.inputs.mode }}"
 
     # --- BUILD STAGE ---
     - name: Restore build cache (Mode A)
@@ -125,11 +129,11 @@ jobs:
         key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
 
     # --- DEPLOY STAGE ---
-    - name: Record deploy metrics start
+    - name: Record deploy and commit times
+      id: timing
       run: |
-        echo "DEPLOY_START=$(date +%s)" >> $GITHUB_ENV
-        COMMIT_TIME=$(git log -1 --format=%ct)
-        echo "LEAD_TIME=$(( $(date +%s) - COMMIT_TIME ))" >> $GITHUB_ENV
+        echo "deploy_start=$(date +%s)" >> $GITHUB_OUTPUT
+        echo "commit_time=$(git log -1 --format=%ct)" >> $GITHUB_OUTPUT
 
     - name: Deploy to Tomcat
       run: |
@@ -143,17 +147,25 @@ jobs:
             sudo /opt/tomcat10/bin/startup.sh
         EOF
         echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
-        echo "DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))" >> $GITHUB_ENV
 
     # --- FINAL METRICS ---
-    - name: Calculate total pipeline time
-      run: |
-        echo "PIPELINE_END=$(date +%s)" >> $GITHUB_ENV
-        echo "TOTAL_TIME=$((PIPELINE_END - PIPELINE_START))" >> $GITHUB_ENV
-
     - name: Summarize Metrics
       run: |
-        echo "Mode: ${{ github.event.inputs.mode }}"
+        DEPLOY_END=$(date +%s)
+        DEPLOY_START=${{ steps.timing.outputs.deploy_start }}
+        COMMIT_TIME=${{ steps.timing.outputs.commit_time }}
+        PIPELINE_START=${{ steps.pipeline_start.outputs.start }}
+        NOW=$DEPLOY_END
+
+        DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))
+        LEAD_TIME=$((NOW - COMMIT_TIME))
+        TOTAL_TIME=$((NOW - PIPELINE_START))
+
+        echo "DEPLOY_TIME=$DEPLOY_TIME" >> $GITHUB_ENV
+        echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
+        echo "TOTAL_TIME=$TOTAL_TIME" >> $GITHUB_ENV
+
+        echo "🚀 Mode: Mode ${{ github.event.inputs.mode }}"
         echo "Build Time    : $BUILD_TIME sec"
         echo "Test Time     : $TEST_TIME sec"
         echo "Deploy Time   : $DEPLOY_TIME sec"
