@@ -155,19 +155,22 @@ jobs:
       run: mkdir -p test_output
 
     # --- TEST CACHE RESTORE ---
-    - name: ⏱ Cache Restore (Test)
+    - name: ⏱ Cache Restore (Test Classes)
       if: ${{ env.MODE == 'A' }}
       run: echo "TEST_CACHE_RESTORE_START=$(date +%s)" >> $GITHUB_ENV
 
     - uses: actions/cache@v3
       if: ${{ env.MODE == 'A' }}
       with:
-        path: test_output
+        path: |
+          test_unit
+          test_int
         key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
 
-    - name: Record end of Cache Restore (Test)
+    - name: Record end of Cache Restore (Test Classes)
       if: ${{ env.MODE == 'A' }}
       run: echo "TEST_CACHE_RESTORE_END=$(date +%s)" >> $GITHUB_ENV
+
 
 
 
@@ -200,19 +203,33 @@ jobs:
         echo "JVM_STARTUP_TIME=$((JVM_END - JVM1_START))" >> $GITHUB_ENV
 
     # --- TEST CACHE SAVE ---
-    - name: ⏱ Cache Save (Test)
+    - name: ⏱ Cache Save (Test Classes)
       if: ${{ env.MODE == 'A' }}
       run: echo "TEST_CACHE_SAVE_START=$(date +%s)" >> $GITHUB_ENV
 
     - uses: actions/cache@v3
       if: ${{ env.MODE == 'A' }}
       with:
-        path: test_output
+        path: |
+          test_unit
+          test_int
         key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
 
-    - name: Record end of Cache Save (Test)
+    - name: Record end of Cache Save (Test Classes)
       if: ${{ env.MODE == 'A' }}
       run: echo "TEST_CACHE_SAVE_END=$(date +%s)" >> $GITHUB_ENV
+
+
+
+
+
+
+
+
+
+
+
+
 
     # --- DEPLOY STAGE ---
     - name: Record deploy and commit times
