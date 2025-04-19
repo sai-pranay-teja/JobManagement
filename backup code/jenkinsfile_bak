@@ -2,7 +2,7 @@
 def pipelineStartTime    = 0L
 def commitTimeMs         = 0L
 def baselineTimeSec      = 0L
-// def mode                 = 'A'
+def mode = 'UNDEFINED' // Global script variable
 def jvmSetupStart        = 0L, jvmSetupEnd        = 0L
 def buildCacheRestoreStart = 0L, buildCacheRestoreEnd = 0L
 def buildTimeSec         = 0L
@@ -45,7 +45,6 @@ stage('Initialize') {
             
             // Convert to milliseconds safely
             commitTimeMs = ct ? (ct as Long) * 1000L : 0L
-            MODE = 'UNSET'
             echo "🔍 Commit timestamp: ${commitTimeMs} ms"
         }
     }
@@ -98,14 +97,14 @@ stage('Measure Baseline Build+Test') {
             // Convert baselineTimeSec to long explicitly if needed
             long threshold = 11L
             if (baselineTimeSec >= threshold) {  // Both values are now primitive longs
-                // mode = 'A'
-                env.MODE = 'A'  // Set both var and environment
+                mode = 'A'
                 echo "✅ Using optimized Mode A"
             } else {
-                // mode = 'B'
-                env.MODE = 'B'
+                mode = 'B'
                 echo "✅ Using baseline Mode B"
             }
+
+            env.MODE = mode 
         }
     }
 }
@@ -150,7 +149,12 @@ stage('Checkout') {
 }
 
 stage('Build Cache Restore') {
-    when { expression { env.MODE == 'A' } }  // Use env.MODE
+        when { 
+        expression { 
+            // Use script variable 'mode' instead of env.MODE
+            return mode == 'A' 
+        } 
+    }  // Use env.MODE
     steps {
         script {
             buildCacheRestoreStart = System.currentTimeMillis()
@@ -199,7 +203,12 @@ stage('Build Cache Restore') {
 }
 
 stage('Build Cache Save') {
-    when { expression { env.MODE == 'A' } }  // Use env.MODE
+        when { 
+        expression { 
+            // Use script variable 'mode' instead of env.MODE
+            return mode == 'A' 
+        } 
+    }  // Use env.MODE
     steps {
         script {
             buildCacheSaveStart = System.currentTimeMillis()
@@ -223,7 +232,12 @@ stage('Backup WAR') {
 }
 
 stage('Test Cache Restore') {
-    when { expression { env.MODE == 'A' } }
+        when { 
+        expression { 
+            // Use script variable 'mode' instead of env.MODE
+            return mode == 'A' 
+        } 
+    }
     steps {
         script {
             testCacheRestoreStart = System.currentTimeMillis()
@@ -266,7 +280,12 @@ stage('Run Tests') {
 }
 
 stage('Test Cache Save') {
-    when { expression { env.MODE == 'A' } }
+        when { 
+        expression { 
+            // Use script variable 'mode' instead of env.MODE
+            return mode == 'A' 
+        } 
+    }
     steps {
         script {
             testCacheSaveStart = System.currentTimeMillis()
