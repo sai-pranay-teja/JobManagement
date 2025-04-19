@@ -231,9 +231,14 @@ pipeline {
         echo "➡️ Pure Total Time           : ${netTotal} sec"
 
         // Write CSV for external analysis
-        def header = 'MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL\\n'
-        def line   = \"${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}\\n\"
-
+        // def header = 'MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL\\n'
+        // def line   = \"${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}\\n\"
+        def header = '''\
+MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL
+'''
+def line = """\
+${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}
+"""
         if (!fileExists(CSV_FILE)) {
           writeFile file: CSV_FILE, text: header + line
         } else {
