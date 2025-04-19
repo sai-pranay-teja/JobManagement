@@ -161,53 +161,71 @@ pipeline {
 stage('Finalize Metrics') {
     steps {
         script {
-            echo "📊 Finalizing Metrics..."
+            echo "Finalizing Metrics..."
 
-            // Helper functions
-            def safeLong = { val -> (val?.isNumber()) ? val.toDouble() as long : 0 }
-            def safeInt = { val -> (val?.isInteger()) ? val.toInteger() : 0 }
-            def roundToLong = { val -> (val != null) ? Math.floor(val) as long : 0 } // Manually round to long
+            // Function to safely convert string to Long or default to 0 if null
+            def safeLong = { val -> val ? (val.isNumber() ? val.toDouble() as long : 0) : 0 }
+            // Function to safely convert string to Integer or default to 0 if null
+            def safeInt = { val -> val ? (val.isInteger() ? val.toInteger() : 0) : 0 }
 
-            // Debug: print all raw env vars
-            echo """
-🔍 Raw ENV values:
-MODE=${env.MODE}
-DEPLOY_START=${env.DEPLOY_START}
-COMMIT_TIME=${env.COMMIT_TIME}
-PIPELINE_START=${env.PIPELINE_START}
-JVM_SETUP_START=${env.JVM_SETUP_START}, JVM_SETUP_END=${env.JVM_SETUP_END}
-BUILD_CACHE_RESTORE_START=${env.BUILD_CACHE_RESTORE_START}, BUILD_CACHE_RESTORE_END=${env.BUILD_CACHE_RESTORE_END}
-BUILD_CACHE_SAVE_START=${env.BUILD_CACHE_SAVE_START}, BUILD_CACHE_SAVE_END=${env.BUILD_CACHE_SAVE_END}
-TEST_CACHE_RESTORE_START=${env.TEST_CACHE_RESTORE_START}, TEST_CACHE_RESTORE_END=${env.TEST_CACHE_RESTORE_END}
-TEST_CACHE_SAVE_START=${env.TEST_CACHE_SAVE_START}, TEST_CACHE_SAVE_END=${env.TEST_CACHE_SAVE_END}
-JVM_STARTUP_TIME=${env.JVM_STARTUP_TIME}
-BUILD_TIME=${env.BUILD_TIME}
-TEST_TIME=${env.TEST_TIME}
-"""
-
+            // Capture current time for metrics calculation
             def now = System.currentTimeMillis()
+
+            // Safely retrieve environment variables, handling null values
             def deployStart = safeLong(env.DEPLOY_START)
             def commitTime = safeLong(env.COMMIT_TIME)
             def pipelineStart = safeLong(env.PIPELINE_START)
+            def jvmSetupStart = safeLong(env.JVM_SETUP_START)
+            def jvmSetupEnd = safeLong(env.JVM_SETUP_END)
+            def buildCacheRestoreStart = safeLong(env.BUILD_CACHE_RESTORE_START)
+            def buildCacheRestoreEnd = safeLong(env.BUILD_CACHE_RESTORE_END)
+            def buildCacheSaveStart = safeLong(env.BUILD_CACHE_SAVE_START)
+            def buildCacheSaveEnd = safeLong(env.BUILD_CACHE_SAVE_END)
+            def testCacheRestoreStart = safeLong(env.TEST_CACHE_RESTORE_START)
+            def testCacheRestoreEnd = safeLong(env.TEST_CACHE_RESTORE_END)
+            def testCacheSaveStart = safeLong(env.TEST_CACHE_SAVE_START)
+            def testCacheSaveEnd = safeLong(env.TEST_CACHE_SAVE_END)
+            def jvmStartupTime = safeInt(env.JVM_STARTUP_TIME)
+            def buildTime = safeInt(env.BUILD_TIME)
+            def testTime = safeInt(env.TEST_TIME)
 
+            // Calculate the times in seconds
             def deployTime = (now - deployStart) / 1000
             def leadTime = (now - commitTime) / 1000
             def totalTime = (now - pipelineStart) / 1000
 
-            def jvmSetupTime = (safeLong(env.JVM_SETUP_END) - safeLong(env.JVM_SETUP_START)) / 1000
-            def buildCacheRestoreTime = (safeLong(env.BUILD_CACHE_RESTORE_END) - safeLong(env.BUILD_CACHE_RESTORE_START)) / 1000
-            def buildCacheSaveTime = (safeLong(env.BUILD_CACHE_SAVE_END) - safeLong(env.BUILD_CACHE_SAVE_START)) / 1000
-            def testCacheRestoreTime = (safeLong(env.TEST_CACHE_RESTORE_END) - safeLong(env.TEST_CACHE_RESTORE_START)) / 1000
-            def testCacheSaveTime = (safeLong(env.TEST_CACHE_SAVE_END) - safeLong(env.TEST_CACHE_SAVE_START)) / 1000
-            def jvmStartupTime = safeInt(env.JVM_STARTUP_TIME)
+            def jvmSetupTime = (jvmSetupEnd - jvmSetupStart) / 1000
+            def buildCacheRestoreTime = (buildCacheRestoreEnd - buildCacheRestoreStart) / 1000
+            def buildCacheSaveTime = (buildCacheSaveEnd - buildCacheSaveStart) / 1000
+            def testCacheRestoreTime = (testCacheRestoreEnd - testCacheRestoreStart) / 1000
+            def testCacheSaveTime = (testCacheSaveEnd - testCacheSaveStart) / 1000
 
-            def buildTime = safeInt(env.BUILD_TIME)
-            def testTime = safeInt(env.TEST_TIME)
-
+            // Net times calculation
             def netBuild = buildTime - buildCacheRestoreTime - buildCacheSaveTime
             def netTest = testTime - jvmStartupTime
             def netTotal = totalTime - buildCacheRestoreTime - buildCacheSaveTime - testCacheRestoreTime - testCacheSaveTime - jvmSetupTime - jvmStartupTime
 
+            // Print the debug values for clarity
+            echo """
+  DEPLOY_START=${env.DEPLOY_START}
+  COMMIT_TIME=${env.COMMIT_TIME}
+  PIPELINE_START=${env.PIPELINE_START}
+  JVM_SETUP_START=${env.JVM_SETUP_START}
+  JVM_SETUP_END=${env.JVM_SETUP_END}
+  BUILD_CACHE_RESTORE_START=${env.BUILD_CACHE_RESTORE_START}
+  BUILD_CACHE_RESTORE_END=${env.BUILD_CACHE_RESTORE_END}
+  BUILD_CACHE_SAVE_START=${env.BUILD_CACHE_SAVE_START}
+  BUILD_CACHE_SAVE_END=${env.BUILD_CACHE_SAVE_END}
+  TEST_CACHE_RESTORE_START=${env.TEST_CACHE_RESTORE_START}
+  TEST_CACHE_RESTORE_END=${env.TEST_CACHE_RESTORE_END}
+  TEST_CACHE_SAVE_START=${env.TEST_CACHE_SAVE_START}
+  TEST_CACHE_SAVE_END=${env.TEST_CACHE_SAVE_END}
+  JVM_STARTUP_TIME=${env.JVM_STARTUP_TIME}
+  BUILD_TIME=${env.BUILD_TIME}
+  TEST_TIME=${env.TEST_TIME}
+"""
+
+            // Output finalized metrics
             echo """
 🚀 Mode: Mode ${env.MODE}
 Build Time          : ${buildTime} sec
@@ -226,20 +244,13 @@ Overhead (JVM Startup Time)      : ${jvmStartupTime} sec
 ➡️ Pure Total   : ${netTotal} sec
 """
 
-            def header = "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,JVM_SETUP,BUILD_CACHE_RESTORE,BUILD_CACHE_SAVE,TEST_CACHE_RESTORE,TEST_CACHE_SAVE,JVM_STARTUP,NET_BUILD_TIME,NET_TEST_TIME,NET_TOTAL_TIME\n"
-            def row = "${env.MODE},${buildTime},${testTime},${deployTime},${leadTime},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}\n"
-
-            def csvFile = 'stage_metrics.csv'
-            if (!fileExists(csvFile)) {
-                writeFile file: csvFile, text: header + row
-            } else {
-                writeFile file: 'temp_metrics.csv', text: row
-                sh "cat temp_metrics.csv >> ${csvFile}"
-                sh "rm temp_metrics.csv"
-            }
+            // Write the final metrics to a CSV file
+            writeFile file: 'stage_metrics.csv', text: "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,JVM_SETUP,BUILD_CACHE_RESTORE,BUILD_CACHE_SAVE,TEST_CACHE_RESTORE,TEST_CACHE_SAVE,JVM_STARTUP,NET_BUILD_TIME,NET_TEST_TIME,NET_TOTAL_TIME\n"
+            appendToFile file: 'stage_metrics.csv', text: "${env.MODE},${buildTime},${testTime},${deployTime},${leadTime},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}\n"
         }
     }
 }
+
 
 
 
