@@ -1,268 +1,367 @@
-/*
- * Pattern‑Driven CI/CD Jenkinsfile (Java‑Servlet Job Portal)
- * Enhanced with detailed overhead & “pure” time metrics
- */
-
-def pipelineStartTime = 0L
-def jvmSetupStart = 0L, jvmSetupEnd = 0L
+// Top‑level vars for timing/metrics
+def pipelineStartTime    = 0L
+def commitTimeMs         = 0L
+def baselineTimeSec      = 0L
+def mode                 = 'A'
+def jvmSetupStart        = 0L, jvmSetupEnd        = 0L
 def buildCacheRestoreStart = 0L, buildCacheRestoreEnd = 0L
-def buildTime = 0L
-def buildCacheSaveStart = 0L, buildCacheSaveEnd = 0L
-def testCacheRestoreStart = 0L, testCacheRestoreEnd = 0L
-def testTime = 0L
-def testCacheSaveStart = 0L, testCacheSaveEnd = 0L
-def jvmStartupStart = 0L, jvmStartupEnd = 0L
-def deployTime = 0L
-def leadTimeForChanges = 0L
-def pipelineEndTime = 0L, totalTime = 0L
-
-// CI/CD Optimization Mode: 'A' = optimized (with caching), 'B' = baseline
-def mode = 'B'
-def CSV_FILE = "${env.WORKSPACE}/stage_metrics.csv"
+def buildTimeSec         = 0L
+def buildCacheSaveStart  = 0L, buildCacheSaveEnd  = 0L
+def testCacheRestoreStart  = 0L, testCacheRestoreEnd  = 0L
+def testTimeSec          = 0L
+def testCacheSaveStart   = 0L, testCacheSaveEnd   = 0L
+def jvmStartupStart      = 0L, jvmStartupEnd      = 0L
+def deployStartTime      = 0L, deployTimeSec      = 0L
+def leadTimeSec          = 0L
+def pipelineEndTime      = 0L, totalTimeSec       = 0L
 
 pipeline {
   agent any
-
   environment {
-    TOMCAT_HOME = '/opt/tomcat10'
-    WAR_NAME    = 'JobManagement_JENKINS.war'
-    DEPLOY_DIR  = "${TOMCAT_HOME}/webapps"
-    SSH_KEY     = '/var/lib/jenkins/.ssh/id_rsa'
-    SSH_USER    = 'root'
-    SSH_HOST    = '40.192.66.15'
-    SSH_OPTS    = '-o StrictHostKeyChecking=no'
-    
+    SSH_USER         = 'root'
+    SSH_HOST         = '40.192.66.15'
+    SSH_KEY          = '/var/lib/jenkins/.ssh/id_rsa'
+    SSH_OPTS         = '-o StrictHostKeyChecking=no'
+    REMOTE_BACKUP_DIR= '/tmp/jenkins_bak'
+    WAR_NAME         = 'JobManagement_JENKINS.war'
+    CACHE_BASE_DIR   = "${WORKSPACE}/jenkins_caches/${JOB_NAME}"
+    BUILD_CACHE_DIR  = "${CACHE_BASE_DIR}/build_classes"
+    TEST_CACHE_DIR   = "${CACHE_BASE_DIR}/test_outputs"
+    CSV_FILE         = "stage_metrics.csv"
+    MODE             = 'A'
+    TOMCAT_HOME      = "/opt/tomcat10"
   }
-  
   options { timestamps() }
 
   stages {
 
-    // Define file paths for logs and war outputs
-    stage('Setup Paths') {
-      steps {
+stage('Initialize') {
+    steps {
         script {
-          env.WAR_STORAGE          = "${env.WORKSPACE}"
-          env.RESOURCE_BEFORE_LOG  = "${env.WORKSPACE}/resource_before_usage.log"
-          env.RESOURCE_AFTER_LOG   = "${env.WORKSPACE}/resource_after_usage.log"
-          env.LOG_FILE             = "${env.WORKSPACE}/deployment.log"
-          env.DEPLOYMENT_TIME_FILE = "${env.WORKSPACE}/deployment_time.log"
-          env.ROLLBACK_LOG         = "${env.WORKSPACE}/rollback.log"
-          env.MEM_BEFORE_LOG       = "${env.WORKSPACE}/mem_before.log"
-          env.MEM_AFTER_LOG        = "${env.WORKSPACE}/mem_after.log"
-          env.TEST_RESULTS_LOG     = "${env.WORKSPACE}/test_results.log"
+            pipelineStartTime = System.currentTimeMillis()
+            
+            // Get commit timestamp in seconds
+            def ct = sh(script: 'git log -1 --format=%ct', returnStdout: true).trim()
+            
+            // Convert to milliseconds safely
+            commitTimeMs = ct ? (ct as Long) * 1000L : 0L
+            
+            echo "🔍 Commit timestamp: ${commitTimeMs} ms"
         }
-      }
     }
+}
 
-    // Measure JVM setup time
-    stage('Initialize & JVM Setup') {
-      steps {
-        script {
-          pipelineStartTime = System.currentTimeMillis()
-          jvmSetupStart    = System.currentTimeMillis()
-        }
-        sh 'java -version || true'
-        script {
-          jvmSetupEnd = System.currentTimeMillis()
-        }
-      }
-    }
+stage('Measure Baseline Build+Test') {
+  steps {
+    script {
+      echo "⏳ Baseline full build+test"
+      def t0 = System.currentTimeMillis()  // Use def instead of long
 
-    // Ensure correct mode is used
-    stage('Validate MODE') {
-      steps {
-        script {
-          if (!(mode == 'A' || mode == 'B')) {
-            error "Invalid mode '${mode}'. Must be 'A' or 'B'."
-          }
-        }
-      }
-    }
+      // Clean and prepare directories
+      sh 'rm -rf build test_output'
+      sh 'mkdir -p build/WEB-INF/classes test_output'
 
-    // Git checkout the application
-    stage('Checkout') {
-      steps {
-        git url: 'https://github.com/sai-pranay-teja/JobManagement.git', branch: 'main'
-      }
-    }
+      // Full source compile
+      sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
 
-    // Restore previously stashed build artifacts
-    stage('Build Cache Restore') {
-      when { expression { mode == 'A' } }
-      steps {
-        script {
-          buildCacheRestoreStart = System.currentTimeMillis()
-          try { unstash 'buildClasses' } catch(e) { /* ignore first run */ }
-          buildCacheRestoreEnd = System.currentTimeMillis()
-        }
-      }
-    }
+      // Compile tests
+      sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d test_output src/main/test/*.java'
 
-    // Compile source files and package WAR
-    stage('Build') {
-      steps {
-        script {
-          def start = System.currentTimeMillis()
-          sh 'mkdir -p build/WEB-INF/classes'
+      // Copy config.properties for test execution
+      sh 'cp src/main/resources/config.properties test_output/'
 
-          if (mode == 'A') {
-            def changed = sh(
-              script: "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes",
-              returnStdout: true
-            ).trim()
-            if (changed) {
-              echo "Incremental compile of changed files"
-              sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
-            } else {
-              echo "No changes => full compile"
-              sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
-            }
-          } else {
-            echo "[Mode B] Full compile"
-            sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
-          }
+      // Run all tests from test_output directory
+      sh '''
+        java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+          org.junit.platform.console.ConsoleLauncher \
+          --scan-class-path test_output \
+          --details summary || true
+      '''
 
-          sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
-          sh 'cp -R src/main/webapp/* build/'
-          sh "jar -cvf ${WAR_NAME} -C build ."
-          buildTime = (System.currentTimeMillis() - start) / 1000
-        }
-      }
-    }
+      // Time measurement - use explicit casting
+      def elapsedMillis = System.currentTimeMillis() - t0
+      baselineTimeSec = (long)(elapsedMillis / 1000)  
 
-    // Save compiled build classes for caching
-    stage('Build Cache Save') {
-      when { expression { mode == 'A' } }
-      steps {
-        script {
-          buildCacheSaveStart = System.currentTimeMillis()
-          stash name: 'buildClasses', includes: 'build/WEB-INF/classes/**', allowEmpty: true
-          buildCacheSaveEnd = System.currentTimeMillis()
-        }
-      }
-    }
+      // Export using explicit string conversion
+      env.BASELINE_TIME_SEC = baselineTimeSec.toString()
 
-    // Back up WAR on the remote server
-    stage('Backup WAR') {
-      steps {
-        sh """
-          ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} 'mkdir -p /tmp/jenkins_bak'
-          scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:/tmp/jenkins_bak/
-        """
-      }
-    }
-
-    // Restore cached test outputs
-    stage('Test Cache Restore') {
-      when { expression { mode == 'A' } }
-      steps {
-        script {
-          testCacheRestoreStart = System.currentTimeMillis()
-          try { unstash 'testOutput' } catch(e) { /* ignore */ }
-          testCacheRestoreEnd = System.currentTimeMillis()
-        }
-      }
-    }
-
-    // Compile and run tests with timing
-    stage('Run Tests') {
-      steps {
-        script {
-          def start = System.currentTimeMillis()
-          sh 'mkdir -p test_unit && cp src/main/resources/config.properties test_unit/'
-          sh 'mkdir -p test_int'
-
-          sh "javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_unit src/main/test/TestAppPart1.java"
-          sh "javac -cp 'src/main/webapp/WEB-INF/lib/*:src' -d test_int src/main/test/TestAppPart2.java"
-
-          jvmStartupStart = System.currentTimeMillis()
-          sh "java -cp 'test_unit:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 &"
-          sh "java -cp 'test_int:src/main/webapp/WEB-INF/lib/*' org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log 2>&1 &"
-          sh 'wait'
-          jvmStartupEnd = System.currentTimeMillis()
-
-          testTime = (System.currentTimeMillis() - start) / 1000
-        }
-      }
-    }
-
-    // Save test output for future use
-    stage('Test Cache Save') {
-      when { expression { mode == 'A' } }
-      steps {
-        script {
-          testCacheSaveStart = System.currentTimeMillis()
-          stash name: 'testOutput', includes: 'test_unit.log,test_int.log', allowEmpty: true
-          testCacheSaveEnd = System.currentTimeMillis()
-        }
-      }
-    }
-
-    // Deploy WAR to Tomcat and restart server
-    stage('Deploy') {
-      steps {
-        script {
-          def deployStart = System.currentTimeMillis()
-          def commitTime = sh(script: 'git log -1 --format=%ct', returnStdout: true).trim().toInteger()
-          def now = (System.currentTimeMillis() / 1000) as Integer
-          leadTimeForChanges = now - commitTime
-
-          sh """
-            scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${DEPLOY_DIR}/
-            ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} \\
-              'sudo rm -rf ${DEPLOY_DIR}/${WAR_NAME}* && sudo ${TOMCAT_HOME}/bin/catalina.sh stop || true && sudo ${TOMCAT_HOME}/bin/catalina.sh start'
-          """
-          deployTime = (System.currentTimeMillis() - deployStart) / 1000
-        }
-      }
-    }
-  }
-
-  // Calculate all metrics and write to CSV for analysis
-  post {
-    always {
-      script {
-        pipelineEndTime = System.currentTimeMillis()
-        totalTime = (pipelineEndTime - pipelineStartTime) / 1000
-
-        def jvmSetupTime          = (jvmSetupEnd - jvmSetupStart) / 1000
-        def buildCacheRestoreTime = (buildCacheRestoreEnd - buildCacheRestoreStart) / 1000
-        def buildCacheSaveTime    = (buildCacheSaveEnd - buildCacheSaveStart) / 1000
-        def testCacheRestoreTime  = (testCacheRestoreEnd - testCacheRestoreStart) / 1000
-        def testCacheSaveTime     = (testCacheSaveEnd - testCacheSaveStart) / 1000
-        def jvmStartupTime        = (jvmStartupEnd - jvmStartupStart) / 1000
-
-        def netBuild = buildTime - buildCacheRestoreTime - buildCacheSaveTime
-        def netTest  = testTime - jvmStartupTime
-        def netTotal = totalTime - jvmSetupTime - buildCacheRestoreTime - buildCacheSaveTime - testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
-
-        echo "=== PIPELINE METRICS (Mode ${mode}) ==="
-        echo "Build Time         : ${buildTime} sec"
-        echo "Test Time          : ${testTime} sec"
-        echo "Deploy Time        : ${deployTime} sec"
-        echo "Lead Time for Change: ${leadTimeForChanges} sec"
-        echo "Total Pipeline Time: ${totalTime} sec"
-        echo "Overhead (JVM)     : ${jvmSetupTime} sec"
-        echo "➡️ Pure Build Time : ${netBuild} sec"
-        echo "➡️ Pure Test Time  : ${netTest} sec"
-        echo "➡️ Pure Total Time : ${netTotal} sec"
-
-        def header = '''\
-MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL
-'''
-        def line = """\
-${mode},${buildTime},${testTime},${deployTime},${leadTimeForChanges},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}
-"""
-
-        if (!fileExists(CSV_FILE)) {
-          writeFile file: CSV_FILE, text: header + line
-        } else {
-          writeFile file: CSV_FILE, text: readFile(CSV_FILE) + line
-        }
-
-        archiveArtifacts artifacts: "${CSV_FILE}", onlyIfSuccessful: false
-      }
+      echo "⚖️  Baseline time = ${baselineTimeSec} sec"
     }
   }
 }
+
+
+
+   stage('Decide Mode Dynamically') {
+    steps {
+        script {
+            // Convert baselineTimeSec to long explicitly if needed
+            long threshold = 11L
+            if (baselineTimeSec >= threshold) {  // Both values are now primitive longs
+                mode = 'A'
+                env.MODE = 'A'  // Set both var and environment
+                echo "✅ Using optimized Mode A"
+            } else {
+                mode = 'B'
+                env.MODE = 'B'
+                echo "✅ Using baseline Mode B"
+            }
+        }
+    }
+}
+
+stage('Validate Mode') {
+    steps {
+        script {
+            // Access through env var for reliability
+            if (env.MODE != 'A' && env.MODE != 'B') {
+                error "❌ Invalid MODE: ${env.MODE}"
+            }
+            echo "🔧 Mode = ${env.MODE}"  // Use env.MODE for consistency
+        }
+    }
+}
+
+stage('Initialize & JVM Setup') {
+    steps {
+        script { 
+            jvmSetupStart = System.currentTimeMillis() 
+        }
+        sh 'java -version || true'
+        script {
+            // Use env.MODE instead of variable
+            if (env.MODE == 'A') {
+                sh 'java -Xshare:auto -version > /dev/null 2>&1 || true'
+            }
+            jvmSetupEnd = System.currentTimeMillis()
+        }
+    }
+}
+
+stage('Checkout') {
+    steps {
+        // Add timeout for reliability
+        timeout(time: 2, unit: 'MINUTES') {
+            git url: 'https://github.com/sai-pranay-teja/JobManagement.git', 
+                 branch: 'main',
+                 poll: false  // Disable SCM polling if not needed
+        }
+    }
+}
+
+stage('Build Cache Restore') {
+    when { expression { env.MODE == 'A' } }  // Use env.MODE
+    steps {
+        script {
+            buildCacheRestoreStart = System.currentTimeMillis()
+            // Add quotes for path with spaces
+            if (fileExists("${env.BUILD_CACHE_DIR}")) {
+                echo "🔄 Restoring build cache from ${env.BUILD_CACHE_DIR}"
+                sh """
+                    mkdir -p build/WEB-INF/classes
+                    cp -r "${env.BUILD_CACHE_DIR}/"* build/WEB-INF/classes/
+                """
+            } else {
+                echo "⚠️ No build cache found"
+            }
+            buildCacheRestoreEnd = System.currentTimeMillis()
+        }
+    }
+}
+
+
+
+    stage('Build') {
+    steps {
+        script {
+            def t0 = System.currentTimeMillis()
+            sh 'mkdir -p build/WEB-INF/classes'
+            if (env.MODE == 'A') {  // Use env.MODE instead of mode
+                def changed = sh(script: "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes", returnStdout: true).trim()
+                if (changed) {
+                    echo "🔧 Incremental compile"
+                    sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
+                } else {
+                    echo "🔧 Full compile (no changes)"
+                    sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+                }
+            } else {
+                echo "🔧 Full compile (Mode B)"
+                sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+            }
+            sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
+            sh 'cp -R src/main/webapp/* build/'
+            sh "jar -cvf ${env.WAR_NAME} -C build ."
+            buildTimeSec = (long)((System.currentTimeMillis() - t0)/1000)
+            echo "✅ Build took ${buildTimeSec} sec"
+        }
+    }
+}
+
+stage('Build Cache Save') {
+    when { expression { env.MODE == 'A' } }  // Use env.MODE
+    steps {
+        script {
+            buildCacheSaveStart = System.currentTimeMillis()
+            sh "mkdir -p '${env.BUILD_CACHE_DIR}'"  // Quote path
+            sh "cp -r build/WEB-INF/classes/* '${env.BUILD_CACHE_DIR}/'"
+            buildCacheSaveEnd = System.currentTimeMillis()
+            echo "💾 Saved build cache to ${env.BUILD_CACHE_DIR}"
+        }
+    }
+}
+
+stage('Backup WAR') {
+    steps {
+        sh """
+            ssh ${env.SSH_OPTS} -i '${env.SSH_KEY}' ${env.SSH_USER}@${env.SSH_HOST} \
+                "mkdir -p '${env.REMOTE_BACKUP_DIR}'"
+            scp ${env.SSH_OPTS} -i '${env.SSH_KEY}' ${env.WAR_NAME} \
+                ${env.SSH_USER}@${env.SSH_HOST}:'${env.REMOTE_BACKUP_DIR}/${env.WAR_NAME}_bak'
+        """
+    }
+}
+
+stage('Test Cache Restore') {
+    when { expression { env.MODE == 'A' } }
+    steps {
+        script {
+            testCacheRestoreStart = System.currentTimeMillis()
+            if (fileExists(env.TEST_CACHE_DIR)) {
+                echo "🔄 Restoring test cache"
+                sh "cp -r '${env.TEST_CACHE_DIR}/test_unit' ."
+                sh "cp -r '${env.TEST_CACHE_DIR}/test_int' ."
+            }
+            testCacheRestoreEnd = System.currentTimeMillis()
+        }
+    }
+}
+
+stage('Run Tests') {
+    steps {
+        script {
+            def t0 = System.currentTimeMillis()
+            sh 'mkdir -p test_unit test_int && cp src/main/resources/config.properties test_unit/'
+            sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java'
+            sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java'
+            jvmStartupStart = System.currentTimeMillis()
+            sh '''
+                java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
+                    org.junit.platform.console.ConsoleLauncher \
+                    --select-class TestAppPart1 \
+                    --details summary > test_unit.log 2>&1 &
+            '''
+            sh '''
+                java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
+                    org.junit.platform.console.ConsoleLauncher \
+                    --select-class TestAppPart2 \
+                    --details summary > test_int.log 2>&1 &
+            '''
+            sh 'wait'
+            jvmStartupEnd = System.currentTimeMillis()
+            testTimeSec = (long)((System.currentTimeMillis() - t0)/1000)  
+            echo "✅ Tests took ${testTimeSec} sec"
+        }
+    }
+}
+
+stage('Test Cache Save') {
+    when { expression { env.MODE == 'A' } }
+    steps {
+        script {
+            testCacheSaveStart = System.currentTimeMillis()
+            sh "mkdir -p '${env.TEST_CACHE_DIR}'"
+            sh "cp -r test_unit '${env.TEST_CACHE_DIR}/'"
+            sh "cp -r test_int  '${env.TEST_CACHE_DIR}/'"
+            testCacheSaveEnd = System.currentTimeMillis()
+            echo "💾 Saved test cache to ${env.TEST_CACHE_DIR}"
+        }
+    }
+}
+
+stage('Deploy') {
+    steps {
+        script {
+            deployStartTime = System.currentTimeMillis()
+            def warBase = env.WAR_NAME.replaceAll(/\.war$/, "")
+
+            sh """
+                ssh ${env.SSH_OPTS} -i '${env.SSH_KEY}' ${env.SSH_USER}@${env.SSH_HOST} \
+                    "sudo rm -rf /opt/tomcat10/webapps/${warBase}* || true
+                     sudo ${TOMCAT_HOME}/bin/catalina.sh stop || true
+                     sudo ${TOMCAT_HOME}/bin/catalina.sh start"
+                scp ${env.SSH_OPTS} -i '${env.SSH_KEY}' \
+                    ${env.WAR_NAME} \
+                    ${env.SSH_USER}@${env.SSH_HOST}:/opt/tomcat10/webapps/
+            """
+            deployTimeSec = (long)((System.currentTimeMillis() - deployStartTime)/1000)
+            leadTimeSec = (long)((deployStartTime - commitTimeMs)/1000)
+            echo "🚀 Deployed in ${deployTimeSec} sec, lead time = ${leadTimeSec} sec"
+        }
+    }
+}
+  }
+
+  post {
+    always {
+        script {
+            // Calculate total pipeline time
+            pipelineEndTime = System.currentTimeMillis()
+            totalTimeSec = (long)((pipelineEndTime - pipelineStartTime) / 1000)
+
+            // Calculate overhead durations
+            def jvmSetupTime = (long)((jvmSetupEnd - jvmSetupStart) / 1000)
+            def buildCacheRestoreTime = (long)((buildCacheRestoreEnd - buildCacheRestoreStart) / 1000)
+            def buildCacheSaveTime = (long)((buildCacheSaveEnd - buildCacheSaveStart) / 1000)
+            def testCacheRestoreTime = (long)((testCacheRestoreEnd - testCacheRestoreStart) / 1000)
+            def testCacheSaveTime = (long)((testCacheSaveEnd - testCacheSaveStart) / 1000)
+            def jvmStartupTime = (long)((jvmStartupEnd - jvmStartupStart) / 1000)
+
+            // Calculate net times
+            def netBuild = buildTimeSec - buildCacheRestoreTime - buildCacheSaveTime
+            def netTest = testTimeSec - jvmStartupTime
+            def netTotal = totalTimeSec - jvmSetupTime - buildCacheRestoreTime - buildCacheSaveTime - 
+                         testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
+
+            // Print metrics
+            echo "=== PIPELINE METRICS (Mode ${env.MODE}) ==="
+            echo "Build Time                   : ${buildTimeSec} sec"
+            echo "Test Time                    : ${testTimeSec} sec"
+            echo "Deploy Time                  : ${deployTimeSec} sec"
+            echo "Lead Time for Change         : ${leadTimeSec} sec"
+            echo "Total Pipeline Time          : ${totalTimeSec} sec"
+            echo "Overhead (JVM Setup)         : ${jvmSetupTime} sec"
+            echo "Overhead (Cache Restore‑Bld) : ${buildCacheRestoreTime} sec"
+            echo "Overhead (Cache Save‑Bld)    : ${buildCacheSaveTime} sec"
+            echo "Overhead (Cache Restore‑Tst) : ${testCacheRestoreTime} sec"
+            echo "Overhead (Cache Save‑Tst)    : ${testCacheSaveTime} sec"
+            echo "Overhead (JVM Startup)       : ${jvmStartupTime} sec"
+            echo "➡️ Pure Build Time           : ${netBuild} sec"
+            echo "➡️ Pure Test Time            : ${netTest} sec"
+            echo "➡️ Pure Total Time           : ${netTotal} sec"
+
+            // Generate CSV
+            def csvHeader = "MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL\n"
+            def csvLine = String.format("%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
+                env.MODE,
+                buildTimeSec,
+                testTimeSec,
+                deployTimeSec,
+                leadTimeSec,
+                totalTimeSec,
+                jvmSetupTime,
+                buildCacheRestoreTime,
+                buildCacheSaveTime,
+                testCacheRestoreTime,
+                testCacheSaveTime,
+                jvmStartupTime,
+                netBuild,
+                netTest,
+                netTotal
+            )
+            
+            writeFile file: env.CSV_FILE, text: csvHeader + csvLine + "\n"
+            archiveArtifacts artifacts: env.CSV_FILE, onlyIfSuccessful: false
+        }
+    }
+}}
