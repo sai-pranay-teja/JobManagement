@@ -388,4 +388,9 @@ stage('Deploy') {
             archiveArtifacts artifacts: env.CSV_FILE, onlyIfSuccessful: false
         }
     }
-}}
+}
+    cleanup {
+        deleteFile('pipeline_mode.txt') // Ensure clean workspace
+    }
+
+}
