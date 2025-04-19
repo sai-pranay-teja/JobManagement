@@ -16,7 +16,8 @@ env:
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
-
+    env:
+      MODE: ${{ github.event.inputs.mode }}
     steps:
     - name: Checkout source
       uses: actions/checkout@v3
@@ -160,7 +161,6 @@ jobs:
         DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))
         LEAD_TIME=$((NOW - COMMIT_TIME))
         TOTAL_TIME=$((NOW - PIPELINE_START))
-        MODE=${{ github.event.inputs.mode }}
 
         echo "DEPLOY_TIME=$DEPLOY_TIME" >> $GITHUB_ENV
         echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
