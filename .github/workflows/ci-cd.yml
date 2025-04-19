@@ -150,7 +150,7 @@ jobs:
     # --- FINAL METRICS ---
     - name: Summarize Metrics
       run: |
-        MODE = ${{ github.event.inputs.mode }}
+        MODE = "${{ github.event.inputs.mode }}"
         DEPLOY_END=$(date +%s)
         DEPLOY_START=${{ steps.timing.outputs.deploy_start }}
         COMMIT_TIME=${{ steps.timing.outputs.commit_time }}
