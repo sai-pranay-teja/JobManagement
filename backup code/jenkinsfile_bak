@@ -28,7 +28,7 @@ pipeline {
         WAR_STORAGE           = "${WORKSPACE}"
         SSH_KEY               = '/var/lib/jenkins/.ssh/id_rsa'
         SSH_USER              = 'root'
-        SSH_HOST              = '40.192.66.15'
+        SSH_HOST              = '18.61.60.110'
         SSH_OPTS              = '-o StrictHostKeyChecking=no'
         BACKUP_DIR            = '/tmp/jenkins_bak'
 
