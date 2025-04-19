@@ -24,7 +24,9 @@ pipeline {
 
                     // Full compile & test for baseline
                     sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
+                    
                     sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d build/WEB-INF/classes src/main/java/model/*.java'
+                    sh 'cp src/main/resources/config.properties build/WEB-INF/classes/'
                     sh 'java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true'
 
                     def endBuild = System.currentTimeMillis()
