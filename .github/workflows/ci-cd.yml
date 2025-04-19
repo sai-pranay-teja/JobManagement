@@ -8,7 +8,6 @@ on:
       mode:
         description: 'A = optimized (incremental & parallel), B = baseline (full & sequential)'
         required: true
-        default: 'A'
 
 env:
   REMOTE_BACKUP_DIR: /tmp/actions_bak
@@ -16,6 +15,8 @@ env:
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
+    env:
+      MODE: ${{ github.event.inputs.mode }}
     steps:
     - name: Checkout source
       uses: actions/checkout@v3
@@ -36,11 +37,11 @@ jobs:
       run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
 
     - name: Show Mode
-      run: echo "🔧 Mode - Mode ${{ github.event.inputs.mode }}"
+      run: echo "🔧 Mode - Mode $MODE"
 
     # --- BUILD STAGE ---
     - name: Restore build cache (Mode A)
-      if: ${{ github.event.inputs.mode == 'A' }}
+      if: ${{ env.MODE == 'A' }}
       uses: actions/cache@v3
       with:
         path: build/WEB-INF/classes
@@ -51,7 +52,7 @@ jobs:
         BUILD_START=$(date +%s)
         mkdir -p build/WEB-INF/classes
 
-        if [ "${{ github.event.inputs.mode }}" = "A" ]; then
+        if [ "$MODE" = "A" ]; then
           CHANGED=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes)
           if [ -n "$CHANGED" ]; then
             echo "Incremental compile of changed files"
@@ -73,7 +74,7 @@ jobs:
         echo "BUILD_TIME=$((BUILD_END - BUILD_START))" >> $GITHUB_ENV
 
     - name: Save build cache (Mode A)
-      if: ${{ github.event.inputs.mode == 'A' }}
+      if: ${{ env.MODE == 'A' }}
       uses: actions/cache@v3
       with:
         path: build/WEB-INF/classes
@@ -87,7 +88,7 @@ jobs:
 
     # --- TEST STAGE ---
     - name: Restore test cache (Mode A)
-      if: ${{ github.event.inputs.mode == 'A' }}
+      if: ${{ env.MODE == 'A' }}
       uses: actions/cache@v3
       with:
         path: test_output
@@ -97,7 +98,7 @@ jobs:
       run: |
         TEST_START=$(date +%s)
 
-        if [ "${{ github.event.inputs.mode }}" = "A" ]; then
+        if [ "$MODE" = "A" ]; then
           mkdir -p test_unit test_int
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
@@ -121,7 +122,7 @@ jobs:
         echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
 
     - name: Save test cache (Mode A)
-      if: ${{ github.event.inputs.mode == 'A' }}
+      if: ${{ env.MODE == 'A' }}
       uses: actions/cache@v3
       with:
         path: test_output
@@ -150,7 +151,6 @@ jobs:
     # --- FINAL METRICS ---
     - name: Summarize Metrics
       run: |
-        MODE="${{ github.event.inputs.mode }}"
         DEPLOY_END=$(date +%s)
         DEPLOY_START=${{ steps.timing.outputs.deploy_start }}
         COMMIT_TIME=${{ steps.timing.outputs.commit_time }}
