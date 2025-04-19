@@ -69,6 +69,14 @@ jobs:
       with:
         java-version: '17'
         distribution: 'corretto'
+  
+    - name: JVM Pre‑warm (Mode A)
+      if: ${{ env.MODE == 'A' }}
+      run: |
+        echo "JVM_PREWARM_START=$(date +%s)" >> $GITHUB_ENV
+        # Launch a no‑op java to warm the JVM
+        java -Xshare:auto -version > /dev/null 2>&1 || true
+        echo "JVM_PREWARM_END=$(date +%s)" >> $GITHUB_ENV
 
     - name: JVM Setup End
       run: |
