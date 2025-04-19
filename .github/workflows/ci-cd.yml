@@ -26,6 +26,7 @@ jobs:
       run: |
         mkdir -p test_output
         cp src/main/resources/config.properties test_output/
+        
 
     - name: Measure baseline build+test
       id: baseline
