@@ -29,6 +29,7 @@ pipeline {
     TEST_CACHE_DIR   = "${CACHE_BASE_DIR}/test_outputs"
     CSV_FILE         = "${WORKSPACE}/stage_metrics.csv"
     MODE             = 'A'
+    TOMCAT_HOME      = "/opt/tomcat10"
   }
   options { timestamps() }
 
