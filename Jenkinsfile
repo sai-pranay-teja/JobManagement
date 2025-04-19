@@ -34,6 +34,24 @@ pipeline {
   options { timestamps() }
 
   stages {
+  stage('Setup Paths') {
+    steps {
+      script {
+        env.WAR_STORAGE          = "${env.WORKSPACE}"
+        env.RESOURCE_BEFORE_LOG  = "${env.WORKSPACE}/resource_before_usage.log"
+        env.RESOURCE_AFTER_LOG   = "${env.WORKSPACE}/resource_after_usage.log"
+        env.LOG_FILE             = "${env.WORKSPACE}/deployment.log"
+        env.DEPLOYMENT_TIME_FILE = "${env.WORKSPACE}/deployment_time.log"
+        env.ROLLBACK_LOG         = "${env.WORKSPACE}/rollback.log"
+        env.MEM_BEFORE_LOG       = "${env.WORKSPACE}/mem_before.log"
+        env.MEM_AFTER_LOG        = "${env.WORKSPACE}/mem_after.log"
+        env.TEST_RESULTS_LOG     = "${env.WORKSPACE}/test_results.log"
+      }
+    }
+  }
+}
+
+  stages {
     stage('Initialize & JVM Setup') {
       steps {
         script {
