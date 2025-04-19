@@ -160,12 +160,13 @@ jobs:
         DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))
         LEAD_TIME=$((NOW - COMMIT_TIME))
         TOTAL_TIME=$((NOW - PIPELINE_START))
+        MODE=${{ github.event.inputs.mode }}
 
         echo "DEPLOY_TIME=$DEPLOY_TIME" >> $GITHUB_ENV
         echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
         echo "TOTAL_TIME=$TOTAL_TIME" >> $GITHUB_ENV
 
-        echo "🚀 Mode: Mode ${{ github.event.inputs.mode }}"
+        echo "🚀 Mode: Mode $MODE"
         echo "Build Time    : $BUILD_TIME sec"
         echo "Test Time     : $TEST_TIME sec"
         echo "Deploy Time   : $DEPLOY_TIME sec"
