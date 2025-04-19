@@ -123,18 +123,18 @@ jobs:
 
           wait
         else
-          mkdir -p test_all
           find src/main/test -name "*.java" | \
-            xargs javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_all
-          java -cp "test_all:src/main/webapp/WEB-INF/lib/*" \
-            org.junit.platform.console.ConsoleLauncher --scan-class-path test_all --details summary > test_results.log 2>&1 || true
+            xargs javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit
+          cp -r test_unit/* test_int/
+          java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 || true
+          java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log 2>&1 || true
         fi
 
         TEST_END=$(date +%s)
         echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
-        if [ "$MODE" = "A" ]; then
-          cat test_unit.log test_int.log > test_results.log
-        fi
+
 
     - name: Save test cache (Mode A)
       if: ${{ env.MODE == 'A' }}
@@ -186,6 +186,10 @@ jobs:
         echo "Deploy Time   : $DEPLOY_TIME sec"
         echo "Lead Time     : $LEAD_TIME sec"
         echo "Total Pipeline: $TOTAL_TIME sec"
+    - name: Generate CSV summary
+      run: |
+        echo "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME" > stage_metrics.csv
+        echo "$MODE,$BUILD_TIME,$TEST_TIME,$DEPLOY_TIME,$LEAD_TIME,$TOTAL_TIME" >> stage_metrics.csv
 
     - name: Upload test logs
       uses: actions/upload-artifact@v4
@@ -194,4 +198,4 @@ jobs:
         path: |
           test_unit.log
           test_int.log
-          test_results.log
+          stage_metrics.csv
