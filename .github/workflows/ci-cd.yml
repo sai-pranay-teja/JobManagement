@@ -3,17 +3,21 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'A = optimized (incremental & parallel), B = baseline (full & sequential)'
+        required: true
+        default: 'A'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     env:
-      REMOTE_HOST: 18.61.80.123
-      REMOTE_USER: ubuntu
-      # Remote backup directory on the server
+      MODE: ${{ github.event.inputs.mode }}
+      REMOTE_HOST: ${{ secrets.REMOTE_HOST }}  # e.g. 40.192.66.15
+      REMOTE_USER: ${{ secrets.REMOTE_USER }}  # e.g. root or ubuntu
       REMOTE_BACKUP_DIR: /tmp/actions_bak
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
@@ -26,13 +30,10 @@ jobs:
 
       - name: Save SSH key to file
         run: |
-          echo "$SSH_KEY_SECRET" > key.pem
-          sed -i 's/\\n/\n/g' key.pem
-          grep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i-----BEGIN RSA PRIVATE KEY-----' key.pem
-          grep -q "END RSA PRIVATE KEY" key.pem || echo "-----END RSA PRIVATE KEY-----" >> key.pem
+          echo "$SSH_PRIVATE_KEY" > key.pem
           chmod 400 key.pem
         env:
-          SSH_KEY_SECRET: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Record pipeline start time
         run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
@@ -40,135 +41,86 @@ jobs:
       - name: Build WAR file
         run: |
           mkdir -p build/WEB-INF/classes
-          # Compile Java sources; redirect errors to compile_error.log and exit if compilation fails.
-          # javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
-          javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log
-
+          if [ "$MODE" = "A" ]; then
+            CHANGED=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes)
+            if [ -n "$CHANGED" ]; then
+              echo "Compiling changed files..."
+              javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $CHANGED
+            else
+              echo "No changes detected — full compile"
+              find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+            fi
+          else
+            echo "Baseline full compile"
+            find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+          fi
           cp -R src/main/resources/* build/WEB-INF/classes/
           cp -R src/main/webapp/* build/
           jar -cvf JobManagement_ACTIONS.war -C build .
+          BUILD_END=$(date +%s)
+          echo "BUILD_TIME=$((BUILD_END - PIPELINE_START_TIME))" >> $GITHUB_ENV
 
-      - name: Backup WAR file on remote host
+      - name: Backup WAR on remote
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "mkdir -p /tmp/actions_bak"
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war $REMOTE_USER@$REMOTE_HOST:/tmp/actions_bak/JobManagement_ACTIONS.war_bak
-          echo "Backup saved on remote host at /tmp/actions_bak/JobManagement_ACTIONS.war_bak"
+          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "mkdir -p $REMOTE_BACKUP_DIR"
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war $REMOTE_USER@$REMOTE_HOST:$REMOTE_BACKUP_DIR/JobManagement_ACTIONS.war_bak
+          echo "Backup done"
 
-      - name: Run Unit Tests
+      - name: Run Tests
         run: |
-          mkdir -p test_output
-          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output $(find src/main/test -name "*.java")
-          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary > test_results.log || true
-          head -n 20 test_results.log
+          TEST_START=$(date +%s)
+          if [ "$MODE" = "A" ]; then
+            # parallel unit & integration
+            (mkdir -p test_unit && javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java && \
+             java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log) &
+            (mkdir -p test_int && javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java && \
+             java -cp "test_int:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log) &
+            wait
+          else
+            mkdir -p test_all
+            find src/main/test -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_all
+            java -cp "test_all:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_all --details summary > test_results.log || true
+          fi
+          TEST_END=$(date +%s)
+          echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
 
-      - name: Record pre-deployment resource usage
+      - name: Record deployment timings
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_before.log
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_before.log
-
-      - name: Record deployment start time & calculate Lead Time
-        run: |
-          echo "DEPLOY_START_TIME=$(date +%s)" >> $GITHUB_ENV
+          echo "DEPLOY_START=$(date +%s)" >> $GITHUB_ENV
           COMMIT_TIME=$(git log -1 --format=%ct)
-          LEAD_TIME=$(($(date +%s) - COMMIT_TIME))
-          echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
+          echo "LEAD_TIME=$(( $(date +%s) - COMMIT_TIME ))" >> $GITHUB_ENV
 
-      - name: Deploy WAR to Tomcat
-        id: deploy
-        continue-on-error: true
+      - name: Deploy to Tomcat
         run: |
           scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/
           ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<EOF
             sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
-            sleep 5
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
-            exit
           EOF
+          echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
+          echo "DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))" >> $GITHUB_ENV
 
-
-      - name: Wait for deployment logs
-        if: always()
+      - name: Calculate total pipeline time
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "timeout 60 bash -c 'until grep -q \"Deployment of web application archive\" <(tail -n 50 /opt/tomcat10/logs/catalina.out); do sleep 5; done'"
+          echo "PIPELINE_END=$(date +%s)" >> $GITHUB_ENV
+          echo "TOTAL_TIME=$((PIPELINE_END - PIPELINE_START_TIME))" >> $GITHUB_ENV
 
-      - name: Record deployment end time
-        if: always()
-        run: echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
-
-      - name: Record post-deployment resource usage
-        if: always()
+      - name: Summarize Metrics
         run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_after.log
+          echo "Mode: $MODE"
+          echo "Build Time    : $BUILD_TIME sec"
+          echo "Test Time     : $TEST_TIME sec"
+          echo "Deploy Time   : $DEPLOY_TIME sec"
+          echo "Lead Time     : $LEAD_TIME sec"
+          echo "Total Pipeline: $TOTAL_TIME sec"
 
-      - name: Calculate deployment & pipeline time
-        if: always()
-        run: |
-          source $GITHUB_ENV
-          DEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))
-          PIPELINE_END_TIME=$(date +%s)
-          TOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))
-          echo "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV
-          echo "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV
-
-      - name: Rollback if deployment failed
-        if: failure()
-        run: |
-          echo $'The error is:\n '
-          cat compile_error.log
-
-          echo "Deployment failed! Initiating rollback..."
-          ROLLBACK_START=$(date +%s)
-
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "if [ -f /tmp/actions_bak/JobManagement_ACTIONS.war_bak ]; then sudo cp /tmp/actions_bak/JobManagement_ACTIONS.war_bak /opt/tomcat10/webapps/JobManagement_ACTIONS.war; else echo 'No backup available'; exit 1; fi"
-
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<EOF
-            sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
-            sleep 5
-            sudo /opt/tomcat10/bin/shutdown.sh || true
-            sudo /opt/tomcat10/bin/startup.sh
-            exit
-          EOF
-
-          ROLLBACK_END=$(date +%s)
-          ROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))
-          echo "ROLLBACK_DURATION=$ROLLBACK_DURATION" >> $GITHUB_ENV
-
-
-      - name: Display CI/CD Metrics
-        if: always()
-        run: |
-          echo "-------------------------------------------------"
-          echo "              CI/CD Metrics Summary              "
-          echo "-------------------------------------------------"
-          echo "| Metric                             | Value          |"
-          echo "-------------------------------------------------"
-          echo "| Total Pipeline Time (sec)          | $TOTAL_PIPELINE_TIME          |"
-          # If deployment succeeded, DEPLOY_DURATION is set; if not, ROLLBACK_DURATION is used.
-          if [ -n "$DEPLOY_DURATION" ]; then
-            echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"
-          else
-            echo "| Rollback Deployment Time (sec)     | $ROLLBACK_DURATION          |"
-          fi
-          echo "| Lead Time for Changes (sec)        | $LEAD_TIME          |"
-          if [ -f test_results.log ]; then
-            TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1)
-          else
-            TEST_SUMMARY="N/A"
-          fi
-          echo "| Test Summary                       | $TEST_SUMMARY          |"
-          echo "-------------------------------------------------"
-          echo "Memory Usage BEFORE:"
-          cat mem_before.log
-          echo "-------------------------------------------------"
-          echo "Memory Usage AFTER:"
-          cat mem_after.log
-          echo "-------------------------------------------------"
-          echo "Resource Usage BEFORE (vmstat):"
-          cat resource_usage_before.log
-          echo "-------------------------------------------------"
-          echo "Resource Usage AFTER (vmstat):"
-          cat resource_usage_after.log
-          echo "-------------------------------------------------"
-          
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: pipeline-results
+          path: |
+            test_unit.log
+            test_int.log
+            test_results.log
+            key.pem
