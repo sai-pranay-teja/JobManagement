@@ -27,23 +27,31 @@ jobs:
     - name: Checkout source
       uses: actions/checkout@v3
 
-    - name: Set up Java 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'corretto'
-
-    - name: Save SSH key
-      run: |
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
-        chmod 400 key.pem
-
     - name: Record pipeline start
       id: pipeline_start
       run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
 
     - name: Show Mode
       run: echo "🔧 Mode - Mode $MODE"
+
+    # --- JVM SETUP ---
+    - name: JVM Setup Start
+      run: echo "JVM_SETUP_START=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'corretto'
+
+    - name: JVM Setup End
+      run: |
+        echo "JVM_SETUP_END=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Save SSH key
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
+        chmod 400 key.pem
 
     # --- BUILD CACHE RESTORE ---
     - name: ⏱ Cache Restore (Build)
@@ -197,11 +205,15 @@ jobs:
         LEAD_TIME=$((NOW - COMMIT_TIME))
         TOTAL_TIME=$((NOW - PIPELINE_START))
 
-        # Overhead Times
+        JVM_SETUP_TIME=$((JVM_SETUP_END - JVM_SETUP_START))
         BUILD_CACHE_RESTORE_TIME=$((BUILD_CACHE_RESTORE_END - BUILD_CACHE_RESTORE_START))
         BUILD_CACHE_SAVE_TIME=$((BUILD_CACHE_SAVE_END - BUILD_CACHE_SAVE_START))
         TEST_CACHE_RESTORE_TIME=$((TEST_CACHE_RESTORE_END - TEST_CACHE_RESTORE_START))
         TEST_CACHE_SAVE_TIME=$((TEST_CACHE_SAVE_END - TEST_CACHE_SAVE_START))
+
+        NET_BUILD=$((BUILD_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME))
+        NET_TEST=$((TEST_TIME - JVM_STARTUP_TIME))
+        NET_TOTAL=$((TOTAL_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME - TEST_CACHE_RESTORE_TIME - TEST_CACHE_SAVE_TIME - JVM_SETUP_TIME - JVM_STARTUP_TIME))
 
         echo "DEPLOY_TIME=$DEPLOY_TIME" >> $GITHUB_ENV
         echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
@@ -213,14 +225,18 @@ jobs:
         echo "Deploy Time         : $DEPLOY_TIME sec"
         echo "Lead Time           : $LEAD_TIME sec"
         echo "Total Pipeline Time : $TOTAL_TIME sec"
-        echo "Overhead (Cache Restore - Build): $BUILD_CACHE_RESTORE_TIME sec"
-        echo "Overhead (Cache Save - Build)   : $BUILD_CACHE_SAVE_TIME sec"
-        echo "Overhead (Cache Restore - Test) : $TEST_CACHE_RESTORE_TIME sec"
-        echo "Overhead (Cache Save - Test)    : $TEST_CACHE_SAVE_TIME sec"
-        echo "Overhead (JVM Startup Time)     : $JVM_STARTUP_TIME sec"
+        echo "Overhead (JVM Setup)              : $JVM_SETUP_TIME sec"
+        echo "Overhead (Cache Restore - Build) : $BUILD_CACHE_RESTORE_TIME sec"
+        echo "Overhead (Cache Save - Build)    : $BUILD_CACHE_SAVE_TIME sec"
+        echo "Overhead (Cache Restore - Test)  : $TEST_CACHE_RESTORE_TIME sec"
+        echo "Overhead (Cache Save - Test)     : $TEST_CACHE_SAVE_TIME sec"
+        echo "Overhead (JVM Startup Time)      : $JVM_STARTUP_TIME sec"
+        echo "➡️ Pure Build   : $NET_BUILD sec"
+        echo "➡️ Pure Test    : $NET_TEST sec"
+        echo "➡️ Pure Total   : $NET_TOTAL sec"
 
-        echo "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,CACHE_RESTORE_BUILD,CACHE_SAVE_BUILD,CACHE_RESTORE_TEST,CACHE_SAVE_TEST,JVM_STARTUP" > stage_metrics.csv
-        echo "$MODE,$BUILD_TIME,$TEST_TIME,$DEPLOY_TIME,$LEAD_TIME,$TOTAL_TIME,$BUILD_CACHE_RESTORE_TIME,$BUILD_CACHE_SAVE_TIME,$TEST_CACHE_RESTORE_TIME,$TEST_CACHE_SAVE_TIME,$JVM_STARTUP_TIME" >> stage_metrics.csv
+        echo "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,JVM_SETUP,BUILD_CACHE_RESTORE,BUILD_CACHE_SAVE,TEST_CACHE_RESTORE,TEST_CACHE_SAVE,JVM_STARTUP,NET_BUILD_TIME,NET_TEST_TIME,NET_TOTAL_TIME" > stage_metrics.csv
+        echo "$MODE,$BUILD_TIME,$TEST_TIME,$DEPLOY_TIME,$LEAD_TIME,$TOTAL_TIME,$JVM_SETUP_TIME,$BUILD_CACHE_RESTORE_TIME,$BUILD_CACHE_SAVE_TIME,$TEST_CACHE_RESTORE_TIME,$TEST_CACHE_SAVE_TIME,$JVM_STARTUP_TIME,$NET_BUILD,$NET_TEST,$NET_TOTAL" >> stage_metrics.csv
 
     - name: Upload test logs
       uses: actions/upload-artifact@v4
