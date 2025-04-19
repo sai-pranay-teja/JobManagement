@@ -24,7 +24,7 @@ pipeline {
     SSH_OPTS         = '-o StrictHostKeyChecking=no'
     REMOTE_BACKUP_DIR= '/tmp/jenkins_bak'
     WAR_NAME         = 'JobManagement_JENKINS.war'
-    CACHE_BASE_DIR   = "/var/jenkins_caches/${JOB_NAME}"
+    CACHE_BASE_DIR   = "${WORKSPACE}/jenkins_caches/${JOB_NAME}"
     BUILD_CACHE_DIR  = "${CACHE_BASE_DIR}/build_classes"
     TEST_CACHE_DIR   = "${CACHE_BASE_DIR}/test_outputs"
     CSV_FILE         = "${WORKSPACE}/stage_metrics.csv"
