@@ -43,7 +43,7 @@ stage('Initialize') {
             def ct = sh(script: 'git log -1 --format=%ct', returnStdout: true).trim()
             
             // Convert to milliseconds safely
-            commitTimeMs = ct ? (Long.parseLong(ct) * 1000L) : 0L
+            commitTimeMs = ct ? (ct as Long) * 1000L : 0L
             
             echo "🔍 Commit timestamp: ${commitTimeMs} ms"
         }
