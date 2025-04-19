@@ -237,7 +237,7 @@ pipeline {
         def netTest  = testTime - jvmStartupTime
         def netTotal = totalTime - jvmSetupTime - buildCacheRestoreTime - buildCacheSaveTime - testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
 
-        echo "=== PIPELINE METRICS (${mode}) ==="
+        echo "=== PIPELINE METRICS (Mode ${mode}) ==="
         echo "Build Time         : ${buildTime} sec"
         echo "Test Time          : ${testTime} sec"
         echo "Deploy Time        : ${deployTime} sec"
