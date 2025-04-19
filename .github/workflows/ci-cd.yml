@@ -109,6 +109,7 @@ jobs:
     - name: Run Tests
       run: |
         TEST_START=$(date +%s)
+        
 
         if [ "$MODE" = "A" ]; then
           mkdir -p test_unit test_int
@@ -123,9 +124,11 @@ jobs:
 
           wait
         else
-          find src/main/test -name "*.java" | \
-            xargs javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit
-          cp -r test_unit/* test_int/
+          mkdir -p test_unit test_int
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
+
+          
           java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
             org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 || true
           java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
