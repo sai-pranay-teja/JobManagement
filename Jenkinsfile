@@ -18,7 +18,7 @@ def pipelineEndTime = 0L, totalTime = 0L
 
 // CI/CD Optimization Mode: 'A' = optimized (with caching), 'B' = baseline
 def mode = 'A'
-def CSV_FILE = "${WORKSPACE}/stage_metrics.csv"
+
 
 pipeline {
   agent any
@@ -31,8 +31,9 @@ pipeline {
     SSH_USER    = 'root'
     SSH_HOST    = '40.192.66.15'
     SSH_OPTS    = '-o StrictHostKeyChecking=no'
+    
   }
-
+  def CSV_FILE = "${env.WORKSPACE}/stage_metrics.csv"
   options { timestamps() }
 
   stages {
