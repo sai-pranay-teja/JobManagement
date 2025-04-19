@@ -132,6 +132,9 @@ jobs:
 
         TEST_END=$(date +%s)
         echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
+        if [ "$MODE" = "A" ]; then
+          cat test_unit.log test_int.log > test_results.log
+        fi
 
     - name: Save test cache (Mode A)
       if: ${{ env.MODE == 'A' }}
