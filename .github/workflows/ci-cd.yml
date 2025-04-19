@@ -11,13 +11,20 @@ on:
 
 env:
   REMOTE_BACKUP_DIR: /tmp/actions_bak
+  MODE: B 
 
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
-    env:
-      MODE: ${{ github.event.inputs.mode }}
+    # env:
+    #   MODE: ${{ github.event.inputs.mode }}
     steps:
+    - name: Validate MODE
+      run: |
+        if [[ "$MODE" != "A" && "$MODE" != "B" ]]; then
+          echo "❌ Invalid MODE: '$MODE'. Must be 'A' or 'B'."
+          exit 1
+        fi
     - name: Checkout source
       uses: actions/checkout@v3
 
