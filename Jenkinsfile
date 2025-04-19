@@ -9,6 +9,7 @@ pipeline {
     WAR_NAME       = 'JobManagement_JENKINS.war'
     WAR_STORAGE    = '.'
     SSH_OPTS       = '-o StrictHostKeyChecking=no'
+    TEST_CLASSES_CACHE = 'test_cache'
 }
 
 
