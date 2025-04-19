@@ -164,8 +164,9 @@ stage('Finalize Metrics') {
             echo "📊 Finalizing Metrics..."
 
             // Helper functions
-            def safeLong = { val -> (val?.isNumber()) ? val.toDouble().round() as long : 0 }
+            def safeLong = { val -> (val?.isNumber()) ? val.toDouble() as long : 0 }
             def safeInt = { val -> (val?.isInteger()) ? val.toInteger() : 0 }
+            def roundToLong = { val -> (val != null) ? Math.floor(val) as long : 0 } // Manually round to long
 
             // Debug: print all raw env vars
             echo """
@@ -239,6 +240,7 @@ Overhead (JVM Startup Time)      : ${jvmStartupTime} sec
         }
     }
 }
+
 
 
     }
