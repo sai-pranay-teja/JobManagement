@@ -11,7 +11,7 @@ on:
 
 env:
   REMOTE_BACKUP_DIR: /tmp/actions_bak
-  MODE: B
+  MODE: A
 
 jobs:
   build-test-deploy:
@@ -128,7 +128,7 @@ jobs:
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
           javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
 
-          
+
           java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
             org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 || true
           java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
