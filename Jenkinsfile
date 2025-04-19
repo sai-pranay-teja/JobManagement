@@ -218,8 +218,17 @@ Overhead (JVM Startup Time)      : ${jvmStartupTime} sec
 ➡️ Pure Total   : ${netTotal} sec
 """
 
-            writeFile file: 'stage_metrics.csv', text: "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,JVM_SETUP,BUILD_CACHE_RESTORE,BUILD_CACHE_SAVE,TEST_CACHE_RESTORE,TEST_CACHE_SAVE,JVM_STARTUP,NET_BUILD_TIME,NET_TEST_TIME,NET_TOTAL_TIME\n"
-            appendToFile file: 'stage_metrics.csv', text: "${env.MODE},${buildTime},${testTime},${deployTime},${leadTime},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}\n"
+            def csvLine = "${env.MODE},${buildTime},${testTime},${deployTime},${leadTime},${totalTime},${jvmSetupTime},${buildCacheRestoreTime},${buildCacheSaveTime},${testCacheRestoreTime},${testCacheSaveTime},${jvmStartupTime},${netBuild},${netTest},${netTotal}\n"
+
+def metricsFile = 'stage_metrics.csv'
+
+if (fileExists(metricsFile)) {
+    def existing = readFile(metricsFile)
+    writeFile file: metricsFile, text: existing + csvLine
+} else {
+    writeFile file: metricsFile, text: "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,JVM_SETUP,BUILD_CACHE_RESTORE,BUILD_CACHE_SAVE,TEST_CACHE_RESTORE,TEST_CACHE_SAVE,JVM_STARTUP,NET_BUILD_TIME,NET_TEST_TIME,NET_TOTAL_TIME\n" + csvLine
+}
+
         }
     }
 }
