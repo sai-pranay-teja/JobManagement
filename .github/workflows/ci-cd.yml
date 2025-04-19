@@ -10,116 +10,161 @@ on:
         required: true
         default: 'A'
 
+env:
+  REMOTE_BACKUP_DIR: /tmp/actions_bak
+
 jobs:
-  build-and-deploy:
+  build-test-deploy:
     runs-on: ubuntu-latest
-    env:
-      MODE: ${{ github.event.inputs.mode }}
-      REMOTE_HOST: ${{ secrets.REMOTE_HOST }}  # e.g. 40.192.66.15
-      REMOTE_USER: ${{ secrets.REMOTE_USER }}  # e.g. root or ubuntu
-      REMOTE_BACKUP_DIR: /tmp/actions_bak
+
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
+    - name: Checkout source
+      uses: actions/checkout@v3
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'corretto'
+    - name: Set up Java 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'corretto'
 
-      - name: Save SSH key to file
-        run: |
-          echo "$SSH_PRIVATE_KEY" > key.pem
-          chmod 400 key.pem
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Save SSH key
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
+        chmod 400 key.pem
 
-      - name: Record pipeline start time
-        run: echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
+    - name: Record pipeline start
+      run: echo "PIPELINE_START=$(date +%s)" >> $GITHUB_ENV
 
-      - name: Build WAR file
-        run: |
-          mkdir -p build/WEB-INF/classes
-          if [ "$MODE" = "A" ]; then
-            CHANGED=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes)
-            if [ -n "$CHANGED" ]; then
-              echo "Compiling changed files..."
-              javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $CHANGED
-            else
-              echo "No changes detected — full compile"
-              find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
-            fi
+    # --- BUILD STAGE ---
+    - name: Restore build cache (Mode A)
+      if: ${{ github.event.inputs.mode == 'A' }}
+      uses: actions/cache@v3
+      with:
+        path: build/WEB-INF/classes
+        key: build-classes-${{ hashFiles('src/main/java/model/**/*.java') }}
+
+    - name: Build WAR file
+      run: |
+        BUILD_START=$(date +%s)
+        mkdir -p build/WEB-INF/classes
+
+        if [ "${{ github.event.inputs.mode }}" = "A" ]; then
+          CHANGED=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes)
+          if [ -n "$CHANGED" ]; then
+            echo "Incremental compile of changed files"
+            javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $CHANGED
           else
-            echo "Baseline full compile"
+            echo "No changes => full compile"
             find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
           fi
-          cp -R src/main/resources/* build/WEB-INF/classes/
-          cp -R src/main/webapp/* build/
-          jar -cvf JobManagement_ACTIONS.war -C build .
-          BUILD_END=$(date +%s)
-          echo "BUILD_TIME=$((BUILD_END - PIPELINE_START_TIME))" >> $GITHUB_ENV
+        else
+          echo "[Mode B] Full compile"
+          find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+        fi
 
-      - name: Backup WAR on remote
-        run: |
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "mkdir -p $REMOTE_BACKUP_DIR"
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war $REMOTE_USER@$REMOTE_HOST:$REMOTE_BACKUP_DIR/JobManagement_ACTIONS.war_bak
-          echo "Backup done"
+        cp -R src/main/resources/* build/WEB-INF/classes/
+        cp -R src/main/webapp/* build/
+        jar -cvf JobManagement_ACTIONS.war -C build .
 
-      - name: Run Tests
-        run: |
-          TEST_START=$(date +%s)
-          if [ "$MODE" = "A" ]; then
-            # parallel unit & integration
-            (mkdir -p test_unit && javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java && \
-             java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log) &
-            (mkdir -p test_int && javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java && \
-             java -cp "test_int:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log) &
-            wait
-          else
-            mkdir -p test_all
-            find src/main/test -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_all
-            java -cp "test_all:src/main/webapp/WEB-INF/lib/*" org.junit.platform.console.ConsoleLauncher --scan-class-path test_all --details summary > test_results.log || true
-          fi
-          TEST_END=$(date +%s)
-          echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
+        BUILD_END=$(date +%s)
+        echo "BUILD_TIME=$((BUILD_END - BUILD_START))" >> $GITHUB_ENV
 
-      - name: Record deployment timings
-        run: |
-          echo "DEPLOY_START=$(date +%s)" >> $GITHUB_ENV
-          COMMIT_TIME=$(git log -1 --format=%ct)
-          echo "LEAD_TIME=$(( $(date +%s) - COMMIT_TIME ))" >> $GITHUB_ENV
+    - name: Save build cache (Mode A)
+      if: ${{ github.event.inputs.mode == 'A' }}
+      uses: actions/cache@v3
+      with:
+        path: build/WEB-INF/classes
+        key: build-classes-${{ hashFiles('src/main/java/model/**/*.java') }}
 
-      - name: Deploy to Tomcat
-        run: |
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war $REMOTE_USER@$REMOTE_HOST:/opt/tomcat10/webapps/
-          ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<EOF
+    # --- BACKUP WAR ---
+    - name: Backup WAR on remote
+      run: |
+        ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "mkdir -p $REMOTE_BACKUP_DIR"
+        scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:$REMOTE_BACKUP_DIR/JobManagement_ACTIONS.war_bak
+
+    # --- TEST STAGE ---
+    - name: Restore test cache (Mode A)
+      if: ${{ github.event.inputs.mode == 'A' }}
+      uses: actions/cache@v3
+      with:
+        path: test_output
+        key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
+
+    - name: Run Tests
+      run: |
+        TEST_START=$(date +%s)
+
+        if [ "${{ github.event.inputs.mode }}" = "A" ]; then
+          mkdir -p test_unit test_int
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
+
+          java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 &
+
+          java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log 2>&1 &
+
+          wait
+        else
+          mkdir -p test_all
+          find src/main/test -name "*.java" | \
+            xargs javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_all
+          java -cp "test_all:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --scan-class-path test_all --details summary > test_results.log 2>&1 || true
+        fi
+
+        TEST_END=$(date +%s)
+        echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
+
+    - name: Save test cache (Mode A)
+      if: ${{ github.event.inputs.mode == 'A' }}
+      uses: actions/cache@v3
+      with:
+        path: test_output
+        key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
+
+    # --- DEPLOY STAGE ---
+    - name: Record deploy metrics start
+      run: |
+        echo "DEPLOY_START=$(date +%s)" >> $GITHUB_ENV
+        COMMIT_TIME=$(git log -1 --format=%ct)
+        echo "LEAD_TIME=$(( $(date +%s) - COMMIT_TIME ))" >> $GITHUB_ENV
+
+    - name: Deploy to Tomcat
+      run: |
+        scp -o StrictHostKeyChecking=no -i key.pem \
+          JobManagement_ACTIONS.war \
+          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/opt/tomcat10/webapps/
+        ssh -o StrictHostKeyChecking=no -i key.pem \
+          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} <<EOF
             sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
             sudo /opt/tomcat10/bin/shutdown.sh || true
             sudo /opt/tomcat10/bin/startup.sh
-          EOF
-          echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
-          echo "DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))" >> $GITHUB_ENV
+        EOF
+        echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
+        echo "DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))" >> $GITHUB_ENV
 
-      - name: Calculate total pipeline time
-        run: |
-          echo "PIPELINE_END=$(date +%s)" >> $GITHUB_ENV
-          echo "TOTAL_TIME=$((PIPELINE_END - PIPELINE_START_TIME))" >> $GITHUB_ENV
+    # --- FINAL METRICS ---
+    - name: Calculate total pipeline time
+      run: |
+        echo "PIPELINE_END=$(date +%s)" >> $GITHUB_ENV
+        echo "TOTAL_TIME=$((PIPELINE_END - PIPELINE_START))" >> $GITHUB_ENV
 
-      - name: Summarize Metrics
-        run: |
-          echo "Mode: $MODE"
-          echo "Build Time    : $BUILD_TIME sec"
-          echo "Test Time     : $TEST_TIME sec"
-          echo "Deploy Time   : $DEPLOY_TIME sec"
-          echo "Lead Time     : $LEAD_TIME sec"
-          echo "Total Pipeline: $TOTAL_TIME sec"
+    - name: Summarize Metrics
+      run: |
+        echo "Mode: ${{ github.event.inputs.mode }}"
+        echo "Build Time    : $BUILD_TIME sec"
+        echo "Test Time     : $TEST_TIME sec"
+        echo "Deploy Time   : $DEPLOY_TIME sec"
+        echo "Lead Time     : $LEAD_TIME sec"
+        echo "Total Pipeline: $TOTAL_TIME sec"
 
-      - name: Upload results
-        uses: actions/upload-artifact@v4
-        with:
-          name: pipeline-results
-          path: |
-            test_unit.log
-            test_int.log
-            test_results.log
+    - name: Upload test logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-results
+        path: |
+          test_unit.log
+          test_int.log
+          test_results.log
