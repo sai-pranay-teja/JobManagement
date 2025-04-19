@@ -25,13 +25,20 @@ jobs:
     - name: Measure baseline build+test
       id: baseline
       run: |
+        start=$(date +%s)
         echo "BASE_BUILD=$(date +%s)" >> $GITHUB_OUTPUT
         # full compile & test
         find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
         javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output src/main/test/*.java
         java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
           org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true
+        end=$(date +%s)
         echo "BASE_TEST=$(date +%s)" >> $GITHUB_OUTPUT
+
+        # Log the time for later analysis
+        baseline_time=$((end - start))
+        echo "BASELINE_TIME=$baseline_time" >> $GITHUB_ENV
+        echo "::notice title=Baseline Build+Test Time::$baseline_time seconds"
     - name: Decide MODE dynamically
       run: |
         base_build=$(( ${{ steps.baseline.outputs.BASE_TEST }} - ${{ steps.baseline.outputs.BASE_BUILD }} ))
