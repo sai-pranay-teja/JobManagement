@@ -16,6 +16,8 @@ env:
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
+    # env:
+    #   MODE: ${{ github.event.inputs.mode }}
     steps:
     - name: Validate MODE
       run: |
@@ -23,7 +25,6 @@ jobs:
           echo "❌ Invalid MODE: '$MODE'. Must be 'A' or 'B'."
           exit 1
         fi
-
     - name: Checkout source
       uses: actions/checkout@v3
 
@@ -45,22 +46,14 @@ jobs:
     - name: Show Mode
       run: echo "🔧 Mode - Mode $MODE"
 
-    # --- BUILD CACHE RESTORE ---
-    - name: ⏱ Cache Restore (Build)
+    # --- BUILD STAGE ---
+    - name: Restore build cache (Mode A)
       if: ${{ env.MODE == 'A' }}
-      run: echo "BUILD_CACHE_RESTORE_START=$(date +%s)" >> $GITHUB_ENV
-
-    - uses: actions/cache@v3
-      if: ${{ env.MODE == 'A' }}
+      uses: actions/cache@v3
       with:
         path: build/WEB-INF/classes
         key: build-classes-${{ hashFiles('src/main/java/model/**/*.java') }}
 
-    - name: Record end of Cache Restore (Build)
-      if: ${{ env.MODE == 'A' }}
-      run: echo "BUILD_CACHE_RESTORE_END=$(date +%s)" >> $GITHUB_ENV
-
-    # --- BUILD STAGE ---
     - name: Build WAR file
       run: |
         BUILD_START=$(date +%s)
@@ -87,20 +80,12 @@ jobs:
         BUILD_END=$(date +%s)
         echo "BUILD_TIME=$((BUILD_END - BUILD_START))" >> $GITHUB_ENV
 
-    # --- BUILD CACHE SAVE ---
-    - name: ⏱ Cache Save (Build)
+    - name: Save build cache (Mode A)
       if: ${{ env.MODE == 'A' }}
-      run: echo "BUILD_CACHE_SAVE_START=$(date +%s)" >> $GITHUB_ENV
-
-    - uses: actions/cache@v3
-      if: ${{ env.MODE == 'A' }}
+      uses: actions/cache@v3
       with:
         path: build/WEB-INF/classes
         key: build-classes-${{ hashFiles('src/main/java/model/**/*.java') }}
-
-    - name: Record end of Cache Save (Build)
-      if: ${{ env.MODE == 'A' }}
-      run: echo "BUILD_CACHE_SAVE_END=$(date +%s)" >> $GITHUB_ENV
 
     # --- BACKUP WAR ---
     - name: Backup WAR on remote
@@ -112,57 +97,54 @@ jobs:
       if: ${{ env.MODE == 'A' }}
       run: mkdir -p test_output
 
-    # --- TEST CACHE RESTORE ---
-    - name: ⏱ Cache Restore (Test)
-      if: ${{ env.MODE == 'A' }}
-      run: echo "TEST_CACHE_RESTORE_START=$(date +%s)" >> $GITHUB_ENV
 
-    - uses: actions/cache@v3
+    # --- TEST STAGE ---
+    - name: Restore test cache (Mode A)
       if: ${{ env.MODE == 'A' }}
+      uses: actions/cache@v3
       with:
         path: test_output
         key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
 
-    - name: Record end of Cache Restore (Test)
-      if: ${{ env.MODE == 'A' }}
-      run: echo "TEST_CACHE_RESTORE_END=$(date +%s)" >> $GITHUB_ENV
-
-    # --- TEST STAGE ---
     - name: Run Tests
       run: |
         TEST_START=$(date +%s)
+        
 
-        mkdir -p test_unit test_int
-        javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
-        javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
+        if [ "$MODE" = "A" ]; then
+          mkdir -p test_unit test_int
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
 
-        JVM1_START=$(date +%s)
-        java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
-          org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 &
-        JVM2_START=$(date +%s)
-        java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
-          org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log 2>&1 &
-        wait
-        JVM_END=$(date +%s)
+          java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 &
+
+          java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log 2>&1 &
+
+          wait
+        else
+          mkdir -p test_unit test_int
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
+
+
+          java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 || true
+          java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log 2>&1 || true
+        fi
 
         TEST_END=$(date +%s)
         echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
-        echo "JVM_STARTUP_TIME=$((JVM_END - JVM1_START))" >> $GITHUB_ENV
 
-    # --- TEST CACHE SAVE ---
-    - name: ⏱ Cache Save (Test)
-      if: ${{ env.MODE == 'A' }}
-      run: echo "TEST_CACHE_SAVE_START=$(date +%s)" >> $GITHUB_ENV
 
-    - uses: actions/cache@v3
+    - name: Save test cache (Mode A)
       if: ${{ env.MODE == 'A' }}
+      uses: actions/cache@v3
       with:
         path: test_output
         key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
-
-    - name: Record end of Cache Save (Test)
-      if: ${{ env.MODE == 'A' }}
-      run: echo "TEST_CACHE_SAVE_END=$(date +%s)" >> $GITHUB_ENV
 
     # --- DEPLOY STAGE ---
     - name: Record deploy and commit times
@@ -197,30 +179,20 @@ jobs:
         LEAD_TIME=$((NOW - COMMIT_TIME))
         TOTAL_TIME=$((NOW - PIPELINE_START))
 
-        # Overhead Times
-        BUILD_CACHE_RESTORE_TIME=$((BUILD_CACHE_RESTORE_END - BUILD_CACHE_RESTORE_START))
-        BUILD_CACHE_SAVE_TIME=$((BUILD_CACHE_SAVE_END - BUILD_CACHE_SAVE_START))
-        TEST_CACHE_RESTORE_TIME=$((TEST_CACHE_RESTORE_END - TEST_CACHE_RESTORE_START))
-        TEST_CACHE_SAVE_TIME=$((TEST_CACHE_SAVE_END - TEST_CACHE_SAVE_START))
-
         echo "DEPLOY_TIME=$DEPLOY_TIME" >> $GITHUB_ENV
         echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
         echo "TOTAL_TIME=$TOTAL_TIME" >> $GITHUB_ENV
 
         echo "🚀 Mode: Mode $MODE"
-        echo "Build Time          : $BUILD_TIME sec"
-        echo "Test Time           : $TEST_TIME sec"
-        echo "Deploy Time         : $DEPLOY_TIME sec"
-        echo "Lead Time           : $LEAD_TIME sec"
-        echo "Total Pipeline Time : $TOTAL_TIME sec"
-        echo "Overhead (Cache Restore - Build): $BUILD_CACHE_RESTORE_TIME sec"
-        echo "Overhead (Cache Save - Build)   : $BUILD_CACHE_SAVE_TIME sec"
-        echo "Overhead (Cache Restore - Test) : $TEST_CACHE_RESTORE_TIME sec"
-        echo "Overhead (Cache Save - Test)    : $TEST_CACHE_SAVE_TIME sec"
-        echo "Overhead (JVM Startup Time)     : $JVM_STARTUP_TIME sec"
-
-        echo "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,CACHE_RESTORE_BUILD,CACHE_SAVE_BUILD,CACHE_RESTORE_TEST,CACHE_SAVE_TEST,JVM_STARTUP" > stage_metrics.csv
-        echo "$MODE,$BUILD_TIME,$TEST_TIME,$DEPLOY_TIME,$LEAD_TIME,$TOTAL_TIME,$BUILD_CACHE_RESTORE_TIME,$BUILD_CACHE_SAVE_TIME,$TEST_CACHE_RESTORE_TIME,$TEST_CACHE_SAVE_TIME,$JVM_STARTUP_TIME" >> stage_metrics.csv
+        echo "Build Time    : $BUILD_TIME sec"
+        echo "Test Time     : $TEST_TIME sec"
+        echo "Deploy Time   : $DEPLOY_TIME sec"
+        echo "Lead Time     : $LEAD_TIME sec"
+        echo "Total Pipeline: $TOTAL_TIME sec"
+    - name: Generate CSV summary
+      run: |
+        echo "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME" > stage_metrics.csv
+        echo "$MODE,$BUILD_TIME,$TEST_TIME,$DEPLOY_TIME,$LEAD_TIME,$TOTAL_TIME" >> stage_metrics.csv
 
     - name: Upload test logs
       uses: actions/upload-artifact@v4
