@@ -2,12 +2,15 @@ pipeline {
     agent any
 
     environment {
-        REMOTE_USER = 'root'
-        REMOTE_HOST = '40.192.66.15'
-        REMOTE_BACKUP_DIR = '/tmp/actions_bak'
-        MODE = 'A'  // Default mode
-        TEST_CLASSES_CACHE = 'test_cache'
-    }
+    SSH_USER       = 'root'
+    SSH_HOST       = '40.192.66.15'
+    SSH_KEY        = '/var/lib/jenkins/.ssh/id_rsa'
+    REMOTE_BACKUP_DIR = '/tmp/jenkins_bak'
+    WAR_NAME       = 'JobManagement_JENKINS.war'
+    WAR_STORAGE    = '.'
+    SSH_OPTS       = '-o StrictHostKeyChecking=no'
+}
+
 
     stages {
         stage('Checkout Source') {
@@ -92,7 +95,7 @@ pipeline {
                     sh 'cp -R src/main/webapp/* build/'
 
                     // Build WAR file
-                    sh 'jar -cvf JobManagement_ACTIONS.war -C build .'
+                    sh 'jar -cvf JobManagement_JENKINS.war -C build .'
 
                     def endBuild = System.currentTimeMillis()
                     def buildTime = (endBuild - startBuild) / 1000
@@ -106,15 +109,17 @@ pipeline {
             steps {
                 script {
                     echo "Deploying WAR to Tomcat..."
-                    sh """
-                    ssh -o StrictHostKeyChecking=no -i key.pem ${env.REMOTE_USER}@${env.REMOTE_HOST} "mkdir -p ${env.REMOTE_BACKUP_DIR}"
-                    scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war ${env.REMOTE_USER}@${env.REMOTE_HOST}:${env.REMOTE_BACKUP_DIR}/JobManagement_ACTIONS.war_bak
-                    ssh -o StrictHostKeyChecking=no -i key.pem ${env.REMOTE_USER}@${env.REMOTE_HOST} <<EOF
-                        sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
+                    sh '''
+                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "mkdir -p ${REMOTE_BACKUP_DIR}"
+                    scp ${SSH_OPTS} -i ${SSH_KEY} ${WAR_STORAGE}/${WAR_NAME} ${SSH_USER}@${SSH_HOST}:${REMOTE_BACKUP_DIR}/${WAR_NAME}_bak
+
+                    ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} << 'ENDSSH'
+                        sudo rm -rf /opt/tomcat10/webapps/JobManagement_JENKINS || true
                         sudo /opt/tomcat10/bin/catalina.sh stop || true
                         sudo /opt/tomcat10/bin/catalina.sh start
-                    EOF
-                    """
+                    ENDSSH
+                   '''
+
                 }
             }
         }
