@@ -164,23 +164,35 @@ stage('Finalize Metrics') {
             echo "Finalizing Metrics..."
 
             def now = System.currentTimeMillis()
-            def deployStart = env.DEPLOY_START.toLong()
-            def commitTime = env.COMMIT_TIME.toLong()
-            def pipelineStart = env.PIPELINE_START.toLong()
+
+            def deployStart = env.DEPLOY_START ? env.DEPLOY_START.toLong() : 0
+            def commitTime = env.COMMIT_TIME ? env.COMMIT_TIME.toLong() : 0
+            def pipelineStart = env.PIPELINE_START ? env.PIPELINE_START.toLong() : 0
+
+            def jvmSetupStart = env.JVM_SETUP_START ? env.JVM_SETUP_START.toLong() : 0
+            def jvmSetupEnd = env.JVM_SETUP_END ? env.JVM_SETUP_END.toLong() : 0
+            def buildCacheRestoreStart = env.BUILD_CACHE_RESTORE_START ? env.BUILD_CACHE_RESTORE_START.toLong() : 0
+            def buildCacheRestoreEnd = env.BUILD_CACHE_RESTORE_END ? env.BUILD_CACHE_RESTORE_END.toLong() : 0
+            def buildCacheSaveStart = env.BUILD_CACHE_SAVE_START ? env.BUILD_CACHE_SAVE_START.toLong() : 0
+            def buildCacheSaveEnd = env.BUILD_CACHE_SAVE_END ? env.BUILD_CACHE_SAVE_END.toLong() : 0
+            def testCacheRestoreStart = env.TEST_CACHE_RESTORE_START ? env.TEST_CACHE_RESTORE_START.toLong() : 0
+            def testCacheRestoreEnd = env.TEST_CACHE_RESTORE_END ? env.TEST_CACHE_RESTORE_END.toLong() : 0
+            def testCacheSaveStart = env.TEST_CACHE_SAVE_START ? env.TEST_CACHE_SAVE_START.toLong() : 0
+            def testCacheSaveEnd = env.TEST_CACHE_SAVE_END ? env.TEST_CACHE_SAVE_END.toLong() : 0
+
+            def jvmStartupTime = env.JVM_STARTUP_TIME ? env.JVM_STARTUP_TIME.toInteger() : 0
+            def buildTime = env.BUILD_TIME ? env.BUILD_TIME.toInteger() : 0
+            def testTime = env.TEST_TIME ? env.TEST_TIME.toInteger() : 0
 
             def deployTime = (now - deployStart) / 1000
             def leadTime = (now - commitTime) / 1000
             def totalTime = (now - pipelineStart) / 1000
 
-            def jvmSetupTime = (env.JVM_SETUP_END.toLong() - env.JVM_SETUP_START.toLong()) / 1000
-            def buildCacheRestoreTime = (env.BUILD_CACHE_RESTORE_END.toLong() - env.BUILD_CACHE_RESTORE_START.toLong()) / 1000
-            def buildCacheSaveTime = (env.BUILD_CACHE_SAVE_END.toLong() - env.BUILD_CACHE_SAVE_START.toLong()) / 1000
-            def testCacheRestoreTime = (env.TEST_CACHE_RESTORE_END.toLong() - env.TEST_CACHE_RESTORE_START.toLong()) / 1000
-            def testCacheSaveTime = (env.TEST_CACHE_SAVE_END.toLong() - env.TEST_CACHE_SAVE_START.toLong()) / 1000
-            def jvmStartupTime = env.JVM_STARTUP_TIME.toInteger()
-
-            def buildTime = env.BUILD_TIME.toInteger()
-            def testTime = env.TEST_TIME.toInteger()
+            def jvmSetupTime = (jvmSetupEnd - jvmSetupStart) / 1000
+            def buildCacheRestoreTime = (buildCacheRestoreEnd - buildCacheRestoreStart) / 1000
+            def buildCacheSaveTime = (buildCacheSaveEnd - buildCacheSaveStart) / 1000
+            def testCacheRestoreTime = (testCacheRestoreEnd - testCacheRestoreStart) / 1000
+            def testCacheSaveTime = (testCacheSaveEnd - testCacheSaveStart) / 1000
 
             def netBuild = buildTime - buildCacheRestoreTime - buildCacheSaveTime
             def netTest = testTime - jvmStartupTime
@@ -209,5 +221,6 @@ Overhead (JVM Startup Time)      : ${jvmStartupTime} sec
         }
     }
 }
+
     }
 }
