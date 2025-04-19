@@ -161,7 +161,7 @@ pipeline {
                 script {
                     echo "Finalizing Metrics..."
 
-                    def deployStart = currentBuild.startTime
+                    def deployStart = currentBuild.getStartTimeInMillis()
                     def deployEnd = System.currentTimeMillis()
 
                     def deployTime = (deployEnd - deployStart) / 1000
