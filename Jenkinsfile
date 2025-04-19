@@ -17,7 +17,7 @@ def leadTimeForChanges = 0L
 def pipelineEndTime = 0L, totalTime = 0L
 
 // CI/CD Optimization Mode: 'A' = optimized (with caching), 'B' = baseline
-def mode = 'A'
+def mode = 'B'
 def CSV_FILE = "${env.WORKSPACE}/stage_metrics.csv"
 
 pipeline {
