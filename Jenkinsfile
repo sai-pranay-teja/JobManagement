@@ -27,7 +27,7 @@ pipeline {
     CACHE_BASE_DIR   = "${WORKSPACE}/jenkins_caches/${JOB_NAME}"
     BUILD_CACHE_DIR  = "${CACHE_BASE_DIR}/build_classes"
     TEST_CACHE_DIR   = "${CACHE_BASE_DIR}/test_outputs"
-    CSV_FILE         = "${WORKSPACE}/stage_metrics.csv"
+    CSV_FILE         = "stage_metrics.csv"
     MODE             = 'A'
     TOMCAT_HOME      = "/opt/tomcat10"
   }
