@@ -79,7 +79,7 @@ stage('Measure Baseline Build+Test') {
 
       // Time measurement - use explicit casting
       def elapsedMillis = System.currentTimeMillis() - t0
-      baselineTimeSec = (long)(elapsedMillis / 1000)  // Safe casting
+      baselineTimeSec = (long)(elapsedMillis / 1000)  
 
       // Export using explicit string conversion
       env.BASELINE_TIME_SEC = baselineTimeSec.toString()
@@ -258,7 +258,7 @@ stage('Run Tests') {
             '''
             sh 'wait'
             jvmStartupEnd = System.currentTimeMillis()
-            testTimeSec = (long)((System.currentTimeMillis() - t0)/1000)  // Safe casting
+            testTimeSec = (long)((System.currentTimeMillis() - t0)/1000)  
             echo "✅ Tests took ${testTimeSec} sec"
         }
     }
