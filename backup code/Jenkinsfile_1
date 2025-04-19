@@ -82,20 +82,7 @@ pipeline {
             }
         }
 
-        // stage('Backup WAR') {
-        //     steps {
-        //         script {
-        //             // Create a backup of the WAR file in the workspace if it exists.
-        //             if (fileExists("${WAR_STORAGE}/${WAR_NAME}")) {
-        //                 sh "cp ${WAR_STORAGE}/${WAR_NAME} ${WAR_STORAGE}/${WAR_NAME}_bak"
-        //                 echo "Backup created: ${WAR_STORAGE}/${WAR_NAME}_bak"
-        //             //  archiveArtifacts artifacts: "${WAR_STORAGE}/${WAR_NAME}_bak", fingerprint: true
-        //             } else {
-        //                 echo "ERROR: WAR file ${WAR_NAME} not found; backup not created."
-        //             }
-        //         }
-        //     }
-        // }
+
 
         stage('Backup WAR') {
             steps {
