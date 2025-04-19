@@ -17,6 +17,30 @@ jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
     steps:
+
+    - name: Measure baseline build+test
+      id: baseline
+      run: |
+        echo "BASE_BUILD=$(date +%s)" >> $GITHUB_OUTPUT
+        # full compile & test
+        find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+        javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output src/main/test/*.java
+        java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+          org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true
+        echo "BASE_TEST=$(date +%s)" >> $GITHUB_OUTPUT
+    - name: Decide MODE dynamically
+      run: |
+        base_build=$(( ${{ steps.baseline.outputs.BASE_TEST }} - ${{ steps.baseline.outputs.BASE_BUILD }} ))
+        THRESHOLD=10  # your chosen T in seconds
+        if [ $base_build -ge $THRESHOLD ]; then
+          echo "Running optimized Mode A"
+          echo "MODE=A" >> $GITHUB_ENV
+        else
+          echo "Running baseline Mode B"
+          echo "MODE=B" >> $GITHUB_ENV
+        fi
+
+
     - name: Validate MODE
       run: |
         if [[ "$MODE" != "A" && "$MODE" != "B" ]]; then
