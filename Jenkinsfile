@@ -33,7 +33,11 @@ pipeline {
 
   options { timestamps() }
 
+  
+
   stages {
+
+
   stage('Setup Paths') {
     steps {
       script {
@@ -49,9 +53,7 @@ pipeline {
       }
     }
   }
-}
 
-  stages {
     stage('Initialize & JVM Setup') {
       steps {
         script {
