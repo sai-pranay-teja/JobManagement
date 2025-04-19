@@ -109,6 +109,8 @@ pipeline {
         stage('Deploy to Tomcat') {
             steps {
                 script {
+                    env.DEPLOY_START = System.currentTimeMillis().toString()
+
                     echo "Deploying WAR to Tomcat..."
                     sh '''
                     ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} "mkdir -p ${REMOTE_BACKUP_DIR}"
@@ -161,13 +163,14 @@ pipeline {
                 script {
                     echo "Finalizing Metrics..."
 
-                    def deployStart = currentBuild.getStartTimeInMillis()
+                    def deployStart = env.DEPLOY_START.toLong()
                     def deployEnd = System.currentTimeMillis()
 
                     def deployTime = (deployEnd - deployStart) / 1000
                     echo "Deployment Time: ${deployTime} seconds"
 
-                    def totalTime = (deployEnd - currentBuild.timestamp) / 1000
+                    def totalTime = (deployEnd - currentBuild.getStartTimeInMillis()) / 1000
+
                     echo "Total Pipeline Time: ${totalTime} seconds"
                     
                     // Output final metrics
