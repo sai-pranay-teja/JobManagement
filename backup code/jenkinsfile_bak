@@ -18,7 +18,7 @@ def pipelineEndTime      = 0L, totalTimeSec       = 0L
 pipeline {
   agent any
   environment {
-    MODE = 'UNSET'
+
     SSH_USER         = 'root'
     SSH_HOST         = '40.192.66.15'
     SSH_KEY          = '/var/lib/jenkins/.ssh/id_rsa'
@@ -46,7 +46,7 @@ stage('Initialize') {
             
             // Convert to milliseconds safely
             commitTimeMs = ct ? (ct as Long) * 1000L : 0L
-            
+            MODE = 'UNSET'
             echo "🔍 Commit timestamp: ${commitTimeMs} ms"
         }
     }
