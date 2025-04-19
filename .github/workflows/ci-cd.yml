@@ -49,7 +49,7 @@ jobs:
     - name: Decide MODE dynamically
       run: |
         base_build=$(( ${{ steps.baseline.outputs.BASE_TEST }} - ${{ steps.baseline.outputs.BASE_BUILD }} ))
-        THRESHOLD=10  # your chosen T in seconds
+        THRESHOLD=5  # your chosen T in seconds
         if [ $base_build -ge $THRESHOLD ]; then
           echo "Running optimized Mode A"
           echo "MODE=A" >> $GITHUB_ENV
