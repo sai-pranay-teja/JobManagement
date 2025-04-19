@@ -1,41 +1,50 @@
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import model.DatabaseUtil;
 
 public class TestAppPart1 {
 
-    private static final String JDBC_URL = System.getenv("JDBC_URL");
-    private static final String JDBC_USER = System.getenv("JDBC_USER");
-    private static final String JDBC_PASS = System.getenv("JDBC_PASSWORD");
-
     @Test
-    public void testUserInsertAndFetch() {
-        String testEmail = "saipranay@example.com";
-        String testName = "sai2";
+    public void testInsertAndFetchUser() {
+        String testEmail = "sai12@example.com";
+        String testName = "spt";
 
-        try (Connection conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASS)) {
+        Connection conn = null;
+        PreparedStatement insertStmt = null;
+        PreparedStatement selectStmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseUtil.getConnection();
+
             // Insert user
             String insertSQL = "INSERT INTO users (name, email) VALUES (?, ?)";
-            try (PreparedStatement stmt = conn.prepareStatement(insertSQL)) {
-                stmt.setString(1, testName);
-                stmt.setString(2, testEmail);
-                stmt.executeUpdate();
-            }
+            insertStmt = conn.prepareStatement(insertSQL);
+            insertStmt.setString(1, testName);
+            insertStmt.setString(2, testEmail);
+            insertStmt.executeUpdate();
 
             // Fetch user
             String selectSQL = "SELECT name FROM users WHERE email = ?";
-            try (PreparedStatement stmt = conn.prepareStatement(selectSQL)) {
-                stmt.setString(1, testEmail);
-                ResultSet rs = stmt.executeQuery();
+            selectStmt = conn.prepareStatement(selectSQL);
+            selectStmt.setString(1, testEmail);
+            rs = selectStmt.executeQuery();
 
-                assertTrue(rs.next(), "User should exist in DB");
-                String fetchedName = rs.getString("name");
-                assertEquals(testName, fetchedName, "Fetched name should match inserted name");
-            }
+            assertTrue(rs.next(), "User should exist in database");
+            String retrievedName = rs.getString("name");
+            assertEquals(testName, retrievedName, "Name should match inserted value");
 
         } catch (SQLException e) {
-            fail("DB operation failed: " + e.getMessage());
+            fail("Database operation failed: " + e.getMessage());
+        } finally {
+            DatabaseUtil.close(conn, selectStmt, rs);
+            DatabaseUtil.close(null, insertStmt, null);
         }
     }
 }
