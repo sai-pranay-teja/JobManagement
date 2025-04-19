@@ -116,11 +116,10 @@ jobs:
           echo "Total Pipeline: $TOTAL_TIME sec"
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.3
         with:
           name: pipeline-results
           path: |
             test_unit.log
             test_int.log
             test_results.log
-            key.pem
