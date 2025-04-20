@@ -96,17 +96,14 @@ stage('Decide Mode Dynamically') {
             long threshold = 11L
             if (baselineTimeSec >= threshold) {
                 writeFile file: 'pipeline_mode.txt', text: 'A'
-                env.MODE = 'A'  // Add this line
-
                 echo "✅ Using optimized Mode A"
             } else {
                 writeFile file: 'pipeline_mode.txt', text: 'B'
-                env.MODE = 'B'  // Add this line
-
                 echo "✅ Using baseline Mode B"
             }
         }
     }
+}}
 }
 
 stage('Validate Mode') {
@@ -191,7 +188,9 @@ stage('Build Cache Restore') {
         script {
             def t0 = System.currentTimeMillis()
             sh 'mkdir -p build/WEB-INF/classes'
-            if (env.MODE == 'A') {  // Use env.MODE instead of mode
+            def mode = readFile('pipeline_mode.txt').trim()
+
+            if (mode == 'A') {  // Use env.MODE instead of mode
                 def changed = sh(script: "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes", returnStdout: true).trim()
                 if (changed) {
                     echo "🔧 Incremental compile"
