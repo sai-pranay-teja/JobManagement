@@ -49,6 +49,18 @@ stage('Initialize') {
     }
 }
 
+
+stage('Checkout') {
+    steps {
+        // Add timeout for reliability
+        timeout(time: 2, unit: 'MINUTES') {
+            git url: 'https://github.com/sai-pranay-teja/JobManagement.git', 
+                 branch: 'main',
+                 poll: false  // Disable SCM polling if not needed
+        }
+    }
+}
+
 stage('Measure Baseline Build+Test') {
   steps {
     script {
@@ -134,16 +146,7 @@ stage('Initialize & JVM Setup') {
     }
 }
 
-stage('Checkout') {
-    steps {
-        // Add timeout for reliability
-        timeout(time: 2, unit: 'MINUTES') {
-            git url: 'https://github.com/sai-pranay-teja/JobManagement.git', 
-                 branch: 'main',
-                 poll: false  // Disable SCM polling if not needed
-        }
-    }
-}
+
 
 
 stage('Build Cache Restore') {
