@@ -108,7 +108,7 @@ stage('Measure Baseline Build+Test') {
 stage('Decide Mode Dynamically') {
     steps {
         script {
-            long threshold = 11L
+            long threshold = 4L
             if (baselineTimeSec >= threshold) {
                 writeFile file: 'pipeline_mode.txt', text: 'A'
                 echo "✅ Using optimized Mode A"
