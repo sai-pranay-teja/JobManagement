@@ -428,16 +428,15 @@ stage('Deploy') {
             
             writeFile file: env.CSV_FILE, text: csvHeader + csvLine + "\n"
             archiveArtifacts artifacts: env.CSV_FILE, onlyIfSuccessful: false
+
+
+                        if (fileExists('pipeline_mode.txt')) {
+                sh 'rm pipeline_mode.txt'
+            }
         }
     }
 }
 
-cleanup {
-    script {
-        if (fileExists('pipeline_mode.txt')) {
-            sh 'rm pipeline_mode.txt'
-        }
-    }
-}
+
 
 }
