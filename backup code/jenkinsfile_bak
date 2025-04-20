@@ -95,6 +95,9 @@ stage('Measure Baseline Build+Test') {
       // Export using explicit string conversion
       env.BASELINE_TIME_SEC = baselineTimeSec.toString()
 
+      echo "⏱️ Baseline elapsed = ${elapsedMillis} ms"
+
+
       echo "⚖️  Baseline time = ${baselineTimeSec} sec"
     }
   }

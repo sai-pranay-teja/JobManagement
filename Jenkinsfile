@@ -2,7 +2,6 @@
 def pipelineStartTime    = 0L
 def commitTimeMs         = 0L
 def baselineTimeSec      = 0L
-def mode                 = 'A'
 def jvmSetupStart        = 0L, jvmSetupEnd        = 0L
 def buildCacheRestoreStart = 0L, buildCacheRestoreEnd = 0L
 def buildTimeSec         = 0L
@@ -18,6 +17,7 @@ def pipelineEndTime      = 0L, totalTimeSec       = 0L
 pipeline {
   agent any
   environment {
+
     SSH_USER         = 'root'
     SSH_HOST         = '40.192.66.15'
     SSH_KEY          = '/var/lib/jenkins/.ssh/id_rsa'
@@ -28,7 +28,6 @@ pipeline {
     BUILD_CACHE_DIR  = "${CACHE_BASE_DIR}/build_classes"
     TEST_CACHE_DIR   = "${CACHE_BASE_DIR}/test_outputs"
     CSV_FILE         = "stage_metrics.csv"
-    MODE             = 'A'
     TOMCAT_HOME      = "/opt/tomcat10"
   }
   options { timestamps() }
@@ -45,8 +44,19 @@ stage('Initialize') {
             
             // Convert to milliseconds safely
             commitTimeMs = ct ? (ct as Long) * 1000L : 0L
-            
             echo "🔍 Commit timestamp: ${commitTimeMs} ms"
+        }
+    }
+}
+
+
+stage('Checkout') {
+    steps {
+        // Add timeout for reliability
+        timeout(time: 2, unit: 'MINUTES') {
+            git url: 'https://github.com/sai-pranay-teja/JobManagement.git', 
+                 branch: 'main',
+                 poll: false  // Disable SCM polling if not needed
         }
     }
 }
@@ -85,6 +95,9 @@ stage('Measure Baseline Build+Test') {
       // Export using explicit string conversion
       env.BASELINE_TIME_SEC = baselineTimeSec.toString()
 
+      echo "⏱️ Baseline elapsed = ${elapsedMillis} ms"
+
+
       echo "⚖️  Baseline time = ${baselineTimeSec} sec"
     }
   }
@@ -92,32 +105,30 @@ stage('Measure Baseline Build+Test') {
 
 
 
-   stage('Decide Mode Dynamically') {
+stage('Decide Mode Dynamically') {
     steps {
         script {
-            // Convert baselineTimeSec to long explicitly if needed
-            long threshold = 5L
-            if (baselineTimeSec >= threshold) {  // Both values are now primitive longs
-                mode = 'A'
-                env.MODE = 'A'  // Set both var and environment
+            long threshold = 11L
+            if (baselineTimeSec >= threshold) {
+                writeFile file: 'pipeline_mode.txt', text: 'A'
                 echo "✅ Using optimized Mode A"
             } else {
-                mode = 'B'
-                env.MODE = 'B'
+                writeFile file: 'pipeline_mode.txt', text: 'B'
                 echo "✅ Using baseline Mode B"
             }
         }
     }
 }
 
+
 stage('Validate Mode') {
     steps {
         script {
-            // Access through env var for reliability
-            if (env.MODE != 'A' && env.MODE != 'B') {
-                error "❌ Invalid MODE: ${env.MODE}"
+            def mode = readFile('pipeline_mode.txt').trim()
+            if (mode != 'A' && mode != 'B') {
+                error "❌ Invalid MODE: ${mode}"
             }
-            echo "🔧 Mode = ${env.MODE}"  // Use env.MODE for consistency
+            echo "🔧 Mode = ${mode}"
         }
     }
 }
@@ -129,8 +140,8 @@ stage('Initialize & JVM Setup') {
         }
         sh 'java -version || true'
         script {
-            // Use env.MODE instead of variable
-            if (env.MODE == 'A') {
+            def mode = readFile('pipeline_mode.txt').trim()
+            if (mode == 'A') {
                 sh 'java -Xshare:auto -version > /dev/null 2>&1 || true'
             }
             jvmSetupEnd = System.currentTimeMillis()
@@ -138,19 +149,26 @@ stage('Initialize & JVM Setup') {
     }
 }
 
-stage('Checkout') {
-    steps {
-        // Add timeout for reliability
-        timeout(time: 2, unit: 'MINUTES') {
-            git url: 'https://github.com/sai-pranay-teja/JobManagement.git', 
-                 branch: 'main',
-                 poll: false  // Disable SCM polling if not needed
-        }
-    }
-}
+
+
 
 stage('Build Cache Restore') {
-    when { expression { env.MODE == 'A' } }  // Use env.MODE
+        when { 
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}  // Use env.MODE
     steps {
         script {
             buildCacheRestoreStart = System.currentTimeMillis()
@@ -176,7 +194,9 @@ stage('Build Cache Restore') {
         script {
             def t0 = System.currentTimeMillis()
             sh 'mkdir -p build/WEB-INF/classes'
-            if (env.MODE == 'A') {  // Use env.MODE instead of mode
+            def mode = readFile('pipeline_mode.txt').trim()
+
+            if (mode == 'A') {  // Use env.MODE instead of mode
                 def changed = sh(script: "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes", returnStdout: true).trim()
                 if (changed) {
                     echo "🔧 Incremental compile"
@@ -199,7 +219,22 @@ stage('Build Cache Restore') {
 }
 
 stage('Build Cache Save') {
-    when { expression { env.MODE == 'A' } }  // Use env.MODE
+        when { 
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}  // Use env.MODE
     steps {
         script {
             buildCacheSaveStart = System.currentTimeMillis()
@@ -223,7 +258,22 @@ stage('Backup WAR') {
 }
 
 stage('Test Cache Restore') {
-    when { expression { env.MODE == 'A' } }
+        when { 
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}
     steps {
         script {
             testCacheRestoreStart = System.currentTimeMillis()
@@ -266,7 +316,22 @@ stage('Run Tests') {
 }
 
 stage('Test Cache Save') {
-    when { expression { env.MODE == 'A' } }
+        when { 
+    expression { 
+        // Add file existence check
+        if (!fileExists('pipeline_mode.txt')) {
+            error "Mode file missing! Ensure 'Decide Mode Dynamically' stage ran successfully."
+        }
+        
+        // Read and validate mode
+        def mode = readFile('pipeline_mode.txt').trim()
+        if (!['A','B'].contains(mode)) {
+            error "Invalid mode value: ${mode}"
+        }
+        
+        return mode == 'A'
+    } 
+}
     steps {
         script {
             testCacheSaveStart = System.currentTimeMillis()
@@ -324,7 +389,8 @@ stage('Deploy') {
                          testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
 
             // Print metrics
-            echo "=== PIPELINE METRICS (Mode ${env.MODE}) ==="
+            def mode = readFile('pipeline_mode.txt').trim()
+            echo "=== PIPELINE METRICS (Mode ${mode}) ==="
             echo "Build Time                   : ${buildTimeSec} sec"
             echo "Test Time                    : ${testTimeSec} sec"
             echo "Deploy Time                  : ${deployTimeSec} sec"
@@ -343,7 +409,7 @@ stage('Deploy') {
             // Generate CSV
             def csvHeader = "MODE,BUILD,TEST,DEPLOY,LEAD,TOTAL,JVM_SETUP,BC_RESTORE,BC_SAVE,TC_RESTORE,TC_SAVE,JVM_STARTUP,NET_BUILD,NET_TEST,NET_TOTAL\n"
             def csvLine = String.format("%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
-                env.MODE,
+                readFile('pipeline_mode.txt').trim(),
                 buildTimeSec,
                 testTimeSec,
                 deployTimeSec,
@@ -364,4 +430,14 @@ stage('Deploy') {
             archiveArtifacts artifacts: env.CSV_FILE, onlyIfSuccessful: false
         }
     }
-}}
+}
+
+cleanup {
+    script {
+        if (fileExists('pipeline_mode.txt')) {
+            sh 'rm pipeline_mode.txt'
+        }
+    }
+}
+
+}
