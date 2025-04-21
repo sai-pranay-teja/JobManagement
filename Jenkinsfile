@@ -107,7 +107,7 @@ stage('Checkout') {
 stage('Compute Avg. Baseline (N=4)') {
   steps {
     script {
-      int N = 4
+      int N = 6
       long sumMs = 0L
 
       for (int i = 1; i <= N; i++) {
