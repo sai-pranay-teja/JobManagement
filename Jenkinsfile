@@ -61,82 +61,127 @@ stage('Checkout') {
     }
 }
 
-stage('Measure Baseline Build+Test') {
-  steps {
-    script {
-      echo "⏳ Baseline full build+test"
-      def t0 = System.currentTimeMillis()  // Use def instead of long
+// stage('Measure Baseline Build+Test') {
+//   steps {
+//     script {
+//       echo "⏳ Baseline full build+test"
+//       def t0 = System.currentTimeMillis()  // Use def instead of long
 
-      // Clean and prepare directories
-      sh 'rm -rf build test_output'
-      sh 'mkdir -p build/WEB-INF/classes test_output'
+//       // Clean and prepare directories
+//       sh 'rm -rf build test_output'
+//       sh 'mkdir -p build/WEB-INF/classes test_output'
 
-      // Full source compile
-      sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
+//       // Full source compile
+//       sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
 
-      // Compile tests
-      sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d test_output src/main/test/*.java'
+//       // Compile tests
+//       sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d test_output src/main/test/*.java'
 
-      // Copy config.properties for test execution
-      sh 'cp src/main/resources/config.properties test_output/'
+//       // Copy config.properties for test execution
+//       sh 'cp src/main/resources/config.properties test_output/'
 
-      // Run all tests from test_output directory
-      sh '''
-        java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
-          org.junit.platform.console.ConsoleLauncher \
-          --scan-class-path test_output \
-          --details summary || true
-      '''
+//       // Run all tests from test_output directory
+//       sh '''
+//         java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+//           org.junit.platform.console.ConsoleLauncher \
+//           --scan-class-path test_output \
+//           --details summary || true
+//       '''
 
-      // Time measurement - use explicit casting
-      def elapsedMillis = System.currentTimeMillis() - t0
-      baselineTimeSec = (long)(elapsedMillis / 1000)  
+//       // Time measurement - use explicit casting
+//       def elapsedMillis = System.currentTimeMillis() - t0
+//       baselineTimeSec = (long)(elapsedMillis / 1000)  
 
-      // Export using explicit string conversion
-      env.BASELINE_TIME_SEC = baselineTimeSec.toString()
+//       // Export using explicit string conversion
+//       env.BASELINE_TIME_SEC = baselineTimeSec.toString()
 
-      echo "⏱️ Baseline elapsed = ${elapsedMillis} ms"
-
-
-      echo "⚖️  Baseline time = ${baselineTimeSec} sec"
-    }
-  }
-}
+//       echo "⏱️ Baseline elapsed = ${elapsedMillis} ms"
 
 
-
-// stage('Decide Mode Dynamically') {
-//     steps {
-//         script {
-//             long threshold = 11L
-//             if (baselineTimeSec >= threshold) {
-//                 writeFile file: 'pipeline_mode.txt', text: 'A'
-//                 echo "✅ Using optimized Mode A"
-//             } else {
-//                 writeFile file: 'pipeline_mode.txt', text: 'B'
-//                 echo "✅ Using baseline Mode B"
-//             }
-//         }
+//       echo "⚖️  Baseline time = ${baselineTimeSec} sec"
 //     }
+//   }
 // }
 
-stage('Decide Mode Dynamically') {
+
+stage('Compute Avg. Baseline (N=4)') {
   steps {
     script {
-      // ← automagically set threshold to 50% of the baseline
-      long threshold = (baselineTimeSec * 0.5) as long
-      echo "ℹ️  Dynamic threshold = ${threshold} sec (50% of baseline ${baselineTimeSec} sec)"
+      int N = 4
+      long sumMs = 0L
 
-      if (baselineTimeSec >= threshold) {
-        writeFile file: 'pipeline_mode.txt', text: 'A'
-        echo "✅ Using optimized Mode A"
-      } else {
-        writeFile file: 'pipeline_mode.txt', text: 'B'
-        echo "✅ Using baseline Mode B"
+      for (int i = 1; i <= N; i++) {
+        echo "🏃 Baseline run #${i}"
+        // clean & prepare
+        sh 'rm -rf build test_output'
+        sh 'mkdir -p build/WEB-INF/classes test_output'
+
+        long t0 = System.currentTimeMillis()
+        // full compile
+        sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
+        // full test compile & copy config
+        sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d test_output src/main/test/*.java'
+        sh 'cp src/main/resources/config.properties test_output/'
+        // run tests
+        sh '''
+          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher \
+            --scan-class-path test_output --details summary || true
+        '''
+        long runMs = System.currentTimeMillis() - t0
+
+        echo "   → ${runMs/1000} sec"
+        sumMs += runMs
       }
+
+      long avgMs = sumMs / N
+      long avgSec = (avgMs / 1000) as long
+
+      // export both baseline and threshold
+      env.BASELINE_TIME_SEC = avgSec.toString()
+      env.THRESHOLD_SEC     = avgSec.toString()
+
+      echo "⚖️  Average baseline (over ${N} runs) = ${avgSec} sec"
     }
   }
 }
+
+
+
+
+stage('Decide Mode Dynamically') {
+    steps {
+        script {
+            long threshold = env.THRESHOLD_SEC.toLong()
+            echo "▶ Threshold T = ${threshold} sec"
+            if (baselineTimeSec >= threshold) {
+                writeFile file: 'pipeline_mode.txt', text: 'A'
+                echo "✅ Using optimized Mode A"
+            } else {
+                writeFile file: 'pipeline_mode.txt', text: 'B'
+                echo "✅ Using baseline Mode B"
+            }
+        }
+    }
+}
+
+// stage('Decide Mode Dynamically') {
+//   steps {
+//     script {
+//       // ← automagically set threshold to 50% of the baseline
+//       long threshold = (baselineTimeSec * 0.5) as long
+//       echo "ℹ️  Dynamic threshold = ${threshold} sec (50% of baseline ${baselineTimeSec} sec)"
+
+//       if (baselineTimeSec >= threshold) {
+//         writeFile file: 'pipeline_mode.txt', text: 'A'
+//         echo "✅ Using optimized Mode A"
+//       } else {
+//         writeFile file: 'pipeline_mode.txt', text: 'B'
+//         echo "✅ Using baseline Mode B"
+//       }
+//     }
+//   }
+// }
 
 
 
