@@ -105,20 +105,39 @@ stage('Measure Baseline Build+Test') {
 
 
 
+// stage('Decide Mode Dynamically') {
+//     steps {
+//         script {
+//             long threshold = 11L
+//             if (baselineTimeSec >= threshold) {
+//                 writeFile file: 'pipeline_mode.txt', text: 'A'
+//                 echo "✅ Using optimized Mode A"
+//             } else {
+//                 writeFile file: 'pipeline_mode.txt', text: 'B'
+//                 echo "✅ Using baseline Mode B"
+//             }
+//         }
+//     }
+// }
+
 stage('Decide Mode Dynamically') {
-    steps {
-        script {
-            long threshold = 11L
-            if (baselineTimeSec >= threshold) {
-                writeFile file: 'pipeline_mode.txt', text: 'A'
-                echo "✅ Using optimized Mode A"
-            } else {
-                writeFile file: 'pipeline_mode.txt', text: 'B'
-                echo "✅ Using baseline Mode B"
-            }
-        }
+  steps {
+    script {
+      // ← automagically set threshold to 50% of the baseline
+      long threshold = (baselineTimeSec * 0.5) as long
+      echo "ℹ️  Dynamic threshold = ${threshold} sec (50% of baseline ${baselineTimeSec} sec)"
+
+      if (baselineTimeSec >= threshold) {
+        writeFile file: 'pipeline_mode.txt', text: 'A'
+        echo "✅ Using optimized Mode A"
+      } else {
+        writeFile file: 'pipeline_mode.txt', text: 'B'
+        echo "✅ Using baseline Mode B"
+      }
     }
+  }
 }
+
 
 
 
@@ -191,6 +210,38 @@ stage('Build Cache Restore') {
 
 
 
+//     stage('Build') {
+//     steps {
+//         script {
+//             def t0 = System.currentTimeMillis()
+//             sh 'mkdir -p build/WEB-INF/classes'
+//             def mode = readFile('pipeline_mode.txt').trim()
+
+//             if (mode == 'A') {  // Use env.MODE instead of mode
+//                 def changed = sh(script: "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes", returnStdout: true).trim()
+//                 if (changed) {
+//                     echo "🔧 Incremental compile"
+//                     sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
+//                 } else {
+//                     echo "🔧 Full compile (no changes)"
+//                     sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+//                 }
+//             } else {
+//                 echo "🔧 Full compile (Mode B)"
+//                 sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+//             }
+//             sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
+//             sh 'cp -R src/main/webapp/* build/'
+//             sh "jar -cvf ${env.WAR_NAME} -C build ."
+//             buildTimeSec = (long)((System.currentTimeMillis() - t0)/1000)
+//             echo "✅ Build took ${buildTimeSec} sec"
+//         }
+//     }
+// }
+
+
+
+
     stage('Build') {
     steps {
         script {
@@ -199,15 +250,22 @@ stage('Build Cache Restore') {
             def mode = readFile('pipeline_mode.txt').trim()
 
             if (mode == 'A') {  // Use env.MODE instead of mode
-                def changed = sh(script: "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes", returnStdout: true).trim()
-                if (changed) {
-                    echo "🔧 Incremental compile"
-                    sh "javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes ${changed}"
-                } else {
-                    echo "🔧 Full compile (no changes)"
-                    sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
-                }
-            } else {
+              //–– report how many files changed vs. total
+  def totalFiles = sh(script: "find src/main/java/model -name '*.java' | wc -l", returnStdout: true).trim().toInteger()
+  def changedFiles = sh(script: "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes | wc -l", returnStdout: true).trim().toInteger()
+  echo "🔍 Incremental build analysis: ${changedFiles}/${totalFiles} files changed"
+
+  if (changedFiles > 0) {
+    echo "🔧 Incremental compile of ${changedFiles} file(s)"
+    sh "find src/main/java/model -name '*.java' -newer build/WEB-INF/classes | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+  } else {
+    echo "🔧 Full compile (no changes)"
+    sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
+  }
+}
+            
+            
+            else {
                 echo "🔧 Full compile (Mode B)"
                 sh "find src/main/java/model -name '*.java' | xargs javac -cp 'src/main/webapp/WEB-INF/lib/*' -d build/WEB-INF/classes"
             }
@@ -385,10 +443,33 @@ stage('Deploy') {
             def jvmStartupTime = (long)((jvmStartupEnd - jvmStartupStart) / 1000)
 
             // Calculate net times
-            def netBuild = buildTimeSec - buildCacheRestoreTime - buildCacheSaveTime
-            def netTest = testTimeSec - jvmStartupTime
-            def netTotal = totalTimeSec - jvmSetupTime - buildCacheRestoreTime - buildCacheSaveTime - 
-                         testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
+            // def netBuild = buildTimeSec - buildCacheRestoreTime - buildCacheSaveTime
+            // def netTest = testTimeSec - jvmStartupTime
+            // def netTotal = totalTimeSec - jvmSetupTime - buildCacheRestoreTime - buildCacheSaveTime - 
+            //              testCacheRestoreTime - testCacheSaveTime - jvmStartupTime
+
+            // read the chosen mode
+def modeVal = readFile('pipeline_mode.txt').trim()
+
+// only subtract A‑only overheads if in Mode A, else keep raw times
+def netBuild = (modeVal == 'A')
+    ? (buildTimeSec - buildCacheRestoreTime - buildCacheSaveTime)
+    : buildTimeSec
+
+def netTest  = (modeVal == 'A')
+    ? (testTimeSec - jvmStartupTime)
+    : testTimeSec
+
+def netTotal = (modeVal == 'A')
+    ? (totalTimeSec - jvmSetupTime
+                  - buildCacheRestoreTime - buildCacheSaveTime
+                  - testCacheRestoreTime - testCacheSaveTime
+                  - jvmStartupTime)
+    : totalTimeSec
+
+
+
+
 
             // Print metrics
             def mode = readFile('pipeline_mode.txt').trim()
