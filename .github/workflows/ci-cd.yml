@@ -27,37 +27,75 @@ jobs:
         mkdir -p test_output
         cp src/main/resources/config.properties test_output/
 
-
-
-
-    - name: Measure baseline build+test
+    - name: Compute average baseline build+test (N=4)
       id: baseline
       run: |
-        start=$(date +%s)
-        echo "BASE_BUILD=$(date +%s)" >> $GITHUB_OUTPUT
-        # full compile & test
-        find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
-        javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output src/main/test/*.java
-        java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
-          org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true
-        end=$(date +%s)
-        echo "BASE_TEST=$(date +%s)" >> $GITHUB_OUTPUT
+        N=4; sum=0
+        for i in $(seq 1 $N); do
+          echo "🔄 Baseline run #$i"
+          start=$(date +%s)
+          # full compile & test
+          find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output src/main/test/*.java
+          cp src/main/resources/config.properties test_output/
+          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true
+          end=$(date +%s)
+          dur=$((end - start))
+          echo "⚖️  Run #$i = $dur sec"
+          sum=$((sum + dur))
+        done
+        avg=$((sum / N))
+        echo "AVERAGE_BASELINE=$avg" >> $GITHUB_ENV
+        echo "::notice title=Average Baseline::$avg seconds over $N runs"
 
-        # Log the time for later analysis
-        baseline_time=$((end - start))
-        echo "BASELINE_TIME=$baseline_time" >> $GITHUB_ENV
-        echo "::notice title=Baseline Build+Test Time::$baseline_time seconds"
+
+
+    # - name: Measure baseline build+test
+    #   id: baseline
+    #   run: |
+    #     start=$(date +%s)
+    #     echo "BASE_BUILD=$(date +%s)" >> $GITHUB_OUTPUT
+    #     # full compile & test
+    #     find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+    #     javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output src/main/test/*.java
+    #     java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+    #       org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true
+    #     end=$(date +%s)
+    #     echo "BASE_TEST=$(date +%s)" >> $GITHUB_OUTPUT
+
+    #     # Log the time for later analysis
+    #     baseline_time=$((end - start))
+    #     echo "BASELINE_TIME=$baseline_time" >> $GITHUB_ENV
+    #     echo "::notice title=Baseline Build+Test Time::$baseline_time seconds"
+
+       
+
+    
+    # - name: Decide MODE dynamically
+    #   run: |
+    #     base_build=$(( ${{ steps.baseline.outputs.BASE_TEST }} - ${{ steps.baseline.outputs.BASE_BUILD }} ))
+    #     THRESHOLD=5  # your chosen T in seconds
+    #     if [ $base_build -ge $THRESHOLD ]; then
+    #       echo "Running optimized Mode A"
+    #       echo "MODE=A" >> $GITHUB_ENV
+    #     else
+    #       echo "Running baseline Mode B"
+    #       echo "MODE=B" >> $GITHUB_ENV
+    #     fi
+
     - name: Decide MODE dynamically
       run: |
-        base_build=$(( ${{ steps.baseline.outputs.BASE_TEST }} - ${{ steps.baseline.outputs.BASE_BUILD }} ))
-        THRESHOLD=5  # your chosen T in seconds
-        if [ $base_build -ge $THRESHOLD ]; then
+        THRESHOLD=11  # fixed threshold, or tweak as needed
+        echo "▶ Threshold T = $THRESHOLD sec"
+        if [ $AVERAGE_BASELINE -ge $THRESHOLD ]; then
           echo "Running optimized Mode A"
           echo "MODE=A" >> $GITHUB_ENV
         else
           echo "Running baseline Mode B"
           echo "MODE=B" >> $GITHUB_ENV
         fi
+
 
 
     - name: Validate MODE
@@ -119,23 +157,28 @@ jobs:
       run: echo "BUILD_CACHE_RESTORE_END=$(date +%s)" >> $GITHUB_ENV
 
     # --- BUILD STAGE ---
+
     - name: Build WAR file
       run: |
         BUILD_START=$(date +%s)
         mkdir -p build/WEB-INF/classes
 
+        TOTAL_FILES=$(find src/main/java/model -name "*.java" | wc -l)
         if [ "$MODE" = "A" ]; then
-          CHANGED=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes)
-          if [ -n "$CHANGED" ]; then
-            echo "Incremental compile of changed files"
-            javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $CHANGED
+          CHANGED_COUNT=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes | wc -l)
+          echo "🔍 Incremental build: $CHANGED_COUNT/$TOTAL_FILES Java files changed"
+          if [ $CHANGED_COUNT -gt 0 ]; then
+            find src/main/java/model -name "*.java" -newer build/WEB-INF/classes | \
+              xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
           else
-            echo "No changes => full compile"
-            find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+            echo "No changes → full compile"
+            find src/main/java/model -name "*.java" | \
+              xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
           fi
         else
           echo "[Mode B] Full compile"
-          find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+          find src/main/java/model -name "*.java" | \
+            xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
         fi
 
         cp -R src/main/resources/* build/WEB-INF/classes/
@@ -144,6 +187,37 @@ jobs:
 
         BUILD_END=$(date +%s)
         echo "BUILD_TIME=$((BUILD_END - BUILD_START))" >> $GITHUB_ENV
+
+
+
+
+
+
+    # - name: Build WAR file
+    #   run: |
+    #     BUILD_START=$(date +%s)
+    #     mkdir -p build/WEB-INF/classes
+
+    #     if [ "$MODE" = "A" ]; then
+    #       CHANGED=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes)
+    #       if [ -n "$CHANGED" ]; then
+    #         echo "Incremental compile of changed files"
+    #         javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $CHANGED
+    #       else
+    #         echo "No changes => full compile"
+    #         find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+    #       fi
+    #     else
+    #       echo "[Mode B] Full compile"
+    #       find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+    #     fi
+
+    #     cp -R src/main/resources/* build/WEB-INF/classes/
+    #     cp -R src/main/webapp/* build/
+    #     jar -cvf JobManagement_ACTIONS.war -C build .
+
+    #     BUILD_END=$(date +%s)
+    #     echo "BUILD_TIME=$((BUILD_END - BUILD_START))" >> $GITHUB_ENV
 
     # --- BUILD CACHE SAVE ---
     - name: ⏱ Cache Save (Build)
@@ -286,9 +360,22 @@ jobs:
         TEST_CACHE_RESTORE_TIME=$((TEST_CACHE_RESTORE_END - TEST_CACHE_RESTORE_START))
         TEST_CACHE_SAVE_TIME=$((TEST_CACHE_SAVE_END - TEST_CACHE_SAVE_START))
 
-        NET_BUILD=$((BUILD_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME))
-        NET_TEST=$((TEST_TIME - JVM_STARTUP_TIME))
-        NET_TOTAL=$((TOTAL_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME - TEST_CACHE_RESTORE_TIME - TEST_CACHE_SAVE_TIME - JVM_SETUP_TIME - JVM_STARTUP_TIME))
+        # NET_BUILD=$((BUILD_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME))
+        # NET_TEST=$((TEST_TIME - JVM_STARTUP_TIME))
+        # NET_TOTAL=$((TOTAL_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME - TEST_CACHE_RESTORE_TIME - TEST_CACHE_SAVE_TIME - JVM_SETUP_TIME - JVM_STARTUP_TIME))
+
+        if [ "$MODE" = "A" ]; then
+          NET_BUILD=$((BUILD_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME))
+          NET_TEST=$((TEST_TIME - JVM_STARTUP_TIME))
+          NET_TOTAL=$((TOTAL_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME - TEST_CACHE_RESTORE_TIME - TEST_CACHE_SAVE_TIME - JVM_SETUP_TIME - JVM_STARTUP_TIME))
+        else
+        # For Mode B, report raw times
+          NET_BUILD=$BUILD_TIME
+          NET_TEST=$TEST_TIME
+          NET_TOTAL=$TOTAL_TIME
+        fi
+
+
 
         echo "DEPLOY_TIME=$DEPLOY_TIME" >> $GITHUB_ENV
         echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
