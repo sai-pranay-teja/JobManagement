@@ -107,41 +107,33 @@ stage('Checkout') {
 stage('Compute Avg. Baseline (N=4)') {
   steps {
     script {
-      int N = 6
-      long sumMs = 0L
+      int N = 4
+      long sumSec = 0L
 
       for (int i = 1; i <= N; i++) {
-        echo "🏃 Baseline run #${i}"
-        // clean & prepare
+        echo "🔄 Baseline run #${i}"
+        long t0 = System.currentTimeMillis()
+
+        // --- full compile & test ---
         sh 'rm -rf build test_output'
         sh 'mkdir -p build/WEB-INF/classes test_output'
-
-        long t0 = System.currentTimeMillis()
-        // full compile
         sh 'find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes'
-        // full test compile & copy config
         sh 'javac -cp "src/main/webapp/WEB-INF/lib/*:src/main/resources" -d test_output src/main/test/*.java'
         sh 'cp src/main/resources/config.properties test_output/'
-        // run tests
         sh '''
           java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
             org.junit.platform.console.ConsoleLauncher \
             --scan-class-path test_output --details summary || true
         '''
-        long runMs = System.currentTimeMillis() - t0
 
-        echo "   → ${runMs/1000} sec"
-        sumMs += runMs
+        long elapsedSec = ((System.currentTimeMillis() - t0) / 1000)
+        echo "⚖️  Run #${i} = ${elapsedSec} sec"
+        sumSec += elapsedSec
       }
 
-      long avgMs = sumMs / N
-      long avgSec = (avgMs / 1000) as long
-
-      // export both baseline and threshold
+      long avgSec = sumSec / N
       env.BASELINE_TIME_SEC = avgSec.toString()
-      env.THRESHOLD_SEC     = avgSec.toString()
-
-      echo "⚖️  Average baseline (over ${N} runs) = ${avgSec} sec"
+      echo "📊 Average baseline over ${N} runs = ${avgSec} sec"
     }
   }
 }
@@ -149,10 +141,12 @@ stage('Compute Avg. Baseline (N=4)') {
 
 
 
+
 stage('Decide Mode Dynamically') {
     steps {
         script {
-            long threshold = env.THRESHOLD_SEC.toLong()
+            long threshold = 11L
+            long baselineTimeSec = env.BASELINE_TIME_SEC.toLong()
             echo "▶ Threshold T = ${threshold} sec"
             if (baselineTimeSec >= threshold) {
                 writeFile file: 'pipeline_mode.txt', text: 'A'
