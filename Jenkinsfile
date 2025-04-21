@@ -19,7 +19,7 @@ pipeline {
   environment {
 
     SSH_USER         = 'root'
-    SSH_HOST         = '40.192.66.15'
+    SSH_HOST         = '40.192.71.74'
     SSH_KEY          = '/var/lib/jenkins/.ssh/id_rsa'
     SSH_OPTS         = '-o StrictHostKeyChecking=no'
     REMOTE_BACKUP_DIR= '/tmp/jenkins_bak'
