@@ -145,7 +145,7 @@ stage('Compute Avg. Baseline (N=4)') {
 stage('Decide Mode Dynamically') {
     steps {
         script {
-            long threshold = 11L
+            long threshold = 5L
             baselineTimeSec = env.BASELINE_TIME_SEC.toLong()
             echo "▶ Threshold T = ${threshold} sec"
             if (baselineTimeSec >= threshold) {
