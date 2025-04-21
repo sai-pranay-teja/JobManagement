@@ -122,6 +122,7 @@ stage('Decide Mode Dynamically') {
 
 
 
+
 stage('Validate Mode') {
     steps {
         script {
