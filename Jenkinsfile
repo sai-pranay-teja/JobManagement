@@ -146,7 +146,7 @@ stage('Decide Mode Dynamically') {
     steps {
         script {
             long threshold = 11L
-            long baselineTimeSec = env.BASELINE_TIME_SEC.toLong()
+            baselineTimeSec = env.BASELINE_TIME_SEC.toLong()
             echo "▶ Threshold T = ${threshold} sec"
             if (baselineTimeSec >= threshold) {
                 writeFile file: 'pipeline_mode.txt', text: 'A'
