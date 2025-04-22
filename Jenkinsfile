@@ -255,7 +255,17 @@ EOF
                 echo String.format("| %-35s | %-15s |", "Deployment Time (sec)", deployTimeValue)
                 echo String.format("| %-35s | %-15s |", "Lead Time for Changes (sec)", leadTimeForChanges)
                 // echo String.format("| %-35s | %-15s |", "Rollback Time (sec)", rollbackTime)
-                echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
+                // ─── Cost Calculation & Echo ──────────────────────────────────────────────
+// define your $/sec rate here (e.g. Jenkins EC2 @ $0.05/hr = $0.0000139/sec)
+def jenkinsRatePerSec = 0.05 / 3600
+def costJenkins = totalPipelineTime * jenkinsRatePerSec
+echo String.format("| %-35s | %-15s |", "Cost (USD)", String.format("%.4f", costJenkins))
+// ─────────────────────────────────────────────────────────────────────────────
+echo String.format("| %-35s | %-15s |", "Test Summary", testSummary)
+
+
+
+                
                 echo "-------------------------------------------------"
                 echo ""
                 echo "Memory Usage BEFORE Deployment (free -h):"

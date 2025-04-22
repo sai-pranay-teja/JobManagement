@@ -157,7 +157,13 @@ jobs:
           else
             TEST_SUMMARY="N/A"
           fi
+          # ─── Cost Calculation & Echo ──────────────────────────────────────────────
+          # GitHub Actions hosted runner = $0.008 per minute = $0.0001333 per sec
+          COST=$(awk "BEGIN { printf \"%.4f\", $TOTAL_PIPELINE_TIME * 0.008/60 }")
+          echo "| Cost (USD)                         | $COST              |"
+          # ─────────────────────────────────────────────────────────────────────────────
           echo "| Test Summary                       | $TEST_SUMMARY          |"
+
           echo "-------------------------------------------------"
           echo "Memory Usage BEFORE:"
           cat mem_before.log
