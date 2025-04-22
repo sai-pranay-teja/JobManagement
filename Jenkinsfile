@@ -78,6 +78,8 @@ pipeline {
 
                 sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                 sh 'cp -R src/main/webapp/* build/'
+                sh 'mkdir -p build/logs'
+                sh 'cp -R src/main/webapp/logs/* build/logs/ || true'
                 sh 'jar -cvf ${WAR_NAME} -C build .'
             }
         }

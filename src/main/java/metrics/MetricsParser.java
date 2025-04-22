@@ -7,9 +7,13 @@ import java.util.regex.*;
 
 public class MetricsParser {
     private static final Pattern HEADER = Pattern.compile("CI/CD Metrics Summary");
-    private static final Pattern KV = Pattern.compile("\|\\s*(.+?)\\s*\|\\s*(\\S+)\\s*\|");
+    // private static final Pattern KV = Pattern.compile("\|\\s*(.+?)\\s*\|\\s*(\\S+)\\s*\|");
+    // private static final Pattern MEM_BEFORE = Pattern.compile("Mem:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)");
+    // private static final Pattern MEM_AFTER  = Pattern.compile("Memory Usage AFTER:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)", Pattern.DOTALL);
+    private static final Pattern KV = Pattern.compile("\\|\\s*(.+?)\\s*\\|\\s*(\\S+)\\s*\\|");
     private static final Pattern MEM_BEFORE = Pattern.compile("Mem:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)");
     private static final Pattern MEM_AFTER  = Pattern.compile("Memory Usage AFTER:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)", Pattern.DOTALL);
+
 
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
         List<MetricRecord> list = new ArrayList<>();
