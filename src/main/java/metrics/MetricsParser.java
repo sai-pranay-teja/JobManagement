@@ -19,8 +19,9 @@ public class MetricsParser {
     private static final Pattern JENKINS_ROLLBACK_SENTENCE =
         Pattern.compile("Rollback completed in\\s+(\\d+)\\s+seconds\\.", Pattern.CASE_INSENSITIVE);
     
+    // FIXED: Added missing closing parenthesis for the first group
     private static final Pattern MEM_USED = Pattern.compile(
-        "(Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)" +  // free -h format
+        "(Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi))" +  // free -h format
         "|(used memory\\s+:\\s+(\\d+\\.?\\d*)\\s+MB)",  // vmstat format
         Pattern.CASE_INSENSITIVE | Pattern.DOTALL
     );
@@ -30,7 +31,7 @@ public class MetricsParser {
     );
     
     private static final Pattern RUN_NUMBER_PATTERN = 
-        Pattern.compile("(gha|jenkins|codebuild).*?[-_](run?)(\\d+).*\\.log", Pattern.CASE_INSENSITIVE);
+        Pattern.compile("(gha|jenkins|codebuild)(-rollback)?-?(\\d+)\\.log", Pattern.CASE_INSENSITIVE);
 
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
         List<MetricRecord> records = new ArrayList<>();
@@ -110,21 +111,27 @@ public class MetricsParser {
     private static String extractToolName(String fn) {
         String baseName = "unknown";
         fn = fn.toLowerCase();
-        
-        // Detect base tool name
-        if (fn.contains("gha")) baseName = "gha";
-        else if (fn.contains("jenkins")) baseName = "jenkins";
-        else if (fn.contains("codebuild")) baseName = "codebuild";
-        
-        // Add run number suffix
+
         Matcher runMatcher = RUN_NUMBER_PATTERN.matcher(fn);
         if (runMatcher.find()) {
-            baseName += "-" + runMatcher.group(3); // Append run number
+            baseName = runMatcher.group(1); // Tool name (gha/jenkins/codebuild)
+            boolean isRollback = (runMatcher.group(2) != null);
+            String runNumber = runMatcher.group(3);
+
+            if (isRollback) {
+                baseName += "-rollback";
+            }
+            if (runNumber != null) {
+                baseName += "-" + runNumber;
+            }
+        } else {
+            // Fallback for filenames without run numbers
+            if (fn.contains("gha")) baseName = "gha";
+            else if (fn.contains("jenkins")) baseName = "jenkins";
+            else if (fn.contains("codebuild")) baseName = "codebuild";
+            if (fn.contains("rollback")) baseName += "-rollback";
         }
-        
-        // Add rollback suffix
-        if (fn.contains("rollback")) baseName += "-rollback";
-        
+
         return baseName;
     }
 }
