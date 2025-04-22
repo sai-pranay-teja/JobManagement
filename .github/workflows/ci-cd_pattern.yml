@@ -8,6 +8,7 @@ on:
       mode:
         description: 'A = optimized (incremental & parallel), B = baseline (full & sequential)'
         required: true
+        
 
 env:
   REMOTE_BACKUP_DIR: /tmp/actions_bak
