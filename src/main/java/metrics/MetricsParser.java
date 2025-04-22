@@ -6,75 +6,96 @@ import java.util.*;
 import java.util.regex.*;
 
 public class MetricsParser {
+    // Regex Patterns
     private static final Pattern HEADER = Pattern.compile("CI/CD Metrics Summary");
     private static final Pattern KV = Pattern.compile("\\|\\s*(.+?)\\s*\\|\\s*(\\S+)\\s*\\|");
-    private static final Pattern MEM_BEFORE = Pattern.compile("Mem:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)");
-    private static final Pattern MEM_AFTER  = Pattern.compile("Memory Usage AFTER:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)", Pattern.DOTALL);
-    private static final String PLACEHOLDER_REGEX = "\\$[A-Za-z_][A-Za-z0-9_]*"; // Regex to detect placeholders like $TOTAL_PIPELINE_TIME
+    private static final Pattern MEM_BEFORE = Pattern.compile("Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)");
+    private static final Pattern VMSTAT_USED = Pattern.compile("(\\d+\\.\\d+)\\s+MB\\s+-\\s+K used memory");
+    private static final Pattern TIMESTAMP = Pattern.compile("\\| (\\d+) \\|");
 
+    // Pricing (USD per minute)
+    private static final Map<String, Double> TOOL_COST_PER_MIN = Map.of(
+        "gha", 0.008,    // GitHub Actions
+        "codebuild", 0.005, // AWS CodeBuild
+        "jenkins", 0.003  // Jenkins (assumed infrastructure cost)
+    );
 
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
-        List<MetricRecord> list = new ArrayList<>();
+        List<MetricRecord> records = new ArrayList<>();
         try (DirectoryStream<Path> ds = Files.newDirectoryStream(logsDir, "*.log")) {
             for (Path p : ds) {
-                list.add(parseLog(p));
+                records.add(parseLog(p));
             }
         }
-        return list;
+        return records;
     }
 
     public static MetricRecord parseLog(Path logFile) throws IOException {
         List<String> lines = Files.readAllLines(logFile);
-        String tool = logFile.getFileName().toString().replaceAll("\\.log$", "");
+        String tool = extractToolName(logFile);
         MetricRecord rec = new MetricRecord(tool);
 
-        Iterator<String> it = lines.iterator();
-        while (it.hasNext()) {
-            String line = it.next();
-            if (HEADER.matcher(line).find()) {
-                // advance until first KV table row
-                while (it.hasNext()) {
-                    line = it.next();
-                    Matcher m = KV.matcher(line);
-                    if (!m.find()) continue;
-                    String key = m.group(1).trim();
-                    String val = m.group(2).trim();
-                    
-                    // Skip or substitute placeholder values
-                    if (val.matches(PLACEHOLDER_REGEX)) {
-                        val = "0"; // or set to any default value you want
-                    }
-                    
-                    try {
-                        switch (key) {
-                            case "Total Pipeline Time (sec)": rec.setTotalPipelineTime(Integer.parseInt(val)); break;
-                            case "Deployment Time (sec)":     rec.setDeploymentTime(Integer.parseInt(val)); break;
-                            case "Lead Time for Changes (sec)": rec.setLeadTime(Integer.parseInt(val)); break;
-                            case "Rollback Deployment Time (sec)": rec.setRollbackTime(val.equals("N/A") ? -1 : Integer.parseInt(val)); break;
-                            default: break;
-                        }
-                    } catch (NumberFormatException e) {
-                        // Handle the case where the value is not a number (e.g., empty string or invalid format)
-                        System.err.println("Invalid number format for key: " + key + " with value: " + val);
-                    }
-                }
+        long startTime = Long.MAX_VALUE;
+        long endTime = Long.MIN_VALUE;
+        StringBuilder sb = new StringBuilder();
 
-                // parse memory before/after
-                StringBuilder sb = new StringBuilder();
-                while (it.hasNext()) sb.append(it.next()).append("\n");
-                Matcher mb = MEM_BEFORE.matcher(sb);
-                if (mb.find()) rec.setMemoryBeforeUsed(parseSize(mb.group(1), mb.group(2)));
-                Matcher ma = MEM_AFTER.matcher(sb);
-                if (ma.find()) rec.setMemoryAfterUsed(parseSize(ma.group(1), ma.group(2)));
-                break;
+        // Extract timestamps and metrics
+        for (String line : lines) {
+            Matcher tsMatcher = TIMESTAMP.matcher(line);
+            if (tsMatcher.find()) {
+                long timestamp = Long.parseLong(tsMatcher.group(1));
+                startTime = Math.min(startTime, timestamp);
+                endTime = Math.max(endTime, timestamp);
             }
+            sb.append(line).append("\n");
         }
+
+        // Calculate duration in minutes
+        double durationMin = (endTime - startTime) / 60000.0;
+        rec.setDuration(durationMin);
+        rec.setCost(calculateCost(tool, durationMin));
+
+        // Parse time metrics
+        Matcher kvMatcher = KV.matcher(sb);
+        while (kvMatcher.find()) {
+            String key = kvMatcher.group(1).trim();
+            String val = kvMatcher.group(2).trim();
+            try {
+                switch (key) {
+                    case "Total Pipeline Time (sec)": rec.setTotalPipelineTime(Double.parseDouble(val)); break;
+                    case "Deployment Time (sec)": rec.setDeploymentTime(Double.parseDouble(val)); break;
+                    case "Lead Time for Changes (sec)": rec.setLeadTime(Double.parseDouble(val)); break;
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // Parse memory metrics
+        Matcher memMatcher = MEM_BEFORE.matcher(sb);
+        if (memMatcher.find()) {
+            rec.setMemoryUsed(parseSize(memMatcher.group(1), memMatcher.group(2)));
+        }
+        Matcher vmstatMatcher = VMSTAT_USED.matcher(sb);
+        if (vmstatMatcher.find()) {
+            rec.setVmstatUsed(Double.parseDouble(vmstatMatcher.group(1)));
+        }
+
         return rec;
     }
 
-    private static long parseSize(String num, String unit) {
+    private static double calculateCost(String tool, double durationMin) {
+        return TOOL_COST_PER_MIN.getOrDefault(tool, 0.0) * durationMin;
+    }
+
+    private static double parseSize(String num, String unit) {
         double v = Double.parseDouble(num);
-        if (unit.equals("Gi")) return (long)(v * 1024);
-        else /* Mi */             return (long)(v);
+        return unit.equals("Gi") ? v * 1024 : v; // Convert GiB to MiB
+    }
+
+    private static String extractToolName(Path path) {
+        String filename = path.getFileName().toString();
+        if (filename.contains("gha")) return "gha";
+        if (filename.contains("jenkins")) return "jenkins";
+        if (filename.contains("codebuild")) return "codebuild";
+        return "unknown";
     }
 }
