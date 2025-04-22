@@ -122,6 +122,8 @@ public class MetricsParser {
     else if (filename.contains("codebuild")) {
         return filename.contains("rollback") ? "codebuild-rollback" : "codebuild";
     }
+return "unknown";
+
     }
-    return "unknown";
+    
 }
