@@ -429,31 +429,6 @@
 2025-04-18T04:51:15.7313326Z [36;1mecho "-------------------------------------------------"[0m
 2025-04-18T04:51:15.7313978Z [36;1mecho "| Total Pipeline Time (sec)          | $TOTAL_PIPELINE_TIME          |"[0m
 2025-04-18T04:51:15.7314586Z [36;1m# If deployment succeeded, DEPLOY_DURATION is set; if not, ROLLBACK_DURATION is used.[0m
-2025-04-18T04:51:15.7315097Z [36;1mif [ -n "$DEPLOY_DURATION" ]; then[0m
-2025-04-18T04:51:15.7315590Z [36;1m  echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"[0m
-2025-04-18T04:51:15.7316012Z [36;1melse[0m
-2025-04-18T04:51:15.7316407Z [36;1m  echo "| Rollback Deployment Time (sec)     | $ROLLBACK_DURATION          |"[0m
-2025-04-18T04:51:15.7316838Z [36;1mfi[0m
-2025-04-18T04:51:15.7317199Z [36;1mecho "| Lead Time for Changes (sec)        | $LEAD_TIME          |"[0m
-2025-04-18T04:51:15.7317635Z [36;1mif [ -f test_results.log ]; then[0m
-2025-04-18T04:51:15.7318085Z [36;1m  TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1)[0m
-2025-04-18T04:51:15.7318676Z [36;1melse[0m
-2025-04-18T04:51:15.7318952Z [36;1m  TEST_SUMMARY="N/A"[0m
-2025-04-18T04:51:15.7319243Z [36;1mfi[0m
-2025-04-18T04:51:15.7319588Z [36;1mecho "| Test Summary                       | $TEST_SUMMARY          |"[0m
-2025-04-18T04:51:15.7320057Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7320448Z [36;1mecho "Memory Usage BEFORE:"[0m
-2025-04-18T04:51:15.7320796Z [36;1mcat mem_before.log[0m
-2025-04-18T04:51:15.7321154Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7321542Z [36;1mecho "Memory Usage AFTER:"[0m
-2025-04-18T04:51:15.7321874Z [36;1mcat mem_after.log[0m
-2025-04-18T04:51:15.7322223Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7322627Z [36;1mecho "Resource Usage BEFORE (vmstat):"[0m
-2025-04-18T04:51:15.7323004Z [36;1mcat resource_usage_before.log[0m
-2025-04-18T04:51:15.7323393Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7323924Z [36;1mecho "Resource Usage AFTER (vmstat):"[0m
-2025-04-18T04:51:15.7324295Z [36;1mcat resource_usage_after.log[0m
-2025-04-18T04:51:15.7324671Z [36;1mecho "-------------------------------------------------"[0m
 2025-04-18T04:51:15.7371157Z shell: /usr/bin/bash -e {0}
 2025-04-18T04:51:15.7371465Z env:
 2025-04-18T04:51:15.7371723Z   REMOTE_HOST: 18.61.80.123
