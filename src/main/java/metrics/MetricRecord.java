@@ -4,6 +4,8 @@ public class MetricRecord {
     private String toolName;
     private boolean isRollback;
     private double totalPipelineTime;
+    private double deploymentTime;     // ← new
+    private double leadTime;           // ← new
     private double rollbackTime;
     private double memoryBeforeUsed;
     private double memoryAfterUsed;
@@ -13,15 +15,24 @@ public class MetricRecord {
         this.isRollback = toolName.contains("-rollback");
     }
 
-    // Getters/Setters
-    public String getToolName() { return toolName; }
-    public boolean isRollback() { return isRollback; }
-    public double getTotalPipelineTime() { return totalPipelineTime; }
+    // existing getters...
+    public String getToolName()            { return toolName; }
+    public boolean isRollback()           { return isRollback; }
+    public double getTotalPipelineTime()  { return totalPipelineTime; }
+    public double getRollbackTime()       { return rollbackTime; }
+    public double getMemoryBeforeUsed()   { return memoryBeforeUsed; }
+    public double getMemoryAfterUsed()    { return memoryAfterUsed; }
+
+    // existing setters...
     public void setTotalPipelineTime(double t) { this.totalPipelineTime = t; }
-    public double getRollbackTime() { return rollbackTime; }
-    public void setRollbackTime(double t) { this.rollbackTime = t; }
-    public double getMemoryBeforeUsed() { return memoryBeforeUsed; }
-    public void setMemoryBeforeUsed(double m) { this.memoryBeforeUsed = m; }
-    public double getMemoryAfterUsed() { return memoryAfterUsed; }
-    public void setMemoryAfterUsed(double m) { this.memoryAfterUsed = m; }
+    public void setRollbackTime(double t)      { this.rollbackTime = t; }
+    public void setMemoryBeforeUsed(double m)  { this.memoryBeforeUsed = m; }
+    public void setMemoryAfterUsed(double m)   { this.memoryAfterUsed = m; }
+
+    // ← new getters & setters:
+    public double getDeploymentTime()     { return deploymentTime; }
+    public void   setDeploymentTime(double d) { this.deploymentTime = d; }
+
+    public double getLeadTime()           { return leadTime; }
+    public void   setLeadTime(double l)      { this.leadTime = l; }
 }

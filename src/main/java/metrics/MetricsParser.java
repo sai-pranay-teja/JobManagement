@@ -1,39 +1,43 @@
 package metrics;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.regex.*;
 
 public class MetricsParser {
-    // Matches any “| Metric Name (sec) | 123 |” row
     private static final Pattern KV_SEC = Pattern.compile(
         "\\|\\s*([^|\\(]+?)\\s*(?:\\(sec\\))?\\s*\\|\\s*(\\d+\\.?\\d*)\\s*\\|",
         Pattern.CASE_INSENSITIVE
     );
-    // Matches “Rollback completed in 8 seconds.”
     private static final Pattern JENKINS_ROLLBACK_SENTENCE =
         Pattern.compile("Rollback completed in\\s+(\\d+)\\s+seconds\\.", Pattern.CASE_INSENSITIVE);
-
-    // MEM_USED stays the same
     private static final Pattern MEM_USED = Pattern.compile(
-        "Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)",
-        Pattern.DOTALL
+        "Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", Pattern.DOTALL
     );
+
+    // ← Restore this so your servlet can still call parseAllLogs(...)
+    public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
+        List<MetricRecord> records = new ArrayList<>();
+        try (DirectoryStream<Path> ds = Files.newDirectoryStream(logsDir, "*.log")) {
+            for (Path p : ds) {
+                records.add(parseLog(p));
+            }
+        }
+        return records;
+    }
 
     public static MetricRecord parseLog(Path logFile) throws IOException {
         List<String> lines = Files.readAllLines(logFile);
-        MetricRecord rec = new MetricRecord(extractToolName(logFile));
-
-        // Join all lines for regex scanning
         String all = String.join("\n", lines);
+        MetricRecord rec = new MetricRecord(extractToolName(logFile.getFileName().toString()));
 
-        // 1) First, find all “| … | number |” rows
+        // 1. Generic “| Name (sec) | 123 |” rows
         Matcher kv = KV_SEC.matcher(all);
         while (kv.find()) {
-            String key = kv.group(1).trim();
+            String key = kv.group(1).trim().toLowerCase();
             double val = Double.parseDouble(kv.group(2));
-            switch (key.toLowerCase()) {
+            switch (key) {
                 case "total pipeline time":
                     rec.setTotalPipelineTime(val);
                     break;
@@ -49,18 +53,17 @@ public class MetricsParser {
                     rec.setRollbackTime(val);
                     break;
                 default:
-                    // ignore other rows (like Test Summary)
+                    // skip
             }
         }
 
-        // 2) If Jenkins‐style sentence exists, override rollbackTime
+        // 2. Jenkins‑style sentence override
         Matcher jr = JENKINS_ROLLBACK_SENTENCE.matcher(all);
         if (jr.find()) {
-            double rb = Double.parseDouble(jr.group(1));
-            rec.setRollbackTime(rb);
+            rec.setRollbackTime(Double.parseDouble(jr.group(1)));
         }
 
-        // 3) Parse memory before/after *only* for non‐rollbacks
+        // 3. Memory before/after (only for non‑rollback runs)
         if (!rec.isRollback()) {
             List<Double> mem = new ArrayList<>();
             Matcher mm = MEM_USED.matcher(all);
@@ -76,14 +79,13 @@ public class MetricsParser {
         return rec;
     }
 
-    // unchanged helpers...
     private static double parseSize(String num, String unit) {
         double v = Double.parseDouble(num);
         return unit.equalsIgnoreCase("Gi") ? v * 1024 : v;
     }
 
-    private static String extractToolName(Path path) {
-        String fn = path.getFileName().toString().toLowerCase();
+    private static String extractToolName(String fn) {
+        fn = fn.toLowerCase();
         if (fn.contains("gha")) return fn.contains("rollback") ? "gha-rollback" : "gha";
         if (fn.contains("jenkins")) return fn.contains("rollback") ? "jenkins-rollback" : "jenkins";
         if (fn.contains("codebuild")) return fn.contains("rollback") ? "codebuild-rollback" : "codebuild";
