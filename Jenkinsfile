@@ -79,7 +79,7 @@ pipeline {
                 sh 'cp -R src/main/resources/* build/WEB-INF/classes/'
                 // sh 'cp -R src/main/webapp/* build/'
                 sh 'cp -R src/main/webapp/. build/'  // Note the dot
-                sh 'ls -l build/' > build_contents.log
+                sh 'ls -l build/ > build_contents.log'
 
                 sh 'mkdir -p build/logs'
                 sh 'cp -R src/main/webapp/logs/* build/logs/ || true'
