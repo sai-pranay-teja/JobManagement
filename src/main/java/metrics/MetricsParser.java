@@ -9,8 +9,14 @@ public class MetricsParser {
     // Regex Patterns
     private static final Pattern HEADER = Pattern.compile("CI/CD Metrics Summary");
     private static final Pattern KV = Pattern.compile("\\|\\s*(.+?)\\s*\\|\\s*(\\S+)\\s*\\|");
-    private static final Pattern MEM_BEFORE = Pattern.compile("Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)");
-    private static final Pattern VMSTAT_USED = Pattern.compile("(\\d+\\.\\d+)\\s+MB\\s+-\\s+K used memory");
+    private static final Pattern MEM_BEFORE = Pattern.compile(
+        "Memory Usage BEFORE.*?Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
+        Pattern.DOTALL
+    );
+    private static final Pattern MEM_AFTER = Pattern.compile(
+        "Memory Usage AFTER.*?Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
+        Pattern.DOTALL
+    );
     private static final Pattern TIMESTAMP = Pattern.compile("\\| (\\d+) \\|");
 
     // Pricing (USD per minute)
@@ -39,7 +45,7 @@ public class MetricsParser {
         long endTime = Long.MIN_VALUE;
         StringBuilder sb = new StringBuilder();
 
-        // Extract timestamps and metrics
+        // Extract timestamps and build log content
         for (String line : lines) {
             Matcher tsMatcher = TIMESTAMP.matcher(line);
             if (tsMatcher.find()) {
@@ -50,7 +56,7 @@ public class MetricsParser {
             sb.append(line).append("\n");
         }
 
-        // Calculate duration in minutes
+        // Calculate duration and cost
         double durationMin = (endTime - startTime) / 60000.0;
         rec.setDuration(durationMin);
         rec.setCost(calculateCost(tool, durationMin));
@@ -62,21 +68,34 @@ public class MetricsParser {
             String val = kvMatcher.group(2).trim();
             try {
                 switch (key) {
-                    case "Total Pipeline Time (sec)": rec.setTotalPipelineTime(Double.parseDouble(val)); break;
-                    case "Deployment Time (sec)": rec.setDeploymentTime(Double.parseDouble(val)); break;
-                    case "Lead Time for Changes (sec)": rec.setLeadTime(Double.parseDouble(val)); break;
+                    case "Total Pipeline Time (sec)": 
+                        rec.setTotalPipelineTime(Double.parseDouble(val)); 
+                        break;
+                    case "Deployment Time (sec)": 
+                        rec.setDeploymentTime(Double.parseDouble(val)); 
+                        break;
+                    case "Lead Time for Changes (sec)": 
+                        rec.setLeadTime(Double.parseDouble(val)); 
+                        break;
                 }
             } catch (NumberFormatException ignored) {}
         }
 
-        // Parse memory metrics
-        Matcher memMatcher = MEM_BEFORE.matcher(sb);
-        if (memMatcher.find()) {
-            rec.setMemoryUsed(parseSize(memMatcher.group(1), memMatcher.group(2)));
+        // Parse memory BEFORE and AFTER
+        Matcher memBeforeMatcher = MEM_BEFORE.matcher(sb);
+        if (memBeforeMatcher.find()) {
+            rec.setMemoryBeforeUsed(parseSize(
+                memBeforeMatcher.group(1), 
+                memBeforeMatcher.group(2)
+            ));
         }
-        Matcher vmstatMatcher = VMSTAT_USED.matcher(sb);
-        if (vmstatMatcher.find()) {
-            rec.setVmstatUsed(Double.parseDouble(vmstatMatcher.group(1)));
+
+        Matcher memAfterMatcher = MEM_AFTER.matcher(sb);
+        if (memAfterMatcher.find()) {
+            rec.setMemoryAfterUsed(parseSize(
+                memAfterMatcher.group(1), 
+                memAfterMatcher.group(2)
+            ));
         }
 
         return rec;

@@ -79,7 +79,7 @@
     <tr>
       <td><%= r.getToolName() %></td>
       <td><%= r.getTotalPipelineTime() %></td>
-      <td><%= memDelta %></td>
+      <td><%= String.format("%.2f", memDelta) %></td>
       <td><%= String.format("%.3f", idx) %></td>
     </tr>
     <% } %>
