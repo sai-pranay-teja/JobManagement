@@ -9,6 +9,7 @@ public class MetricRecord {
     private double rollbackTime;
     private double memoryBeforeUsed;
     private double memoryAfterUsed;
+    private double cost;
 
     public MetricRecord(String toolName) {
         this.toolName = toolName;
@@ -35,4 +36,8 @@ public class MetricRecord {
 
     public double getLeadTime()           { return leadTime; }
     public void   setLeadTime(double l)      { this.leadTime = l; }
+
+
+    public double getCost()          { return cost; }
+public void   setCost(double c)  { this.cost = c; }
 }

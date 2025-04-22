@@ -16,6 +16,14 @@ public class MetricsParser {
         "Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", Pattern.DOTALL
     );
 
+
+    // Capture the new Cost row
+Pattern COST_PATTERN = Pattern.compile("\\|\\s*Cost \\(USD\\)\\s*\\|\\s*(\\d+\\.?\\d*)\\s*\\|");
+Matcher costM = COST_PATTERN.matcher(all);
+if (costM.find()) {
+    rec.setCost(Double.parseDouble(costM.group(1)));
+}
+
     // ← Restore this so your servlet can still call parseAllLogs(...)
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
         List<MetricRecord> records = new ArrayList<>();
