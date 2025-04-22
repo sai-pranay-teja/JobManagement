@@ -16,5 +16,23 @@
     <error-page>
     <exception-type>java.lang.Throwable</exception-type>
     <location>/views/error.jsp</location>
+
+
+
+    <servlet>
+      <servlet-name>MetricsDashboardServlet</servlet-name>
+      <servlet-class>metrics.MetricsDashboardServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+      <servlet-name>MetricsDashboardServlet</servlet-name>
+      <url-pattern>/metrics</url-pattern>
+    </servlet-mapping>
+
+
+
+
+
+
+    
 </error-page>
 </web-app>

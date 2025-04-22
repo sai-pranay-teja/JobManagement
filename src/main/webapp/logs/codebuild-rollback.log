@@ -1,0 +1,364 @@
+[Container] 2025/04/18 05:15:06.144149 Running on CodeBuild On-demand
+[Container] 2025/04/18 05:15:06.144171 Waiting for agent ping
+[Container] 2025/04/18 05:15:08.654312 Waiting for DOWNLOAD_SOURCE
+[Container] 2025/04/18 05:15:12.392469 Phase is DOWNLOAD_SOURCE
+[Container] 2025/04/18 05:15:13.155836 CODEBUILD_SRC_DIR=/codebuild/output/src138155848/src
+[Container] 2025/04/18 05:15:13.156615 YAML location is /codebuild/output/src138155848/src/buildspec.yml
+[Container] 2025/04/18 05:15:13.157152 No commands found for phase name: install
+[Container] 2025/04/18 05:15:13.160099 Setting HTTP client timeout to higher timeout for S3 source
+[Container] 2025/04/18 05:15:13.160213 Processing environment variables
+[Container] 2025/04/18 05:15:14.884911 Selecting 'java' runtime version 'corretto17' based on manual selections...
+[Container] 2025/04/18 05:15:14.885399 Running command echo "Installing Corretto(OpenJDK) version 17 ..."
+Installing Corretto(OpenJDK) version 17 ...
+
+[Container] 2025/04/18 05:15:14.890514 Running command export JAVA_HOME="$JAVA_17_HOME"
+
+[Container] 2025/04/18 05:15:14.893686 Running command export JRE_HOME="$JRE_17_HOME"
+
+[Container] 2025/04/18 05:15:14.896847 Running command export JDK_HOME="$JDK_17_HOME"
+
+[Container] 2025/04/18 05:15:14.900253 Running command for tool_path in "$JAVA_HOME"/bin/*;
+ do tool=`basename "$tool_path"`;
+  if [ $tool != 'java-rmi.cgi' ];
+  then
+    rm -f /usr/bin/$tool /var/lib/alternatives/$tool;
+    update-alternatives --install /usr/bin/$tool $tool $tool_path 20000;
+    update-alternatives --set $tool $tool_path;
+  fi;
+done
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jar because link group jar is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jarsigner because link group jarsigner is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/java because link group java is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/javac because link group javac is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/javadoc because link group javadoc is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/javap because link group javap is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jcmd because link group jcmd is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jconsole because link group jconsole is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jdb because link group jdb is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jdeprscan because link group jdeprscan is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jdeps because link group jdeps is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jfr because link group jfr is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jhsdb because link group jhsdb is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jimage because link group jimage is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jinfo because link group jinfo is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jlink because link group jlink is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jmap because link group jmap is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jmod because link group jmod is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jpackage because link group jpackage is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jps because link group jps is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jrunscript because link group jrunscript is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jshell because link group jshell is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jstack because link group jstack is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jstat because link group jstat is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jstatd because link group jstatd is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/keytool because link group keytool is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/rmiregistry because link group rmiregistry is broken
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/serialver because link group serialver is broken
+
+[Container] 2025/04/18 05:15:16.429172 Moving to directory /codebuild/output/src138155848/src
+[Container] 2025/04/18 05:15:16.429196 Cache is not defined in the buildspec
+[Container] 2025/04/18 05:15:17.198965 Skip cache due to: no paths specified to be cached
+[Container] 2025/04/18 05:15:17.199243 Registering with agent
+[Container] 2025/04/18 05:15:17.981327 Phases found in YAML: 4
+[Container] 2025/04/18 05:15:17.981350  POST_BUILD: 2 commands
+[Container] 2025/04/18 05:15:17.981355  INSTALL: 0 commands
+[Container] 2025/04/18 05:15:17.981358  PRE_BUILD: 8 commands
+[Container] 2025/04/18 05:15:17.981362  BUILD: 6 commands
+[Container] 2025/04/18 05:15:17.981760 Phase complete: DOWNLOAD_SOURCE State: SUCCEEDED
+[Container] 2025/04/18 05:15:17.981773 Phase context status code:  Message: 
+[Container] 2025/04/18 05:15:18.785229 Entering phase INSTALL
+[Container] 2025/04/18 05:15:20.326597 Phase complete: INSTALL State: SUCCEEDED
+[Container] 2025/04/18 05:15:20.326621 Phase context status code:  Message: 
+[Container] 2025/04/18 05:15:20.373123 Entering phase PRE_BUILD
+[Container] 2025/04/18 05:15:20.374019 Running command echo "Starting build pipeline..."
+Starting build pipeline...
+
+[Container] 2025/04/18 05:15:20.379803 Running command export PIPELINE_START_TIME=$(date +%s)
+
+[Container] 2025/04/18 05:15:20.385890 Running command echo $PIPELINE_START_TIME > pipeline_start_time.txt
+
+[Container] 2025/04/18 05:15:20.391413 Running command echo "Fetched pipeline start time - $PIPELINE_START_TIME"
+Fetched pipeline start time - 1744953320
+
+[Container] 2025/04/18 05:15:20.396896 Running command echo "Fetching SSH Key..."
+Fetching SSH Key...
+
+[Container] 2025/04/18 05:15:20.402309 Running command aws secretsmanager get-secret-value --secret-id MyServerSSHKey_3 --query SecretString --output text > key.pem
+
+[Container] 2025/04/18 05:15:31.510390 Running command sed -i 's/\\n/\n/g' key.pem
+
+[Container] 2025/04/18 05:15:31.519296 Running command chmod 400 key.pem
+
+[Container] 2025/04/18 05:15:31.526410 Phase complete: PRE_BUILD State: SUCCEEDED
+[Container] 2025/04/18 05:15:31.526421 Phase context status code:  Message: 
+[Container] 2025/04/18 05:15:31.580701 Entering phase BUILD
+[Container] 2025/04/18 05:15:31.581982 Running command echo "Building application..."
+Building application...
+
+[Container] 2025/04/18 05:15:31.587294 Running command mkdir -p build/WEB-INF/classes
+
+[Container] 2025/04/18 05:15:31.593495 Running command javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
+Build failed!
+
+[Container] 2025/04/18 05:15:35.873545 Command did not exit successfully javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; } exit status 1
+[Container] 2025/04/18 05:15:35.878097 Phase complete: BUILD State: FAILED
+[Container] 2025/04/18 05:15:35.878187 Phase context status code: COMMAND_EXECUTION_ERROR Message: Error while executing command: javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }. Reason: exit status 1
+[Container] 2025/04/18 05:15:35.928059 Entering phase POST_BUILD
+[Container] 2025/04/18 05:15:35.929294 Running command export PIPELINE_START_TIME=$(cat pipeline_start_time.txt)
+
+[Container] 2025/04/18 05:15:35.935579 Running command if [ -f JobManagement_CODEBUILD.war ]; then
+  echo "Build succeeded! Creating backup and recording deployment metrics..."
+  # Record the deployment start time.
+  export DEPLOY_START_TIME=$(date +%s)
+  # Calculate Lead Time for Changes using the latest commit time (fallback to DEPLOY_START_TIME if not available)
+  export COMMIT_TIME=$(git log -1 --format=%ct 2>/dev/null || echo $DEPLOY_START_TIME)
+  export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
+  echo "Lead Time for Changes: $LEAD_TIME seconds"
+  
+  # Backup the WAR file.
+  scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@18.61.80.123:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+  
+  # (Simulated) Deployment delay—replace this with your actual deployment commands.
+  sleep 5
+  
+  # Record the deployment end time and calculate the deployment duration.
+  export DEPLOY_END_TIME=$(date +%s)
+  export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
+  echo "Deployment Duration: $DEPLOY_DURATION seconds"
+  
+  # Record the pipeline end time and calculate the overall pipeline duration.
+  export PIPELINE_END_TIME=$(date +%s)
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+  
+  # Prepare a metrics summary.
+  echo "-------------------------------------------------" > metrics_summary.log
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  echo "Metrics Summary:" 
+  cat metrics_summary.log
+else  
+  echo -e "\nBuild failed - compilation errors:"
+  cat compile_error.log
+  echo "Initiating rollback and recording rollback metrics..."
+  
+  # Record the rollback start time.
+  export ROLLBACK_START_TIME=$(date +%s)
+  ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.61.80.123 "
+    /opt/tomcat10/bin/catalina.sh stop || true
+    cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+    /opt/tomcat10/bin/catalina.sh start" 
+  # Allow time for the rollback to complete.
+  sleep 5
+  export ROLLBACK_END_TIME=$(date +%s)
+  export ROLLBACK_DURATION=$(expr $ROLLBACK_END_TIME - $ROLLBACK_START_TIME)
+  echo "Rollback Duration: $ROLLBACK_DURATION seconds"
+  
+  # Record the pipeline end time and calculate the total pipeline time.
+  export PIPELINE_END_TIME=$(date +%s)
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+  
+  # Prepare a metrics summary that includes the rollback time.
+  echo "-------------------------------------------------" > metrics_summary.log
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "N/A" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "N/A" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_DURATION" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  echo "Metrics Summary:"
+  cat metrics_summary.log
+  
+  exit 1
+fi
+
+-e 
+Build failed - compilation errors:
+src/main/java/model/Application.java:4: error: ';' expected
+    private int applicationId
+                             ^
+1 error
+Initiating rollback and recording rollback metrics...
+Warning: Permanently added '18.61.80.123' (ED25519) to the list of known hosts.
+cp: cannot stat '/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak': No such file or directory
+Tomcat started.
+Rollback Duration: 7 seconds
+Metrics Summary:
+-------------------------------------------------
+              CI/CD Metrics Summary              
+-------------------------------------------------
+| Lead Time for Changes (sec)         | N/A             |
+| Deployment Duration (sec)           | N/A             |
+| Rollback Time (sec)                 | 7               |
+| Total Pipeline Time (sec)           | 22              |
+-------------------------------------------------
+
+[Container] 2025/04/18 05:15:42.846034 Command did not exit successfully if [ -f JobManagement_CODEBUILD.war ]; then
+  echo "Build succeeded! Creating backup and recording deployment metrics..."
+  # Record the deployment start time.
+  export DEPLOY_START_TIME=$(date +%s)
+  # Calculate Lead Time for Changes using the latest commit time (fallback to DEPLOY_START_TIME if not available)
+  export COMMIT_TIME=$(git log -1 --format=%ct 2>/dev/null || echo $DEPLOY_START_TIME)
+  export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
+  echo "Lead Time for Changes: $LEAD_TIME seconds"
+  
+  # Backup the WAR file.
+  scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@18.61.80.123:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+  
+  # (Simulated) Deployment delay—replace this with your actual deployment commands.
+  sleep 5
+  
+  # Record the deployment end time and calculate the deployment duration.
+  export DEPLOY_END_TIME=$(date +%s)
+  export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
+  echo "Deployment Duration: $DEPLOY_DURATION seconds"
+  
+  # Record the pipeline end time and calculate the overall pipeline duration.
+  export PIPELINE_END_TIME=$(date +%s)
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+  
+  # Prepare a metrics summary.
+  echo "-------------------------------------------------" > metrics_summary.log
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  echo "Metrics Summary:" 
+  cat metrics_summary.log
+else  
+  echo -e "\nBuild failed - compilation errors:"
+  cat compile_error.log
+  echo "Initiating rollback and recording rollback metrics..."
+  
+  # Record the rollback start time.
+  export ROLLBACK_START_TIME=$(date +%s)
+  ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.61.80.123 "
+    /opt/tomcat10/bin/catalina.sh stop || true
+    cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+    /opt/tomcat10/bin/catalina.sh start" 
+  # Allow time for the rollback to complete.
+  sleep 5
+  export ROLLBACK_END_TIME=$(date +%s)
+  export ROLLBACK_DURATION=$(expr $ROLLBACK_END_TIME - $ROLLBACK_START_TIME)
+  echo "Rollback Duration: $ROLLBACK_DURATION seconds"
+  
+  # Record the pipeline end time and calculate the total pipeline time.
+  export PIPELINE_END_TIME=$(date +%s)
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+  
+  # Prepare a metrics summary that includes the rollback time.
+  echo "-------------------------------------------------" > metrics_summary.log
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "N/A" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "N/A" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_DURATION" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  echo "Metrics Summary:"
+  cat metrics_summary.log
+  
+  exit 1
+fi
+ exit status 1
+[Container] 2025/04/18 05:15:42.850381 Phase complete: POST_BUILD State: FAILED
+[Container] 2025/04/18 05:15:42.850396 Phase context status code: COMMAND_EXECUTION_ERROR Message: Error while executing command: if [ -f JobManagement_CODEBUILD.war ]; then
+  echo "Build succeeded! Creating backup and recording deployment metrics..."
+  # Record the deployment start time.
+  export DEPLOY_START_TIME=$(date +%s)
+  # Calculate Lead Time for Changes using the latest commit time (fallback to DEPLOY_START_TIME if not available)
+  export COMMIT_TIME=$(git log -1 --format=%ct 2>/dev/null || echo $DEPLOY_START_TIME)
+  export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
+  echo "Lead Time for Changes: $LEAD_TIME seconds"
+  
+  # Backup the WAR file.
+  scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@18.61.80.123:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+  
+  # (Simulated) Deployment delay—replace this with your actual deployment commands.
+  sleep 5
+  
+  # Record the deployment end time and calculate the deployment duration.
+  export DEPLOY_END_TIME=$(date +%s)
+  export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
+  echo "Deployment Duration: $DEPLOY_DURATION seconds"
+  
+  # Record the pipeline end time and calculate the overall pipeline duration.
+  export PIPELINE_END_TIME=$(date +%s)
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+  
+  # Prepare a metrics summary.
+  echo "-------------------------------------------------" > metrics_summary.log
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  echo "Metrics Summary:" 
+  cat metrics_summary.log
+else  
+  echo -e "\nBuild failed - compilation errors:"
+  cat compile_error.log
+  echo "Initiating rollback and recording rollback metrics..."
+  
+  # Record the rollback start time.
+  export ROLLBACK_START_TIME=$(date +%s)
+  ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.61.80.123 "
+    /opt/tomcat10/bin/catalina.sh stop || true
+    cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+    /opt/tomcat10/bin/catalina.sh start" 
+  # Allow time for the rollback to complete.
+  sleep 5
+  export ROLLBACK_END_TIME=$(date +%s)
+  export ROLLBACK_DURATION=$(expr $ROLLBACK_END_TIME - $ROLLBACK_START_TIME)
+  echo "Rollback Duration: $ROLLBACK_DURATION seconds"
+  
+  # Record the pipeline end time and calculate the total pipeline time.
+  export PIPELINE_END_TIME=$(date +%s)
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+  
+  # Prepare a metrics summary that includes the rollback time.
+  echo "-------------------------------------------------" > metrics_summary.log
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "N/A" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "N/A" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_DURATION" >> metrics_summary.log
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+  echo "-------------------------------------------------" >> metrics_summary.log
+  echo "Metrics Summary:"
+  cat metrics_summary.log
+  
+  exit 1
+fi
+. Reason: exit status 1
+[Container] 2025/04/18 05:15:44.168810 Expanding base directory path: .
+[Container] 2025/04/18 05:15:44.170660 Assembling file list
+[Container] 2025/04/18 05:15:44.170673 Expanding .
+[Container] 2025/04/18 05:15:44.172340 Expanding file paths for base directory .
+[Container] 2025/04/18 05:15:44.172354 Assembling file list
+[Container] 2025/04/18 05:15:44.172358 Expanding JobManagement_CODEBUILD.war
+[Container] 2025/04/18 05:15:44.173890 Skipping invalid file path JobManagement_CODEBUILD.war
+[Container] 2025/04/18 05:15:44.173900 Expanding compile_error.log
+[Container] 2025/04/18 05:15:44.175457 Expanding metrics_summary.log
+[Container] 2025/04/18 05:15:44.176990 Found 2 file(s)
+[Container] 2025/04/18 05:15:44.180362 Set report auto-discover timeout to 5 seconds
+[Container] 2025/04/18 05:15:44.180417 Expanding base directory path:  .
+[Container] 2025/04/18 05:15:44.181932 Assembling file list
+[Container] 2025/04/18 05:15:44.181942 Expanding .
+[Container] 2025/04/18 05:15:44.183531 Expanding file paths for base directory .
+[Container] 2025/04/18 05:15:44.183544 Assembling file list
+[Container] 2025/04/18 05:15:44.183548 Expanding **/*
+[Container] 2025/04/18 05:15:44.185364 Found 1 file(s)
+[Container] 2025/04/18 05:15:44.185418 Report auto-discover file discovery took 0.005056 seconds
+[Container] 2025/04/18 05:15:44.186064 Phase complete: UPLOAD_ARTIFACTS State: SUCCEEDED
+[Container] 2025/04/18 05:15:44.186075 Phase context status code:  Message: 
