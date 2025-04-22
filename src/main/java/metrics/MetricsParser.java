@@ -6,77 +6,77 @@ import java.util.*;
 import java.util.regex.*;
 
 public class MetricsParser {
-    private static final Pattern TIME_PATTERN = Pattern.compile(
-        "\\|\\s*(Total Pipeline Time|Rollback Deployment Time|Rollback completed in)\\s*\\|\\s*(\\d+\\.?\\d*)", 
+    // Matches any “| Metric Name (sec) | 123 |” row
+    private static final Pattern KV_SEC = Pattern.compile(
+        "\\|\\s*([^|\\(]+?)\\s*(?:\\(sec\\))?\\s*\\|\\s*(\\d+\\.?\\d*)\\s*\\|",
         Pattern.CASE_INSENSITIVE
     );
-    
+    // Matches “Rollback completed in 8 seconds.”
+    private static final Pattern JENKINS_ROLLBACK_SENTENCE =
+        Pattern.compile("Rollback completed in\\s+(\\d+)\\s+seconds\\.", Pattern.CASE_INSENSITIVE);
+
+    // MEM_USED stays the same
     private static final Pattern MEM_USED = Pattern.compile(
-        "Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
+        "Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)",
         Pattern.DOTALL
     );
-
-    public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
-        List<MetricRecord> records = new ArrayList<>();
-        try (DirectoryStream<Path> ds = Files.newDirectoryStream(logsDir, "*.log")) {
-            for (Path p : ds) records.add(parseLog(p));
-        }
-        return records;
-    }
 
     public static MetricRecord parseLog(Path logFile) throws IOException {
         List<String> lines = Files.readAllLines(logFile);
         MetricRecord rec = new MetricRecord(extractToolName(logFile));
-        StringBuilder sb = new StringBuilder();
 
-        // Parse timestamps
-        long start = Long.MAX_VALUE, end = Long.MIN_VALUE;
-        for (String line : lines) {
-            Matcher m = Pattern.compile("\\| (\\d+) \\|").matcher(line);
-            if (m.find()) {
-                long ts = Long.parseLong(m.group(1));
-                start = Math.min(start, ts);
-                end = Math.max(end, ts);
-            }
-            sb.append(line).append("\n");
-        }
+        // Join all lines for regex scanning
+        String all = String.join("\n", lines);
 
-        // Parse time metrics
-        Matcher timeMatcher = TIME_PATTERN.matcher(sb);
-        while (timeMatcher.find()) {
-            String key = timeMatcher.group(1).replaceAll("[^a-zA-Z]", "").toLowerCase();
-            String val = timeMatcher.group(2).trim();
-            
-            try {
-                if (key.contains("totalpipeline")) {
-                    rec.setTotalPipelineTime(Double.parseDouble(val));
-                } 
-                else if (key.contains("rollback")) {
-                    rec.setRollbackTime(Double.parseDouble(val));
-                }
-            } catch (NumberFormatException e) {
-                System.err.printf("Failed to parse time in %s: %s=%s%n", 
-                    logFile.getFileName(), key, val);
+        // 1) First, find all “| … | number |” rows
+        Matcher kv = KV_SEC.matcher(all);
+        while (kv.find()) {
+            String key = kv.group(1).trim();
+            double val = Double.parseDouble(kv.group(2));
+            switch (key.toLowerCase()) {
+                case "total pipeline time":
+                    rec.setTotalPipelineTime(val);
+                    break;
+                case "deployment time":
+                case "deployment duration":
+                    rec.setDeploymentTime(val);
+                    break;
+                case "lead time for changes":
+                    rec.setLeadTime(val);
+                    break;
+                case "rollback time":
+                case "rollback deployment time":
+                    rec.setRollbackTime(val);
+                    break;
+                default:
+                    // ignore other rows (like Test Summary)
             }
         }
 
-        // Parse memory metrics for non-rollbacks
+        // 2) If Jenkins‐style sentence exists, override rollbackTime
+        Matcher jr = JENKINS_ROLLBACK_SENTENCE.matcher(all);
+        if (jr.find()) {
+            double rb = Double.parseDouble(jr.group(1));
+            rec.setRollbackTime(rb);
+        }
+
+        // 3) Parse memory before/after *only* for non‐rollbacks
         if (!rec.isRollback()) {
-            List<Double> memValues = new ArrayList<>();
-            Matcher memMatcher = MEM_USED.matcher(sb);
-            while (memMatcher.find()) {
-                double value = parseSize(memMatcher.group(1), memMatcher.group(2));
-                memValues.add(value);
+            List<Double> mem = new ArrayList<>();
+            Matcher mm = MEM_USED.matcher(all);
+            while (mm.find()) {
+                mem.add(parseSize(mm.group(1), mm.group(2)));
             }
-            if (memValues.size() >= 2) {
-                rec.setMemoryBeforeUsed(memValues.get(0));
-                rec.setMemoryAfterUsed(memValues.get(1));
+            if (mem.size() >= 2) {
+                rec.setMemoryBeforeUsed(mem.get(0));
+                rec.setMemoryAfterUsed(mem.get(1));
             }
         }
 
         return rec;
     }
 
+    // unchanged helpers...
     private static double parseSize(String num, String unit) {
         double v = Double.parseDouble(num);
         return unit.equalsIgnoreCase("Gi") ? v * 1024 : v;
