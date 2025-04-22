@@ -11,11 +11,11 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
 using GIT_ASKPASS to set credentials 
  > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 7c32d0a85c08ec4cfa3aa5308c56cc497ef2ce7f (refs/remotes/origin/main)
+Checking out Revision b14cc91695b902fb08ca55a85543062560e0b1e6 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 7c32d0a85c08ec4cfa3aa5308c56cc497ef2ce7f # timeout=10
-Commit message: "now go bakfile"
- > git rev-list --no-walk 811908646a0f02066c8b360cf879ac869d384498 # timeout=10
+ > git checkout -f b14cc91695b902fb08ca55a85543062560e0b1e6 # timeout=10
+Commit message: "dcsvsz"
+ > git rev-list --no-walk 341e3c48fe120dfcfe28cae39fbd43593fee9231 # timeout=10
 [Pipeline] Start of Pipeline
 [Pipeline] node
 Running on Jenkins in /var/lib/jenkins/workspace/my-research-pipeline
@@ -34,10 +34,10 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
 using GIT_ASKPASS to set credentials 
  > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 7c32d0a85c08ec4cfa3aa5308c56cc497ef2ce7f (refs/remotes/origin/main)
+Checking out Revision b14cc91695b902fb08ca55a85543062560e0b1e6 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 7c32d0a85c08ec4cfa3aa5308c56cc497ef2ce7f # timeout=10
-Commit message: "now go bakfile"
+ > git checkout -f b14cc91695b902fb08ca55a85543062560e0b1e6 # timeout=10
+Commit message: "dcsvsz"
 [Pipeline] }
 [Pipeline] // stage
 [Pipeline] withEnv
@@ -58,7 +58,7 @@ Commit message: "now go bakfile"
 [Pipeline] sh
 + date +%s
 [Pipeline] echo
-Pipeline start time recorded: 1744950668
+Pipeline start time recorded: 1745359976
 [Pipeline] }
 [Pipeline] // script
 [Pipeline] }
@@ -79,12 +79,12 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
  > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
 Avoid second fetch
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 7c32d0a85c08ec4cfa3aa5308c56cc497ef2ce7f (refs/remotes/origin/main)
+Checking out Revision b14cc91695b902fb08ca55a85543062560e0b1e6 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 7c32d0a85c08ec4cfa3aa5308c56cc497ef2ce7f # timeout=10
+ > git checkout -f b14cc91695b902fb08ca55a85543062560e0b1e6 # timeout=10
  > git branch -a -v --no-abbrev # timeout=10
- > git checkout -b main 7c32d0a85c08ec4cfa3aa5308c56cc497ef2ce7f # timeout=10
-Commit message: "now go bakfile"
+ > git checkout -b main b14cc91695b902fb08ca55a85543062560e0b1e6 # timeout=10
+Commit message: "dcsvsz"
 [Pipeline] }
 [Pipeline] // stage
 [Pipeline] stage
@@ -93,7 +93,7 @@ Commit message: "now go bakfile"
 + mkdir -p build/WEB-INF/classes
 [Pipeline] sh
 + find src -name *.java
-+ javac -cp /var/lib/jenkins/workspace/my-research-pipeline/src/main/webapp/WEB-INF/lib/* -d build/WEB-INF/classes src/main/test/TestApp.java src/main/java/model/ApplicationController.java src/main/java/model/UserDAO.java src/main/java/model/Job.java src/main/java/model/DownloadResumeController.java src/main/java/model/UserController.java src/main/java/model/ApplicationDAO.java src/main/java/model/ViewJobsController.java src/main/java/model/DeleteJobController.java src/main/java/model/UpdateApplicationStatusController.java src/main/java/model/CancelApplicationController.java src/main/java/model/EmployerDashboardController.java src/main/java/model/Application.java src/main/java/model/JobDAO.java src/main/java/model/ViewApplicationsController.java src/main/java/model/User.java src/main/java/model/JobController.java src/main/java/model/LogoutServlet.java src/main/java/model/DatabaseUtil.java src/main/java/model/LoginController.java
++ javac -cp /var/lib/jenkins/workspace/my-research-pipeline/src/main/webapp/WEB-INF/lib/* -d build/WEB-INF/classes src/main/test/TestApp.java src/main/test/TestAppPart2.java src/main/test/TestAppPart1.java src/main/java/model/ApplicationController.java src/main/java/model/UserDAO.java src/main/java/model/Job.java src/main/java/model/DownloadResumeController.java src/main/java/model/UserController.java src/main/java/model/ApplicationDAO.java src/main/java/model/ViewJobsController.java src/main/java/model/DeleteJobController.java src/main/java/model/UpdateApplicationStatusController.java src/main/java/model/CancelApplicationController.java src/main/java/model/EmployerDashboardController.java src/main/java/model/Application.java src/main/java/model/JobDAO.java src/main/java/model/ViewApplicationsController.java src/main/java/model/User.java src/main/java/model/JobController.java src/main/java/model/LogoutServlet.java src/main/java/model/DatabaseUtil.java src/main/java/model/LoginController.java src/main/java/metrics/MetricRecord.java src/main/java/metrics/MetricsParser.java src/main/java/metrics/EfficiencyIndexCalculator.java src/main/java/metrics/MetricsDashboardServlet.java
 [Pipeline] }
 [Pipeline] // stage
 [Pipeline] stage
@@ -158,6 +158,8 @@ Stage "Measure Resource Usage After Deployment" skipped due to earlier failure(s
 [Pipeline] echo
 | Lead Time for Changes (sec)         | 0               |
 [Pipeline] echo
+| Cost (USD)                          | 0.0001          |
+[Pipeline] echo
 | Test Summary                        | N/A             |
 [Pipeline] echo
 -------------------------------------------------
@@ -207,21 +209,21 @@ Deployment failed! Performing rollback...
 + date +%s
 [Pipeline] fileExists
 [Pipeline] sh
-+ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.61.80.123 rm -rf /tmp/jenkins_bak/JobManagement_JENKINS.war
-+ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.61.80.123 cp /tmp/jenkins_bak/JobManagement_JENKINS.war_bak /opt/tomcat10/webapps/JobManagement_JENKINS.war
-+ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.61.80.123
++ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.60.83.220 rm -rf /tmp/jenkins_bak/JobManagement_JENKINS.war
++ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.60.83.220 cp /tmp/jenkins_bak/JobManagement_JENKINS.war_bak /opt/tomcat10/webapps/JobManagement_JENKINS.war
++ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.60.83.220
 Pseudo-terminal will not be allocated because stdin is not a terminal.
-Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1026-aws x86_64)
+Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1027-aws x86_64)
 
  * Documentation:  https://help.ubuntu.com
  * Management:     https://landscape.canonical.com
  * Support:        https://ubuntu.com/pro
 
- System information as of Fri Apr 18 04:31:15 UTC 2025
+ System information as of Tue Apr 22 22:12:50 UTC 2025
 
-  System load:  0.74              Temperature:           -273.1 C
-  Usage of /:   69.6% of 6.71GB   Processes:             129
-  Memory usage: 30%               Users logged in:       1
+  System load:  1.3               Temperature:           -273.1 C
+  Usage of /:   67.8% of 6.71GB   Processes:             117
+  Memory usage: 24%               Users logged in:       1
   Swap usage:   0%                IPv4 address for ens5: 172.31.20.166
 
  * Ubuntu Pro delivers the most comprehensive open source security and
@@ -231,17 +233,33 @@ Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1026-aws x86_64)
 
 Expanded Security Maintenance for Applications is not enabled.
 
-29 updates can be applied immediately.
+1 update can be applied immediately.
 To see these additional updates run: apt list --upgradable
 
 Enable ESM Apps to receive additional future security updates.
 See https://ubuntu.com/esm or run: sudo pro status
 
 
-The list of available updates is more than a week old.
-To check for new updates run: sudo apt update
+Apr 22, 2025 10:13:09 PM org.apache.catalina.startup.Catalina stopServer
+SEVERE: Could not contact [localhost:8005] (base port [8005] and offset [0]). Tomcat may not be running.
+Apr 22, 2025 10:13:09 PM org.apache.catalina.startup.Catalina stopServer
+SEVERE: Error stopping Catalina
+java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.connect0(Native Method)
+	at java.base/sun.nio.ch.Net.connect(Net.java:589)
+	at java.base/sun.nio.ch.Net.connect(Net.java:578)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:583)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:751)
+	at java.base/java.net.Socket.connect(Socket.java:686)
+	at java.base/java.net.Socket.<init>(Socket.java:555)
+	at java.base/java.net.Socket.<init>(Socket.java:324)
+	at org.apache.catalina.startup.Catalina.stopServer(Catalina.java:657)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.catalina.startup.Bootstrap.stopServer(Bootstrap.java:393)
+	at org.apache.catalina.startup.Bootstrap.main(Bootstrap.java:478)
 
--bash: line 3: /opt/tomcat10/bin/shutdown.sh: No such file or directory
 Tomcat started.
 [Pipeline] sh
 + date +%s

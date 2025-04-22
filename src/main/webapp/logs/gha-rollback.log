@@ -1,496 +1,544 @@
-﻿2025-04-18T04:50:49.9823113Z Current runner version: '2.323.0'
-2025-04-18T04:50:49.9848777Z ##[group]Operating System
-2025-04-18T04:50:49.9849873Z Ubuntu
-2025-04-18T04:50:49.9850765Z 24.04.2
-2025-04-18T04:50:49.9851612Z LTS
-2025-04-18T04:50:49.9852351Z ##[endgroup]
-2025-04-18T04:50:49.9853241Z ##[group]Runner Image
-2025-04-18T04:50:49.9854280Z Image: ubuntu-24.04
-2025-04-18T04:50:49.9855166Z Version: 20250413.1.0
-2025-04-18T04:50:49.9856614Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250413.1/images/ubuntu/Ubuntu2404-Readme.md
-2025-04-18T04:50:49.9858448Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250413.1
-2025-04-18T04:50:49.9859743Z ##[endgroup]
-2025-04-18T04:50:49.9860533Z ##[group]Runner Image Provisioner
-2025-04-18T04:50:49.9861480Z 2.0.422.1
-2025-04-18T04:50:49.9862276Z ##[endgroup]
-2025-04-18T04:50:49.9864073Z ##[group]GITHUB_TOKEN Permissions
-2025-04-18T04:50:49.9866555Z Contents: read
-2025-04-18T04:50:49.9867461Z Metadata: read
-2025-04-18T04:50:49.9868380Z Packages: read
-2025-04-18T04:50:49.9869376Z ##[endgroup]
-2025-04-18T04:50:49.9872067Z Secret source: Actions
-2025-04-18T04:50:49.9873057Z Prepare workflow directory
-2025-04-18T04:50:50.0350333Z Prepare all required actions
-2025-04-18T04:50:50.0401391Z Getting action download info
-2025-04-18T04:50:50.4346344Z ##[group]Download immutable action package 'actions/checkout@v3'
-2025-04-18T04:50:50.4347829Z Version: 3.6.0
-2025-04-18T04:50:50.4349231Z Digest: sha256:942562b9c7d4b1f2557f1da21f4d3eb4eb4fd01f2ad78b2a6e187d1b193e0a0f
-2025-04-18T04:50:50.4350885Z Source commit SHA: f43a0e5ff2bd294095638e18286ca9a3d1956744
-2025-04-18T04:50:50.4351955Z ##[endgroup]
-2025-04-18T04:50:50.5278183Z ##[group]Download immutable action package 'actions/setup-java@v3'
-2025-04-18T04:50:50.5279199Z Version: 3.14.1
-2025-04-18T04:50:50.5280113Z Digest: sha256:0f5994bd85f236d7525048fec5b0b7b3ec7474ec50184c8f78a320717cfb3d51
-2025-04-18T04:50:50.5281286Z Source commit SHA: 17f84c3641ba7b8f6deff6309fc4c864478f5d62
-2025-04-18T04:50:50.5282226Z ##[endgroup]
-2025-04-18T04:50:50.8322436Z Complete job name: build-and-deploy
-2025-04-18T04:50:50.9072898Z ##[group]Run actions/checkout@v3
-2025-04-18T04:50:50.9074372Z with:
-2025-04-18T04:50:50.9075107Z   repository: sai-pranay-teja/JobManagement
-2025-04-18T04:50:50.9076139Z   token: ***
-2025-04-18T04:50:50.9076794Z   ssh-strict: true
-2025-04-18T04:50:50.9077490Z   persist-credentials: true
-2025-04-18T04:50:50.9078222Z   clean: true
-2025-04-18T04:50:50.9078891Z   sparse-checkout-cone-mode: true
-2025-04-18T04:50:50.9079665Z   fetch-depth: 1
-2025-04-18T04:50:50.9080329Z   fetch-tags: false
-2025-04-18T04:50:50.9080988Z   lfs: false
-2025-04-18T04:50:50.9081638Z   submodules: false
-2025-04-18T04:50:50.9082322Z   set-safe-directory: true
-2025-04-18T04:50:50.9083281Z env:
-2025-04-18T04:50:50.9084125Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:50.9084852Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:50.9085558Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:50.9086335Z ##[endgroup]
-2025-04-18T04:50:51.0489154Z Syncing repository: sai-pranay-teja/JobManagement
-2025-04-18T04:50:51.0491292Z ##[group]Getting Git version info
-2025-04-18T04:50:51.0492275Z Working directory is '/home/runner/work/JobManagement/JobManagement'
-2025-04-18T04:50:51.0494130Z [command]/usr/bin/git version
-2025-04-18T04:50:51.0524440Z git version 2.49.0
-2025-04-18T04:50:51.0551916Z ##[endgroup]
-2025-04-18T04:50:51.0565457Z Temporarily overriding HOME='/home/runner/work/_temp/b50a2b30-c443-420e-960f-c405dcbef272' before making global git config changes
-2025-04-18T04:50:51.0568041Z Adding repository directory to the temporary git global config as a safe directory
-2025-04-18T04:50:51.0569601Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/JobManagement/JobManagement
-2025-04-18T04:50:51.0599474Z Deleting the contents of '/home/runner/work/JobManagement/JobManagement'
-2025-04-18T04:50:51.0602896Z ##[group]Initializing the repository
-2025-04-18T04:50:51.0606181Z [command]/usr/bin/git init /home/runner/work/JobManagement/JobManagement
-2025-04-18T04:50:51.0663420Z hint: Using 'master' as the name for the initial branch. This default branch name
-2025-04-18T04:50:51.0665152Z hint: is subject to change. To configure the initial branch name to use in all
-2025-04-18T04:50:51.0666497Z hint: of your new repositories, which will suppress this warning, call:
-2025-04-18T04:50:51.0668131Z hint:
-2025-04-18T04:50:51.0669261Z hint: 	git config --global init.defaultBranch <name>
-2025-04-18T04:50:51.0670953Z hint:
-2025-04-18T04:50:51.0672598Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
-2025-04-18T04:50:51.0675264Z hint: 'development'. The just-created branch can be renamed via this command:
-2025-04-18T04:50:51.0677152Z hint:
-2025-04-18T04:50:51.0678338Z hint: 	git branch -m <name>
-2025-04-18T04:50:51.0680381Z Initialized empty Git repository in /home/runner/work/JobManagement/JobManagement/.git/
-2025-04-18T04:50:51.0684619Z [command]/usr/bin/git remote add origin https://github.com/sai-pranay-teja/JobManagement
-2025-04-18T04:50:51.0713430Z ##[endgroup]
-2025-04-18T04:50:51.0715666Z ##[group]Disabling automatic garbage collection
-2025-04-18T04:50:51.0717454Z [command]/usr/bin/git config --local gc.auto 0
-2025-04-18T04:50:51.0745124Z ##[endgroup]
-2025-04-18T04:50:51.0747171Z ##[group]Setting up auth
-2025-04-18T04:50:51.0751257Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2025-04-18T04:50:51.0779988Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2025-04-18T04:50:51.1050351Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2025-04-18T04:50:51.1078044Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2025-04-18T04:50:51.1308021Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
-2025-04-18T04:50:51.1364927Z ##[endgroup]
-2025-04-18T04:50:51.1367035Z ##[group]Fetching the repository
-2025-04-18T04:50:51.1375628Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +3261218114e49a30fe39e415b2828de456fcba65:refs/remotes/origin/main
-2025-04-18T04:50:51.3951020Z remote: Enumerating objects: 61, done.        
-2025-04-18T04:50:51.3952391Z remote: Counting objects:   1% (1/61)        
-2025-04-18T04:50:51.3953891Z remote: Counting objects:   3% (2/61)        
-2025-04-18T04:50:51.3955137Z remote: Counting objects:   4% (3/61)        
-2025-04-18T04:50:51.3956347Z remote: Counting objects:   6% (4/61)        
-2025-04-18T04:50:51.3957542Z remote: Counting objects:   8% (5/61)        
-2025-04-18T04:50:51.3958741Z remote: Counting objects:   9% (6/61)        
-2025-04-18T04:50:51.3959970Z remote: Counting objects:  11% (7/61)        
-2025-04-18T04:50:51.3961330Z remote: Counting objects:  13% (8/61)        
-2025-04-18T04:50:51.3962659Z remote: Counting objects:  14% (9/61)        
-2025-04-18T04:50:51.3965026Z remote: Counting objects:  16% (10/61)        
-2025-04-18T04:50:51.3967076Z remote: Counting objects:  18% (11/61)        
-2025-04-18T04:50:51.3968413Z remote: Counting objects:  19% (12/61)        
-2025-04-18T04:50:51.3969806Z remote: Counting objects:  21% (13/61)        
-2025-04-18T04:50:51.3971531Z remote: Counting objects:  22% (14/61)        
-2025-04-18T04:50:51.3973493Z remote: Counting objects:  24% (15/61)        
-2025-04-18T04:50:51.3975650Z remote: Counting objects:  26% (16/61)        
-2025-04-18T04:50:51.3977622Z remote: Counting objects:  27% (17/61)        
-2025-04-18T04:50:51.3979646Z remote: Counting objects:  29% (18/61)        
-2025-04-18T04:50:51.3981774Z remote: Counting objects:  31% (19/61)        
-2025-04-18T04:50:51.3984156Z remote: Counting objects:  32% (20/61)        
-2025-04-18T04:50:51.3986662Z remote: Counting objects:  34% (21/61)        
-2025-04-18T04:50:51.3988947Z remote: Counting objects:  36% (22/61)        
-2025-04-18T04:50:51.3990978Z remote: Counting objects:  37% (23/61)        
-2025-04-18T04:50:51.3992997Z remote: Counting objects:  39% (24/61)        
-2025-04-18T04:50:51.3995176Z remote: Counting objects:  40% (25/61)        
-2025-04-18T04:50:51.3997225Z remote: Counting objects:  42% (26/61)        
-2025-04-18T04:50:51.3999308Z remote: Counting objects:  44% (27/61)        
-2025-04-18T04:50:51.4001290Z remote: Counting objects:  45% (28/61)        
-2025-04-18T04:50:51.4003946Z remote: Counting objects:  47% (29/61)        
-2025-04-18T04:50:51.4006456Z remote: Counting objects:  49% (30/61)        
-2025-04-18T04:50:51.4008278Z remote: Counting objects:  50% (31/61)        
-2025-04-18T04:50:51.4010597Z remote: Counting objects:  52% (32/61)        
-2025-04-18T04:50:51.4012582Z remote: Counting objects:  54% (33/61)        
-2025-04-18T04:50:51.4014600Z remote: Counting objects:  55% (34/61)        
-2025-04-18T04:50:51.4016470Z remote: Counting objects:  57% (35/61)        
-2025-04-18T04:50:51.4018317Z remote: Counting objects:  59% (36/61)        
-2025-04-18T04:50:51.4020175Z remote: Counting objects:  60% (37/61)        
-2025-04-18T04:50:51.4022016Z remote: Counting objects:  62% (38/61)        
-2025-04-18T04:50:51.4024042Z remote: Counting objects:  63% (39/61)        
-2025-04-18T04:50:51.4025913Z remote: Counting objects:  65% (40/61)        
-2025-04-18T04:50:51.4027807Z remote: Counting objects:  67% (41/61)        
-2025-04-18T04:50:51.4029743Z remote: Counting objects:  68% (42/61)        
-2025-04-18T04:50:51.4031739Z remote: Counting objects:  70% (43/61)        
-2025-04-18T04:50:51.4033889Z remote: Counting objects:  72% (44/61)        
-2025-04-18T04:50:51.4035890Z remote: Counting objects:  73% (45/61)        
-2025-04-18T04:50:51.4037860Z remote: Counting objects:  75% (46/61)        
-2025-04-18T04:50:51.4039838Z remote: Counting objects:  77% (47/61)        
-2025-04-18T04:50:51.4041800Z remote: Counting objects:  78% (48/61)        
-2025-04-18T04:50:51.4044178Z remote: Counting objects:  80% (49/61)        
-2025-04-18T04:50:51.4046212Z remote: Counting objects:  81% (50/61)        
-2025-04-18T04:50:51.4048186Z remote: Counting objects:  83% (51/61)        
-2025-04-18T04:50:51.4050165Z remote: Counting objects:  85% (52/61)        
-2025-04-18T04:50:51.4052135Z remote: Counting objects:  86% (53/61)        
-2025-04-18T04:50:51.4054240Z remote: Counting objects:  88% (54/61)        
-2025-04-18T04:50:51.4056171Z remote: Counting objects:  90% (55/61)        
-2025-04-18T04:50:51.4058056Z remote: Counting objects:  91% (56/61)        
-2025-04-18T04:50:51.4059919Z remote: Counting objects:  93% (57/61)        
-2025-04-18T04:50:51.4061778Z remote: Counting objects:  95% (58/61)        
-2025-04-18T04:50:51.4063692Z remote: Counting objects:  96% (59/61)        
-2025-04-18T04:50:51.4065526Z remote: Counting objects:  98% (60/61)        
-2025-04-18T04:50:51.4067352Z remote: Counting objects: 100% (61/61)        
-2025-04-18T04:50:51.4069266Z remote: Counting objects: 100% (61/61), done.        
-2025-04-18T04:50:51.4071212Z remote: Compressing objects:   2% (1/49)        
-2025-04-18T04:50:51.4073088Z remote: Compressing objects:   4% (2/49)        
-2025-04-18T04:50:51.4075083Z remote: Compressing objects:   6% (3/49)        
-2025-04-18T04:50:51.4076980Z remote: Compressing objects:   8% (4/49)        
-2025-04-18T04:50:51.4078884Z remote: Compressing objects:  10% (5/49)        
-2025-04-18T04:50:51.4080778Z remote: Compressing objects:  12% (6/49)        
-2025-04-18T04:50:51.4082653Z remote: Compressing objects:  14% (7/49)        
-2025-04-18T04:50:51.4084635Z remote: Compressing objects:  16% (8/49)        
-2025-04-18T04:50:51.4086518Z remote: Compressing objects:  18% (9/49)        
-2025-04-18T04:50:51.4088416Z remote: Compressing objects:  20% (10/49)        
-2025-04-18T04:50:51.4090337Z remote: Compressing objects:  22% (11/49)        
-2025-04-18T04:50:51.4092259Z remote: Compressing objects:  24% (12/49)        
-2025-04-18T04:50:51.4094447Z remote: Compressing objects:  26% (13/49)        
-2025-04-18T04:50:51.4096389Z remote: Compressing objects:  28% (14/49)        
-2025-04-18T04:50:51.4098320Z remote: Compressing objects:  30% (15/49)        
-2025-04-18T04:50:51.4100264Z remote: Compressing objects:  32% (16/49)        
-2025-04-18T04:50:51.4102203Z remote: Compressing objects:  34% (17/49)        
-2025-04-18T04:50:51.4104978Z remote: Compressing objects:  36% (18/49)        
-2025-04-18T04:50:51.4107822Z remote: Compressing objects:  38% (19/49)        
-2025-04-18T04:50:51.4110405Z remote: Compressing objects:  40% (20/49)        
-2025-04-18T04:50:51.4112478Z remote: Compressing objects:  42% (21/49)        
-2025-04-18T04:50:51.4114609Z remote: Compressing objects:  44% (22/49)        
-2025-04-18T04:50:51.4116498Z remote: Compressing objects:  46% (23/49)        
-2025-04-18T04:50:51.4118376Z remote: Compressing objects:  48% (24/49)        
-2025-04-18T04:50:51.4120263Z remote: Compressing objects:  51% (25/49)        
-2025-04-18T04:50:51.4122362Z remote: Compressing objects:  53% (26/49)        
-2025-04-18T04:50:51.4124590Z remote: Compressing objects:  55% (27/49)        
-2025-04-18T04:50:51.4126492Z remote: Compressing objects:  57% (28/49)        
-2025-04-18T04:50:51.4128380Z remote: Compressing objects:  59% (29/49)        
-2025-04-18T04:50:51.4130284Z remote: Compressing objects:  61% (30/49)        
-2025-04-18T04:50:51.4132193Z remote: Compressing objects:  63% (31/49)        
-2025-04-18T04:50:51.4134241Z remote: Compressing objects:  65% (32/49)        
-2025-04-18T04:50:51.4136130Z remote: Compressing objects:  67% (33/49)        
-2025-04-18T04:50:51.4138016Z remote: Compressing objects:  69% (34/49)        
-2025-04-18T04:50:51.4139886Z remote: Compressing objects:  71% (35/49)        
-2025-04-18T04:50:51.4141877Z remote: Compressing objects:  73% (36/49)        
-2025-04-18T04:50:51.4143896Z remote: Compressing objects:  75% (37/49)        
-2025-04-18T04:50:51.4145771Z remote: Compressing objects:  77% (38/49)        
-2025-04-18T04:50:51.4147830Z remote: Compressing objects:  79% (39/49)        
-2025-04-18T04:50:51.4149713Z remote: Compressing objects:  81% (40/49)        
-2025-04-18T04:50:51.4151575Z remote: Compressing objects:  83% (41/49)        
-2025-04-18T04:50:51.4153433Z remote: Compressing objects:  85% (42/49)        
-2025-04-18T04:50:51.4155531Z remote: Compressing objects:  87% (43/49)        
-2025-04-18T04:50:51.4157400Z remote: Compressing objects:  89% (44/49)        
-2025-04-18T04:50:51.4159289Z remote: Compressing objects:  91% (45/49)        
-2025-04-18T04:50:51.4161341Z remote: Compressing objects:  93% (46/49)        
-2025-04-18T04:50:51.4163403Z remote: Compressing objects:  95% (47/49)        
-2025-04-18T04:50:51.4165457Z remote: Compressing objects:  97% (48/49)        
-2025-04-18T04:50:51.4167317Z remote: Compressing objects: 100% (49/49)        
-2025-04-18T04:50:51.4169432Z remote: Compressing objects: 100% (49/49), done.        
-2025-04-18T04:50:51.7576028Z remote: Total 61 (delta 12), reused 40 (delta 6), pack-reused 0 (from 0)        
-2025-04-18T04:50:51.8359012Z From https://github.com/sai-pranay-teja/JobManagement
-2025-04-18T04:50:51.8361080Z  * [new ref]         3261218114e49a30fe39e415b2828de456fcba65 -> origin/main
-2025-04-18T04:50:51.8388665Z ##[endgroup]
-2025-04-18T04:50:51.8390666Z ##[group]Determining the checkout info
-2025-04-18T04:50:51.8393041Z ##[endgroup]
-2025-04-18T04:50:51.8395087Z ##[group]Checking out the ref
-2025-04-18T04:50:51.8397022Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
-2025-04-18T04:50:51.8877213Z Switched to a new branch 'main'
-2025-04-18T04:50:51.8880114Z branch 'main' set up to track 'origin/main'.
-2025-04-18T04:50:51.8887494Z ##[endgroup]
-2025-04-18T04:50:51.8918866Z [command]/usr/bin/git log -1 --format='%H'
-2025-04-18T04:50:51.8940369Z '3261218114e49a30fe39e415b2828de456fcba65'
-2025-04-18T04:50:51.9275488Z ##[group]Run actions/setup-java@v3
-2025-04-18T04:50:51.9277061Z with:
-2025-04-18T04:50:51.9278273Z   java-version: 17
-2025-04-18T04:50:51.9279798Z   distribution: corretto
-2025-04-18T04:50:51.9281076Z   java-package: jdk
-2025-04-18T04:50:51.9282279Z   check-latest: false
-2025-04-18T04:50:51.9283499Z   server-id: github
-2025-04-18T04:50:51.9284907Z   server-username: GITHUB_ACTOR
-2025-04-18T04:50:51.9286308Z   server-password: GITHUB_TOKEN
-2025-04-18T04:50:51.9287705Z   overwrite-settings: true
-2025-04-18T04:50:51.9288998Z   job-status: success
-2025-04-18T04:50:51.9290490Z   token: ***
-2025-04-18T04:50:51.9291603Z env:
-2025-04-18T04:50:51.9292690Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:51.9294068Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:51.9295346Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:51.9296766Z ##[endgroup]
-2025-04-18T04:50:52.1188085Z ##[group]Installed distributions
-2025-04-18T04:50:52.1211736Z Trying to resolve the latest version from remote
-2025-04-18T04:50:52.1723083Z Resolved latest version as 17.0.15+6.1
-2025-04-18T04:50:52.1725076Z Trying to download...
-2025-04-18T04:50:52.1727737Z Downloading Java 17.0.15+6.1 (Corretto) from https://corretto.aws/downloads/resources/17.0.15.6.1/amazon-corretto-17.0.15.6.1-linux-x64.tar.gz ...
-2025-04-18T04:50:53.1130637Z Extracting Java archive...
-2025-04-18T04:50:53.1225318Z [command]/usr/bin/tar xz --warning=no-unknown-keyword -C /home/runner/work/_temp/c6acd212-b4cc-4d73-be9d-a7673799c65a -f /home/runner/work/_temp/68cdf35d-ba48-420d-98e9-1d15bc792f5a
-2025-04-18T04:50:55.5911781Z Java 17.0.15+6.1 was downloaded
-2025-04-18T04:50:55.5912551Z Setting Java 17.0.15+6.1 as the default
-2025-04-18T04:50:55.5922235Z Creating toolchains.xml for JDK version 17 from corretto
-2025-04-18T04:50:55.6019420Z Writing to /home/runner/.m2/toolchains.xml
-2025-04-18T04:50:55.6020037Z 
-2025-04-18T04:50:55.6020321Z Java configuration:
-2025-04-18T04:50:55.6020908Z   Distribution: corretto
-2025-04-18T04:50:55.6021515Z   Version: 17.0.15+6.1
-2025-04-18T04:50:55.6022528Z   Path: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:55.6023307Z 
-2025-04-18T04:50:55.6025445Z ##[endgroup]
-2025-04-18T04:50:55.6042594Z Creating settings.xml with server-id: github
-2025-04-18T04:50:55.6043118Z Writing to /home/runner/.m2/settings.xml
-2025-04-18T04:50:55.6185843Z ##[group]Run echo "$SSH_KEY_SECRET" > key.pem
-2025-04-18T04:50:55.6207255Z [36;1mecho "$SSH_KEY_SECRET" > key.pem[0m
-2025-04-18T04:50:55.6207755Z [36;1msed -i 's/\\n/\n/g' key.pem[0m
-2025-04-18T04:50:55.6208520Z [36;1mgrep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i***' key.pem[0m
-2025-04-18T04:50:55.6209213Z [36;1mgrep -q "END RSA PRIVATE KEY" key.pem || echo "***" >> key.pem[0m
-2025-04-18T04:50:55.6209698Z [36;1mchmod 400 key.pem[0m
-2025-04-18T04:50:55.6264285Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:50:55.6264677Z env:
-2025-04-18T04:50:55.6264996Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:55.6265349Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:55.6265706Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:55.6266204Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:55.6266826Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:55.6274427Z   SSH_KEY_SECRET: ***
-2025-04-18T04:50:55.6274837Z ##[endgroup]
-2025-04-18T04:50:55.6447756Z ##[group]Run echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
-2025-04-18T04:50:55.6448394Z [36;1mecho "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV[0m
-2025-04-18T04:50:55.6492698Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:50:55.6493069Z env:
-2025-04-18T04:50:55.6493412Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:55.6493982Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:55.6494347Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:55.6494837Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:55.6495417Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:55.6495887Z ##[endgroup]
-2025-04-18T04:50:55.6602535Z ##[group]Run mkdir -p build/WEB-INF/classes
-2025-04-18T04:50:55.6603041Z [36;1mmkdir -p build/WEB-INF/classes[0m
-2025-04-18T04:50:55.6604221Z [36;1m# Compile Java sources; redirect errors to compile_error.log and exit if compilation fails.[0m
-2025-04-18T04:50:55.6605181Z [36;1m# javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }[0m
-2025-04-18T04:50:55.6606161Z [36;1mjavac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log[0m
-2025-04-18T04:50:55.6606790Z [36;1m[0m
-2025-04-18T04:50:55.6607169Z [36;1mcp -R src/main/resources/* build/WEB-INF/classes/[0m
-2025-04-18T04:50:55.6607618Z [36;1mcp -R src/main/webapp/* build/[0m
-2025-04-18T04:50:55.6608067Z [36;1mjar -cvf JobManagement_ACTIONS.war -C build .[0m
-2025-04-18T04:50:55.6654623Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:50:55.6655004Z env:
-2025-04-18T04:50:55.6655346Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:55.6655708Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:55.6656066Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:55.6656563Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:55.6657143Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:55.6657625Z   PIPELINE_START_TIME: 1744951855
-2025-04-18T04:50:55.6658003Z ##[endgroup]
-2025-04-18T04:50:56.0875370Z ##[error]Process completed with exit code 1.
-2025-04-18T04:50:56.0938765Z ##[group]Run ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "timeout 60 bash -c 'until grep -q \"Deployment of web application archive\" <(tail -n 50 /opt/tomcat10/logs/catalina.out); do sleep 5; done'"
-2025-04-18T04:50:56.0940236Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "timeout 60 bash -c 'until grep -q \"Deployment of web application archive\" <(tail -n 50 /opt/tomcat10/logs/catalina.out); do sleep 5; done'"[0m
-2025-04-18T04:50:56.0987459Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:50:56.0987781Z env:
-2025-04-18T04:50:56.0988045Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:56.0988373Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:56.0988686Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:56.0989132Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:56.0989680Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:56.0990155Z   PIPELINE_START_TIME: 1744951855
-2025-04-18T04:50:56.0990476Z ##[endgroup]
-2025-04-18T04:50:57.1435892Z Warning: Permanently added '18.61.80.123' (ED25519) to the list of known hosts.
-2025-04-18T04:50:59.4682517Z ##[group]Run echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
-2025-04-18T04:50:59.4682994Z [36;1mecho "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV[0m
-2025-04-18T04:50:59.4724973Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:50:59.4725275Z env:
-2025-04-18T04:50:59.4725530Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:59.4725823Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:59.4726124Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:59.4726561Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:59.4727078Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:59.4727512Z   PIPELINE_START_TIME: 1744951855
-2025-04-18T04:50:59.4727825Z ##[endgroup]
-2025-04-18T04:50:59.4821717Z ##[group]Run ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log
-2025-04-18T04:50:59.4822897Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log[0m
-2025-04-18T04:50:59.4824057Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_after.log[0m
-2025-04-18T04:50:59.4861935Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:50:59.4862223Z env:
-2025-04-18T04:50:59.4862458Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:50:59.4862883Z   REMOTE_USER: ubuntu
-2025-04-18T04:50:59.4863175Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:50:59.4863840Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:59.4864364Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:50:59.4864768Z   PIPELINE_START_TIME: 1744951855
-2025-04-18T04:50:59.4865077Z   DEPLOY_END_TIME: 1744951859
-2025-04-18T04:50:59.4865352Z ##[endgroup]
-2025-04-18T04:51:04.8892440Z ##[group]Run source $GITHUB_ENV
-2025-04-18T04:51:04.8892808Z [36;1msource $GITHUB_ENV[0m
-2025-04-18T04:51:04.8893206Z [36;1mDEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))[0m
-2025-04-18T04:51:04.8893847Z [36;1mPIPELINE_END_TIME=$(date +%s)[0m
-2025-04-18T04:51:04.8894309Z [36;1mTOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))[0m
-2025-04-18T04:51:04.8894815Z [36;1mecho "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV[0m
-2025-04-18T04:51:04.8895305Z [36;1mecho "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV[0m
-2025-04-18T04:51:04.8939717Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:51:04.8940000Z env:
-2025-04-18T04:51:04.8940241Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:51:04.8940513Z   REMOTE_USER: ubuntu
-2025-04-18T04:51:04.8940792Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:51:04.8941196Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:51:04.8941708Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:51:04.8942102Z   PIPELINE_START_TIME: 1744951855
-2025-04-18T04:51:04.8942398Z   DEPLOY_END_TIME: 1744951859
-2025-04-18T04:51:04.8942671Z ##[endgroup]
-2025-04-18T04:51:04.9005621Z /home/runner/work/_temp/78758eff-abcc-4ab4-88b4-0acfe3c76f0b.sh: line 2: 1744951859 - : syntax error: operand expected (error token is "- ")
-2025-04-18T04:51:04.9042546Z ##[group]Run echo $'The error is:\n '
-2025-04-18T04:51:04.9042946Z [36;1mecho $'The error is:\n '[0m
-2025-04-18T04:51:04.9043279Z [36;1mcat compile_error.log[0m
-2025-04-18T04:51:04.9043848Z [36;1m[0m
-2025-04-18T04:51:04.9044172Z [36;1mecho "Deployment failed! Initiating rollback..."[0m
-2025-04-18T04:51:04.9044577Z [36;1mROLLBACK_START=$(date +%s)[0m
-2025-04-18T04:51:04.9044895Z [36;1m[0m
-2025-04-18T04:51:04.9045930Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "if [ -f /tmp/actions_bak/JobManagement_ACTIONS.war_bak ]; then sudo cp /tmp/actions_bak/JobManagement_ACTIONS.war_bak /opt/tomcat10/webapps/JobManagement_ACTIONS.war; else echo 'No backup available'; exit 1; fi"[0m
-2025-04-18T04:51:04.9047017Z [36;1m[0m
-2025-04-18T04:51:04.9047423Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<EOF[0m
-2025-04-18T04:51:04.9047993Z [36;1m  sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true[0m
-2025-04-18T04:51:04.9048435Z [36;1m  sleep 5[0m
-2025-04-18T04:51:04.9048761Z [36;1m  sudo /opt/tomcat10/bin/shutdown.sh || true[0m
-2025-04-18T04:51:04.9049138Z [36;1m  sudo /opt/tomcat10/bin/startup.sh[0m
-2025-04-18T04:51:04.9049471Z [36;1m  exit[0m
-2025-04-18T04:51:04.9049726Z [36;1mEOF[0m
-2025-04-18T04:51:04.9049970Z [36;1m[0m
-2025-04-18T04:51:04.9050226Z [36;1mROLLBACK_END=$(date +%s)[0m
-2025-04-18T04:51:04.9050620Z [36;1mROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))[0m
-2025-04-18T04:51:04.9051104Z [36;1mecho "ROLLBACK_DURATION=$ROLLBACK_DURATION" >> $GITHUB_ENV[0m
-2025-04-18T04:51:04.9089265Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:51:04.9089551Z env:
-2025-04-18T04:51:04.9089784Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:51:04.9090058Z   REMOTE_USER: ubuntu
-2025-04-18T04:51:04.9090345Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:51:04.9090753Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:51:04.9091234Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:51:04.9091633Z   PIPELINE_START_TIME: 1744951855
-2025-04-18T04:51:04.9091932Z   DEPLOY_END_TIME: 1744951859
-2025-04-18T04:51:04.9092351Z   DEPLOY_DURATION: 
-2025-04-18T04:51:04.9092607Z   TOTAL_PIPELINE_TIME: 9
-2025-04-18T04:51:04.9092869Z ##[endgroup]
-2025-04-18T04:51:04.9150472Z The error is:
-2025-04-18T04:51:04.9150959Z  
-2025-04-18T04:51:04.9159906Z src/main/java/model/Application.java:4: error: ';' expected
-2025-04-18T04:51:04.9160592Z     private int applicationId
-2025-04-18T04:51:04.9160924Z                              ^
-2025-04-18T04:51:04.9161428Z 1 error
-2025-04-18T04:51:04.9161865Z Deployment failed! Initiating rollback...
-2025-04-18T04:51:07.7457888Z Pseudo-terminal will not be allocated because stdin is not a terminal.
-2025-04-18T04:51:10.4577481Z Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1026-aws x86_64)
-2025-04-18T04:51:10.4578267Z 
-2025-04-18T04:51:10.4578639Z  * Documentation:  https://help.ubuntu.com
-2025-04-18T04:51:10.4579565Z  * Management:     https://landscape.canonical.com
-2025-04-18T04:51:10.4580249Z  * Support:        https://ubuntu.com/pro
-2025-04-18T04:51:10.4580642Z 
-2025-04-18T04:51:10.4580933Z  System information as of Fri Apr 18 04:50:58 UTC 2025
-2025-04-18T04:51:10.4581294Z 
-2025-04-18T04:51:10.4581502Z   System load:  0.03              Temperature:           -273.1 C
-2025-04-18T04:51:10.4581964Z   Usage of /:   69.7% of 6.71GB   Processes:             116
-2025-04-18T04:51:10.4582402Z   Memory usage: 11%               Users logged in:       0
-2025-04-18T04:51:10.4582873Z   Swap usage:   0%                IPv4 address for ens5: 172.31.20.166
-2025-04-18T04:51:10.4583146Z 
-2025-04-18T04:51:10.4583371Z  * Ubuntu Pro delivers the most comprehensive open source security and
-2025-04-18T04:51:10.4584010Z    compliance features.
-2025-04-18T04:51:10.4584194Z 
-2025-04-18T04:51:10.4584333Z    https://ubuntu.com/aws/pro
-2025-04-18T04:51:10.4584580Z 
-2025-04-18T04:51:10.4585085Z Expanded Security Maintenance for Applications is not enabled.
-2025-04-18T04:51:10.4585402Z 
-2025-04-18T04:51:10.4585551Z 29 updates can be applied immediately.
-2025-04-18T04:51:10.4585958Z To see these additional updates run: apt list --upgradable
-2025-04-18T04:51:10.4586243Z 
-2025-04-18T04:51:10.4586434Z Enable ESM Apps to receive additional future security updates.
-2025-04-18T04:51:10.4586883Z See https://ubuntu.com/esm or run: sudo pro status
-2025-04-18T04:51:10.4587146Z 
-2025-04-18T04:51:10.4587151Z 
-2025-04-18T04:51:10.4587328Z The list of available updates is more than a week old.
-2025-04-18T04:51:10.4587736Z To check for new updates run: sudo apt update
-2025-04-18T04:51:10.4587983Z 
-2025-04-18T04:51:15.7052805Z sudo: /opt/tomcat10/bin/shutdown.sh: command not found
-2025-04-18T04:51:15.7229576Z Tomcat started.
-2025-04-18T04:51:15.7311026Z ##[group]Run echo "-------------------------------------------------"
-2025-04-18T04:51:15.7311567Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7312003Z [36;1mecho "              CI/CD Metrics Summary              "[0m
-2025-04-18T04:51:15.7312429Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7312874Z [36;1mecho "| Metric                             | Value          |"[0m
-2025-04-18T04:51:15.7313326Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7313978Z [36;1mecho "| Total Pipeline Time (sec)          | $TOTAL_PIPELINE_TIME          |"[0m
-2025-04-18T04:51:15.7314586Z [36;1m# If deployment succeeded, DEPLOY_DURATION is set; if not, ROLLBACK_DURATION is used.[0m
-2025-04-18T04:51:15.7315097Z [36;1mif [ -n "$DEPLOY_DURATION" ]; then[0m
-2025-04-18T04:51:15.7315590Z [36;1m  echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"[0m
-2025-04-18T04:51:15.7316012Z [36;1melse[0m
-2025-04-18T04:51:15.7316407Z [36;1m  echo "| Rollback Deployment Time (sec)     | $ROLLBACK_DURATION          |"[0m
-2025-04-18T04:51:15.7316838Z [36;1mfi[0m
-2025-04-18T04:51:15.7317199Z [36;1mecho "| Lead Time for Changes (sec)        | $LEAD_TIME          |"[0m
-2025-04-18T04:51:15.7317635Z [36;1mif [ -f test_results.log ]; then[0m
-2025-04-18T04:51:15.7318085Z [36;1m  TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1)[0m
-2025-04-18T04:51:15.7318676Z [36;1melse[0m
-2025-04-18T04:51:15.7318952Z [36;1m  TEST_SUMMARY="N/A"[0m
-2025-04-18T04:51:15.7319243Z [36;1mfi[0m
-2025-04-18T04:51:15.7319588Z [36;1mecho "| Test Summary                       | $TEST_SUMMARY          |"[0m
-2025-04-18T04:51:15.7320057Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7320448Z [36;1mecho "Memory Usage BEFORE:"[0m
-2025-04-18T04:51:15.7320796Z [36;1mcat mem_before.log[0m
-2025-04-18T04:51:15.7321154Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7321542Z [36;1mecho "Memory Usage AFTER:"[0m
-2025-04-18T04:51:15.7321874Z [36;1mcat mem_after.log[0m
-2025-04-18T04:51:15.7322223Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7322627Z [36;1mecho "Resource Usage BEFORE (vmstat):"[0m
-2025-04-18T04:51:15.7323004Z [36;1mcat resource_usage_before.log[0m
-2025-04-18T04:51:15.7323393Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7323924Z [36;1mecho "Resource Usage AFTER (vmstat):"[0m
-2025-04-18T04:51:15.7324295Z [36;1mcat resource_usage_after.log[0m
-2025-04-18T04:51:15.7324671Z [36;1mecho "-------------------------------------------------"[0m
-2025-04-18T04:51:15.7371157Z shell: /usr/bin/bash -e {0}
-2025-04-18T04:51:15.7371465Z env:
-2025-04-18T04:51:15.7371723Z   REMOTE_HOST: 18.61.80.123
-2025-04-18T04:51:15.7372023Z   REMOTE_USER: ubuntu
-2025-04-18T04:51:15.7372328Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
-2025-04-18T04:51:15.7372762Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:51:15.7373295Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
-2025-04-18T04:51:15.7373887Z   PIPELINE_START_TIME: 1744951855
-2025-04-18T04:51:15.7374205Z   DEPLOY_END_TIME: 1744951859
-2025-04-18T04:51:15.7374511Z   DEPLOY_DURATION: 
-2025-04-18T04:51:15.7374793Z   TOTAL_PIPELINE_TIME: 9
-2025-04-18T04:51:15.7375085Z   ROLLBACK_DURATION: 11
-2025-04-18T04:51:15.7375370Z ##[endgroup]
-2025-04-18T04:51:15.7438086Z -------------------------------------------------
-2025-04-18T04:51:15.7438725Z               CI/CD Metrics Summary              
-2025-04-18T04:51:15.7439331Z -------------------------------------------------
-2025-04-18T04:51:15.7440006Z | Metric                             | Value          |
-2025-04-18T04:51:15.7440633Z -------------------------------------------------
-2025-04-18T04:51:15.7441247Z | Total Pipeline Time (sec)          | 9          |
-2025-04-18T04:51:15.7442156Z | Rollback Deployment Time (sec)     | 11          |
-2025-04-18T04:51:15.7442850Z | Lead Time for Changes (sec)        |           |
-2025-04-18T04:51:15.7443254Z | Test Summary                       | N/A          |
-2025-04-18T04:51:15.7443761Z -------------------------------------------------
-2025-04-18T04:51:15.7444110Z Memory Usage BEFORE:
-2025-04-18T04:51:15.7449011Z cat: mem_before.log: No such file or directory
-2025-04-18T04:51:15.7454040Z ##[error]Process completed with exit code 1.
-2025-04-18T04:51:15.7528388Z Post job cleanup.
-2025-04-18T04:51:15.9338471Z Post job cleanup.
-2025-04-18T04:51:16.0064486Z [command]/usr/bin/git version
-2025-04-18T04:51:16.0102200Z git version 2.49.0
-2025-04-18T04:51:16.0145828Z Temporarily overriding HOME='/home/runner/work/_temp/6a30ea86-f4ed-4a99-aaa1-2c0b5ec55450' before making global git config changes
-2025-04-18T04:51:16.0147365Z Adding repository directory to the temporary git global config as a safe directory
-2025-04-18T04:51:16.0148959Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/JobManagement/JobManagement
-2025-04-18T04:51:16.0181473Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2025-04-18T04:51:16.0210707Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2025-04-18T04:51:16.0433762Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2025-04-18T04:51:16.0452589Z http.https://github.com/.extraheader
-2025-04-18T04:51:16.0463676Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2025-04-18T04:51:16.0491691Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2025-04-18T04:51:16.0807641Z Cleaning up orphan processes
+﻿2025-04-22T22:12:42.4870047Z Current runner version: '2.323.0'
+2025-04-22T22:12:42.4909741Z ##[group]Operating System
+2025-04-22T22:12:42.4911532Z Ubuntu
+2025-04-22T22:12:42.4912932Z 24.04.2
+2025-04-22T22:12:42.4914181Z LTS
+2025-04-22T22:12:42.4915618Z ##[endgroup]
+2025-04-22T22:12:42.4916999Z ##[group]Runner Image
+2025-04-22T22:12:42.4918665Z Image: ubuntu-24.04
+2025-04-22T22:12:42.4920309Z Version: 20250413.1.0
+2025-04-22T22:12:42.4922841Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250413.1/images/ubuntu/Ubuntu2404-Readme.md
+2025-04-22T22:12:42.4926085Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250413.1
+2025-04-22T22:12:42.4928690Z ##[endgroup]
+2025-04-22T22:12:42.4930059Z ##[group]Runner Image Provisioner
+2025-04-22T22:12:42.4931831Z 2.0.422.1
+2025-04-22T22:12:42.4933409Z ##[endgroup]
+2025-04-22T22:12:42.4936215Z ##[group]GITHUB_TOKEN Permissions
+2025-04-22T22:12:42.4939859Z Contents: read
+2025-04-22T22:12:42.4941327Z Metadata: read
+2025-04-22T22:12:42.4942953Z Packages: read
+2025-04-22T22:12:42.4944431Z ##[endgroup]
+2025-04-22T22:12:42.4948219Z Secret source: Actions
+2025-04-22T22:12:42.4950047Z Prepare workflow directory
+2025-04-22T22:12:42.5547810Z Prepare all required actions
+2025-04-22T22:12:42.5606449Z Getting action download info
+2025-04-22T22:12:42.7727189Z ##[group]Download immutable action package 'actions/checkout@v3'
+2025-04-22T22:12:42.7728941Z Version: 3.6.0
+2025-04-22T22:12:42.7730214Z Digest: sha256:942562b9c7d4b1f2557f1da21f4d3eb4eb4fd01f2ad78b2a6e187d1b193e0a0f
+2025-04-22T22:12:42.7731849Z Source commit SHA: f43a0e5ff2bd294095638e18286ca9a3d1956744
+2025-04-22T22:12:42.7732923Z ##[endgroup]
+2025-04-22T22:12:42.8598365Z ##[group]Download immutable action package 'actions/setup-java@v3'
+2025-04-22T22:12:42.8599539Z Version: 3.14.1
+2025-04-22T22:12:42.8600671Z Digest: sha256:0f5994bd85f236d7525048fec5b0b7b3ec7474ec50184c8f78a320717cfb3d51
+2025-04-22T22:12:42.8601908Z Source commit SHA: 17f84c3641ba7b8f6deff6309fc4c864478f5d62
+2025-04-22T22:12:42.8603014Z ##[endgroup]
+2025-04-22T22:12:43.1242884Z Complete job name: build-and-deploy
+2025-04-22T22:12:43.1987951Z ##[group]Run actions/checkout@v3
+2025-04-22T22:12:43.1989190Z with:
+2025-04-22T22:12:43.1989820Z   repository: sai-pranay-teja/JobManagement
+2025-04-22T22:12:43.1990785Z   token: ***
+2025-04-22T22:12:43.1991356Z   ssh-strict: true
+2025-04-22T22:12:43.1991963Z   persist-credentials: true
+2025-04-22T22:12:43.1992621Z   clean: true
+2025-04-22T22:12:43.1993216Z   sparse-checkout-cone-mode: true
+2025-04-22T22:12:43.1993904Z   fetch-depth: 1
+2025-04-22T22:12:43.1994485Z   fetch-tags: false
+2025-04-22T22:12:43.1995056Z   lfs: false
+2025-04-22T22:12:43.1995623Z   submodules: false
+2025-04-22T22:12:43.1996233Z   set-safe-directory: true
+2025-04-22T22:12:43.1997058Z env:
+2025-04-22T22:12:43.1997625Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:12:43.1998413Z   REMOTE_USER: ubuntu
+2025-04-22T22:12:43.1999049Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:12:43.1999750Z ##[endgroup]
+2025-04-22T22:12:43.3395445Z Syncing repository: sai-pranay-teja/JobManagement
+2025-04-22T22:12:43.3397560Z ##[group]Getting Git version info
+2025-04-22T22:12:43.3398788Z Working directory is '/home/runner/work/JobManagement/JobManagement'
+2025-04-22T22:12:43.3400117Z [command]/usr/bin/git version
+2025-04-22T22:12:43.3463113Z git version 2.49.0
+2025-04-22T22:12:43.3492429Z ##[endgroup]
+2025-04-22T22:12:43.3510354Z Temporarily overriding HOME='/home/runner/work/_temp/feffa6cc-bdda-4749-bca5-d9da4763603a' before making global git config changes
+2025-04-22T22:12:43.3513151Z Adding repository directory to the temporary git global config as a safe directory
+2025-04-22T22:12:43.3515650Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/JobManagement/JobManagement
+2025-04-22T22:12:43.3549618Z Deleting the contents of '/home/runner/work/JobManagement/JobManagement'
+2025-04-22T22:12:43.3553966Z ##[group]Initializing the repository
+2025-04-22T22:12:43.3558312Z [command]/usr/bin/git init /home/runner/work/JobManagement/JobManagement
+2025-04-22T22:12:43.3612032Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-04-22T22:12:43.3613758Z hint: is subject to change. To configure the initial branch name to use in all
+2025-04-22T22:12:43.3615720Z hint: of your new repositories, which will suppress this warning, call:
+2025-04-22T22:12:43.3617379Z hint:
+2025-04-22T22:12:43.3618633Z hint: 	git config --global init.defaultBranch <name>
+2025-04-22T22:12:43.3619489Z hint:
+2025-04-22T22:12:43.3620247Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-04-22T22:12:43.3621368Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-04-22T22:12:43.3622415Z hint:
+2025-04-22T22:12:43.3686191Z hint: 	git branch -m <name>
+2025-04-22T22:12:43.3688308Z Initialized empty Git repository in /home/runner/work/JobManagement/JobManagement/.git/
+2025-04-22T22:12:43.3691367Z [command]/usr/bin/git remote add origin https://github.com/sai-pranay-teja/JobManagement
+2025-04-22T22:12:43.3693783Z ##[endgroup]
+2025-04-22T22:12:43.3694789Z ##[group]Disabling automatic garbage collection
+2025-04-22T22:12:43.3695639Z [command]/usr/bin/git config --local gc.auto 0
+2025-04-22T22:12:43.3697702Z ##[endgroup]
+2025-04-22T22:12:43.3698959Z ##[group]Setting up auth
+2025-04-22T22:12:43.3699845Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-04-22T22:12:43.3726643Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-04-22T22:12:43.3997791Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-04-22T22:12:43.4025808Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-04-22T22:12:43.4248802Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-04-22T22:12:43.4306713Z ##[endgroup]
+2025-04-22T22:12:43.4308395Z ##[group]Fetching the repository
+2025-04-22T22:12:43.4319201Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +b14cc91695b902fb08ca55a85543062560e0b1e6:refs/remotes/origin/main
+2025-04-22T22:12:43.6690687Z remote: Enumerating objects: 82, done.        
+2025-04-22T22:12:43.6692627Z remote: Counting objects:   1% (1/82)        
+2025-04-22T22:12:43.6693791Z remote: Counting objects:   2% (2/82)        
+2025-04-22T22:12:43.6694935Z remote: Counting objects:   3% (3/82)        
+2025-04-22T22:12:43.6696069Z remote: Counting objects:   4% (4/82)        
+2025-04-22T22:12:43.6697198Z remote: Counting objects:   6% (5/82)        
+2025-04-22T22:12:43.6698666Z remote: Counting objects:   7% (6/82)        
+2025-04-22T22:12:43.6699798Z remote: Counting objects:   8% (7/82)        
+2025-04-22T22:12:43.6700857Z remote: Counting objects:   9% (8/82)        
+2025-04-22T22:12:43.6701892Z remote: Counting objects:  10% (9/82)        
+2025-04-22T22:12:43.6702904Z remote: Counting objects:  12% (10/82)        
+2025-04-22T22:12:43.6703940Z remote: Counting objects:  13% (11/82)        
+2025-04-22T22:12:43.6704957Z remote: Counting objects:  14% (12/82)        
+2025-04-22T22:12:43.6705965Z remote: Counting objects:  15% (13/82)        
+2025-04-22T22:12:43.6706972Z remote: Counting objects:  17% (14/82)        
+2025-04-22T22:12:43.6708688Z remote: Counting objects:  18% (15/82)        
+2025-04-22T22:12:43.6710259Z remote: Counting objects:  19% (16/82)        
+2025-04-22T22:12:43.6711093Z remote: Counting objects:  20% (17/82)        
+2025-04-22T22:12:43.6711928Z remote: Counting objects:  21% (18/82)        
+2025-04-22T22:12:43.6712758Z remote: Counting objects:  23% (19/82)        
+2025-04-22T22:12:43.6713586Z remote: Counting objects:  24% (20/82)        
+2025-04-22T22:12:43.6714408Z remote: Counting objects:  25% (21/82)        
+2025-04-22T22:12:43.6715569Z remote: Counting objects:  26% (22/82)        
+2025-04-22T22:12:43.6716387Z remote: Counting objects:  28% (23/82)        
+2025-04-22T22:12:43.6717240Z remote: Counting objects:  29% (24/82)        
+2025-04-22T22:12:43.6718294Z remote: Counting objects:  30% (25/82)        
+2025-04-22T22:12:43.6719167Z remote: Counting objects:  31% (26/82)        
+2025-04-22T22:12:43.6720021Z remote: Counting objects:  32% (27/82)        
+2025-04-22T22:12:43.6720802Z remote: Counting objects:  34% (28/82)        
+2025-04-22T22:12:43.6721583Z remote: Counting objects:  35% (29/82)        
+2025-04-22T22:12:43.6722355Z remote: Counting objects:  36% (30/82)        
+2025-04-22T22:12:43.6723141Z remote: Counting objects:  37% (31/82)        
+2025-04-22T22:12:43.6723918Z remote: Counting objects:  39% (32/82)        
+2025-04-22T22:12:43.6724831Z remote: Counting objects:  40% (33/82)        
+2025-04-22T22:12:43.6725621Z remote: Counting objects:  41% (34/82)        
+2025-04-22T22:12:43.6726397Z remote: Counting objects:  42% (35/82)        
+2025-04-22T22:12:43.6727179Z remote: Counting objects:  43% (36/82)        
+2025-04-22T22:12:43.6727956Z remote: Counting objects:  45% (37/82)        
+2025-04-22T22:12:43.6728916Z remote: Counting objects:  46% (38/82)        
+2025-04-22T22:12:43.6729692Z remote: Counting objects:  47% (39/82)        
+2025-04-22T22:12:43.6730452Z remote: Counting objects:  48% (40/82)        
+2025-04-22T22:12:43.6731219Z remote: Counting objects:  50% (41/82)        
+2025-04-22T22:12:43.6731973Z remote: Counting objects:  51% (42/82)        
+2025-04-22T22:12:43.6732914Z remote: Counting objects:  52% (43/82)        
+2025-04-22T22:12:43.6733872Z remote: Counting objects:  53% (44/82)        
+2025-04-22T22:12:43.6735163Z remote: Counting objects:  54% (45/82)        
+2025-04-22T22:12:43.6736431Z remote: Counting objects:  56% (46/82)        
+2025-04-22T22:12:43.6737724Z remote: Counting objects:  57% (47/82)        
+2025-04-22T22:12:43.6739177Z remote: Counting objects:  58% (48/82)        
+2025-04-22T22:12:43.6740771Z remote: Counting objects:  59% (49/82)        
+2025-04-22T22:12:43.6742103Z remote: Counting objects:  60% (50/82)        
+2025-04-22T22:12:43.6743353Z remote: Counting objects:  62% (51/82)        
+2025-04-22T22:12:43.6744589Z remote: Counting objects:  63% (52/82)        
+2025-04-22T22:12:43.6745696Z remote: Counting objects:  64% (53/82)        
+2025-04-22T22:12:43.6746454Z remote: Counting objects:  65% (54/82)        
+2025-04-22T22:12:43.6747584Z remote: Counting objects:  67% (55/82)        
+2025-04-22T22:12:43.6749169Z remote: Counting objects:  68% (56/82)        
+2025-04-22T22:12:43.6749975Z remote: Counting objects:  69% (57/82)        
+2025-04-22T22:12:43.6750750Z remote: Counting objects:  70% (58/82)        
+2025-04-22T22:12:43.6751689Z remote: Counting objects:  71% (59/82)        
+2025-04-22T22:12:43.6752785Z remote: Counting objects:  73% (60/82)        
+2025-04-22T22:12:43.6753585Z remote: Counting objects:  74% (61/82)        
+2025-04-22T22:12:43.6754853Z remote: Counting objects:  75% (62/82)        
+2025-04-22T22:12:43.6755665Z remote: Counting objects:  76% (63/82)        
+2025-04-22T22:12:43.6756439Z remote: Counting objects:  78% (64/82)        
+2025-04-22T22:12:43.6757235Z remote: Counting objects:  79% (65/82)        
+2025-04-22T22:12:43.6758518Z remote: Counting objects:  80% (66/82)        
+2025-04-22T22:12:43.6760041Z remote: Counting objects:  81% (67/82)        
+2025-04-22T22:12:43.6761282Z remote: Counting objects:  82% (68/82)        
+2025-04-22T22:12:43.6762087Z remote: Counting objects:  84% (69/82)        
+2025-04-22T22:12:43.6762869Z remote: Counting objects:  85% (70/82)        
+2025-04-22T22:12:43.6763737Z remote: Counting objects:  86% (71/82)        
+2025-04-22T22:12:43.6765003Z remote: Counting objects:  87% (72/82)        
+2025-04-22T22:12:43.6765816Z remote: Counting objects:  89% (73/82)        
+2025-04-22T22:12:43.6766592Z remote: Counting objects:  90% (74/82)        
+2025-04-22T22:12:43.6767370Z remote: Counting objects:  91% (75/82)        
+2025-04-22T22:12:43.6768617Z remote: Counting objects:  92% (76/82)        
+2025-04-22T22:12:43.6769395Z remote: Counting objects:  93% (77/82)        
+2025-04-22T22:12:43.6770177Z remote: Counting objects:  95% (78/82)        
+2025-04-22T22:12:43.6770945Z remote: Counting objects:  96% (79/82)        
+2025-04-22T22:12:43.6771720Z remote: Counting objects:  97% (80/82)        
+2025-04-22T22:12:43.6772479Z remote: Counting objects:  98% (81/82)        
+2025-04-22T22:12:43.6773257Z remote: Counting objects: 100% (82/82)        
+2025-04-22T22:12:43.6774070Z remote: Counting objects: 100% (82/82), done.        
+2025-04-22T22:12:43.6774922Z remote: Compressing objects:   1% (1/72)        
+2025-04-22T22:12:43.6775736Z remote: Compressing objects:   2% (2/72)        
+2025-04-22T22:12:43.6776542Z remote: Compressing objects:   4% (3/72)        
+2025-04-22T22:12:43.6777358Z remote: Compressing objects:   5% (4/72)        
+2025-04-22T22:12:43.6778263Z remote: Compressing objects:   6% (5/72)        
+2025-04-22T22:12:43.6779272Z remote: Compressing objects:   8% (6/72)        
+2025-04-22T22:12:43.6780461Z remote: Compressing objects:   9% (7/72)        
+2025-04-22T22:12:43.6781278Z remote: Compressing objects:  11% (8/72)        
+2025-04-22T22:12:43.6782056Z remote: Compressing objects:  12% (9/72)        
+2025-04-22T22:12:43.6782849Z remote: Compressing objects:  13% (10/72)        
+2025-04-22T22:12:43.6784145Z remote: Compressing objects:  15% (11/72)        
+2025-04-22T22:12:43.6784982Z remote: Compressing objects:  16% (12/72)        
+2025-04-22T22:12:43.6785785Z remote: Compressing objects:  18% (13/72)        
+2025-04-22T22:12:43.6786575Z remote: Compressing objects:  19% (14/72)        
+2025-04-22T22:12:43.6787382Z remote: Compressing objects:  20% (15/72)        
+2025-04-22T22:12:43.6788293Z remote: Compressing objects:  22% (16/72)        
+2025-04-22T22:12:43.6789096Z remote: Compressing objects:  23% (17/72)        
+2025-04-22T22:12:43.6789888Z remote: Compressing objects:  25% (18/72)        
+2025-04-22T22:12:43.6790985Z remote: Compressing objects:  26% (19/72)        
+2025-04-22T22:12:43.6791800Z remote: Compressing objects:  27% (20/72)        
+2025-04-22T22:12:43.6792619Z remote: Compressing objects:  29% (21/72)        
+2025-04-22T22:12:43.6793425Z remote: Compressing objects:  30% (22/72)        
+2025-04-22T22:12:43.6794221Z remote: Compressing objects:  31% (23/72)        
+2025-04-22T22:12:43.6795017Z remote: Compressing objects:  33% (24/72)        
+2025-04-22T22:12:43.6796179Z remote: Compressing objects:  34% (25/72)        
+2025-04-22T22:12:43.6797579Z remote: Compressing objects:  36% (26/72)        
+2025-04-22T22:12:43.6799017Z remote: Compressing objects:  37% (27/72)        
+2025-04-22T22:12:43.6800338Z remote: Compressing objects:  38% (28/72)        
+2025-04-22T22:12:43.6801484Z remote: Compressing objects:  40% (29/72)        
+2025-04-22T22:12:43.6802308Z remote: Compressing objects:  41% (30/72)        
+2025-04-22T22:12:43.6803112Z remote: Compressing objects:  43% (31/72)        
+2025-04-22T22:12:43.6804734Z remote: Compressing objects:  44% (32/72)        
+2025-04-22T22:12:43.6805877Z remote: Compressing objects:  45% (33/72)        
+2025-04-22T22:12:43.6807151Z remote: Compressing objects:  47% (34/72)        
+2025-04-22T22:12:43.6808689Z remote: Compressing objects:  48% (35/72)        
+2025-04-22T22:12:43.6810157Z remote: Compressing objects:  50% (36/72)        
+2025-04-22T22:12:43.6811404Z remote: Compressing objects:  51% (37/72)        
+2025-04-22T22:12:43.6812917Z remote: Compressing objects:  52% (38/72)        
+2025-04-22T22:12:43.6814124Z remote: Compressing objects:  54% (39/72)        
+2025-04-22T22:12:43.6815655Z remote: Compressing objects:  55% (40/72)        
+2025-04-22T22:12:43.6816894Z remote: Compressing objects:  56% (41/72)        
+2025-04-22T22:12:43.6817824Z remote: Compressing objects:  58% (42/72)        
+2025-04-22T22:12:43.6819304Z remote: Compressing objects:  59% (43/72)        
+2025-04-22T22:12:43.6820559Z remote: Compressing objects:  61% (44/72)        
+2025-04-22T22:12:43.6821630Z remote: Compressing objects:  62% (45/72)        
+2025-04-22T22:12:43.6822432Z remote: Compressing objects:  63% (46/72)        
+2025-04-22T22:12:43.6823230Z remote: Compressing objects:  65% (47/72)        
+2025-04-22T22:12:43.6824031Z remote: Compressing objects:  66% (48/72)        
+2025-04-22T22:12:43.6824813Z remote: Compressing objects:  68% (49/72)        
+2025-04-22T22:12:43.6825615Z remote: Compressing objects:  69% (50/72)        
+2025-04-22T22:12:43.6826427Z remote: Compressing objects:  70% (51/72)        
+2025-04-22T22:12:43.6827217Z remote: Compressing objects:  72% (52/72)        
+2025-04-22T22:12:43.6828145Z remote: Compressing objects:  73% (53/72)        
+2025-04-22T22:12:43.6829187Z remote: Compressing objects:  75% (54/72)        
+2025-04-22T22:12:43.6830012Z remote: Compressing objects:  76% (55/72)        
+2025-04-22T22:12:43.6830822Z remote: Compressing objects:  77% (56/72)        
+2025-04-22T22:12:43.6831622Z remote: Compressing objects:  79% (57/72)        
+2025-04-22T22:12:43.6832469Z remote: Compressing objects:  80% (58/72)        
+2025-04-22T22:12:43.6833280Z remote: Compressing objects:  81% (59/72)        
+2025-04-22T22:12:43.6834078Z remote: Compressing objects:  83% (60/72)        
+2025-04-22T22:12:43.6835270Z remote: Compressing objects:  84% (61/72)        
+2025-04-22T22:12:43.6836092Z remote: Compressing objects:  86% (62/72)        
+2025-04-22T22:12:43.6836885Z remote: Compressing objects:  87% (63/72)        
+2025-04-22T22:12:43.6837694Z remote: Compressing objects:  88% (64/72)        
+2025-04-22T22:12:43.6839040Z remote: Compressing objects:  90% (65/72)        
+2025-04-22T22:12:43.6839870Z remote: Compressing objects:  91% (66/72)        
+2025-04-22T22:12:43.6840684Z remote: Compressing objects:  93% (67/72)        
+2025-04-22T22:12:43.6841493Z remote: Compressing objects:  94% (68/72)        
+2025-04-22T22:12:43.6842285Z remote: Compressing objects:  95% (69/72)        
+2025-04-22T22:12:43.6843235Z remote: Compressing objects:  97% (70/72)        
+2025-04-22T22:12:43.6844415Z remote: Compressing objects:  98% (71/72)        
+2025-04-22T22:12:43.6845266Z remote: Compressing objects: 100% (72/72)        
+2025-04-22T22:12:43.6846289Z remote: Compressing objects: 100% (72/72), done.        
+2025-04-22T22:12:44.0062286Z remote: Total 82 (delta 16), reused 46 (delta 6), pack-reused 0 (from 0)        
+2025-04-22T22:12:44.0901842Z From https://github.com/sai-pranay-teja/JobManagement
+2025-04-22T22:12:44.0903355Z  * [new ref]         b14cc91695b902fb08ca55a85543062560e0b1e6 -> origin/main
+2025-04-22T22:12:44.0930215Z ##[endgroup]
+2025-04-22T22:12:44.0932292Z ##[group]Determining the checkout info
+2025-04-22T22:12:44.0934449Z ##[endgroup]
+2025-04-22T22:12:44.0936295Z ##[group]Checking out the ref
+2025-04-22T22:12:44.0938500Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2025-04-22T22:12:44.1459142Z Switched to a new branch 'main'
+2025-04-22T22:12:44.1460653Z branch 'main' set up to track 'origin/main'.
+2025-04-22T22:12:44.1469067Z ##[endgroup]
+2025-04-22T22:12:44.1509115Z [command]/usr/bin/git log -1 --format='%H'
+2025-04-22T22:12:44.1535022Z 'b14cc91695b902fb08ca55a85543062560e0b1e6'
+2025-04-22T22:12:44.1847713Z ##[group]Run actions/setup-java@v3
+2025-04-22T22:12:44.1848860Z with:
+2025-04-22T22:12:44.1849461Z   java-version: 17
+2025-04-22T22:12:44.1850105Z   distribution: corretto
+2025-04-22T22:12:44.1850791Z   java-package: jdk
+2025-04-22T22:12:44.1851428Z   check-latest: false
+2025-04-22T22:12:44.1852089Z   server-id: github
+2025-04-22T22:12:44.1852746Z   server-username: GITHUB_ACTOR
+2025-04-22T22:12:44.1853500Z   server-password: GITHUB_TOKEN
+2025-04-22T22:12:44.1854264Z   overwrite-settings: true
+2025-04-22T22:12:44.1854960Z   job-status: success
+2025-04-22T22:12:44.1855793Z   token: ***
+2025-04-22T22:12:44.1856385Z env:
+2025-04-22T22:12:44.1856982Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:12:44.1857689Z   REMOTE_USER: ubuntu
+2025-04-22T22:12:44.1858591Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:12:44.1859696Z ##[endgroup]
+2025-04-22T22:12:44.3871754Z ##[group]Installed distributions
+2025-04-22T22:12:44.3896378Z Trying to resolve the latest version from remote
+2025-04-22T22:12:44.4438277Z Resolved latest version as 17.0.15+6.1
+2025-04-22T22:12:44.4440399Z Trying to download...
+2025-04-22T22:12:44.4444085Z Downloading Java 17.0.15+6.1 (Corretto) from https://corretto.aws/downloads/resources/17.0.15.6.1/amazon-corretto-17.0.15.6.1-linux-x64.tar.gz ...
+2025-04-22T22:12:45.3786804Z Extracting Java archive...
+2025-04-22T22:12:45.3891779Z [command]/usr/bin/tar xz --warning=no-unknown-keyword -C /home/runner/work/_temp/563b9e5d-7081-4120-9cb7-270c73c6a9eb -f /home/runner/work/_temp/96a17797-0f08-4d65-9aef-f530d1ee46b1
+2025-04-22T22:12:47.9169663Z Java 17.0.15+6.1 was downloaded
+2025-04-22T22:12:47.9170484Z Setting Java 17.0.15+6.1 as the default
+2025-04-22T22:12:47.9181164Z Creating toolchains.xml for JDK version 17 from corretto
+2025-04-22T22:12:47.9263501Z Writing to /home/runner/.m2/toolchains.xml
+2025-04-22T22:12:47.9264425Z 
+2025-04-22T22:12:47.9265054Z Java configuration:
+2025-04-22T22:12:47.9265727Z   Distribution: corretto
+2025-04-22T22:12:47.9266398Z   Version: 17.0.15+6.1
+2025-04-22T22:12:47.9267258Z   Path: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:47.9267937Z 
+2025-04-22T22:12:47.9269015Z ##[endgroup]
+2025-04-22T22:12:47.9287591Z Creating settings.xml with server-id: github
+2025-04-22T22:12:47.9290388Z Writing to /home/runner/.m2/settings.xml
+2025-04-22T22:12:47.9446382Z ##[group]Run echo "$SSH_KEY_SECRET" > key.pem
+2025-04-22T22:12:47.9446990Z [36;1mecho "$SSH_KEY_SECRET" > key.pem[0m
+2025-04-22T22:12:47.9447462Z [36;1msed -i 's/\\n/\n/g' key.pem[0m
+2025-04-22T22:12:47.9448851Z [36;1mgrep -q "BEGIN RSA PRIVATE KEY" key.pem || sed -i '1i***' key.pem[0m
+2025-04-22T22:12:47.9449638Z [36;1mgrep -q "END RSA PRIVATE KEY" key.pem || echo "***" >> key.pem[0m
+2025-04-22T22:12:47.9450152Z [36;1mchmod 400 key.pem[0m
+2025-04-22T22:12:47.9503728Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:12:47.9504186Z env:
+2025-04-22T22:12:47.9523613Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:12:47.9524035Z   REMOTE_USER: ubuntu
+2025-04-22T22:12:47.9524414Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:12:47.9525263Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:47.9526266Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:47.9534207Z   SSH_KEY_SECRET: ***
+2025-04-22T22:12:47.9534671Z ##[endgroup]
+2025-04-22T22:12:47.9727473Z ##[group]Run echo "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV
+2025-04-22T22:12:47.9728324Z [36;1mecho "PIPELINE_START_TIME=$(date +%s)" >> $GITHUB_ENV[0m
+2025-04-22T22:12:47.9780188Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:12:47.9780574Z env:
+2025-04-22T22:12:47.9780887Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:12:47.9781246Z   REMOTE_USER: ubuntu
+2025-04-22T22:12:47.9781606Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:12:47.9782106Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:47.9782722Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:47.9783202Z ##[endgroup]
+2025-04-22T22:12:47.9899668Z ##[group]Run mkdir -p build/WEB-INF/classes
+2025-04-22T22:12:47.9900183Z [36;1mmkdir -p build/WEB-INF/classes[0m
+2025-04-22T22:12:47.9900809Z [36;1m# Compile Java sources; redirect errors to compile_error.log and exit if compilation fails.[0m
+2025-04-22T22:12:47.9901748Z [36;1m# javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }[0m
+2025-04-22T22:12:47.9902735Z [36;1mjavac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log[0m
+2025-04-22T22:12:47.9903393Z [36;1m[0m
+2025-04-22T22:12:47.9903773Z [36;1mcp -R src/main/resources/* build/WEB-INF/classes/[0m
+2025-04-22T22:12:47.9904235Z [36;1mcp -R src/main/webapp/* build/[0m
+2025-04-22T22:12:47.9904972Z [36;1mjar -cvf JobManagement_ACTIONS.war -C build .[0m
+2025-04-22T22:12:47.9949606Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:12:47.9949993Z env:
+2025-04-22T22:12:47.9950340Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:12:47.9950697Z   REMOTE_USER: ubuntu
+2025-04-22T22:12:47.9951058Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:12:47.9951573Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:47.9952167Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:47.9952658Z   PIPELINE_START_TIME: 1745359967
+2025-04-22T22:12:47.9953038Z ##[endgroup]
+2025-04-22T22:12:48.4636508Z ##[error]Process completed with exit code 1.
+2025-04-22T22:12:48.4702204Z ##[group]Run ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "timeout 60 bash -c 'until grep -q \"Deployment of web application archive\" <(tail -n 50 /opt/tomcat10/logs/catalina.out); do sleep 5; done'"
+2025-04-22T22:12:48.4703614Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "timeout 60 bash -c 'until grep -q \"Deployment of web application archive\" <(tail -n 50 /opt/tomcat10/logs/catalina.out); do sleep 5; done'"[0m
+2025-04-22T22:12:48.4753189Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:12:48.4753515Z env:
+2025-04-22T22:12:48.4753772Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:12:48.4754088Z   REMOTE_USER: ubuntu
+2025-04-22T22:12:48.4754400Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:12:48.4754845Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:48.4755399Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:12:48.4755893Z   PIPELINE_START_TIME: 1745359967
+2025-04-22T22:12:48.4756216Z ##[endgroup]
+2025-04-22T22:12:49.4009348Z Warning: Permanently added '18.60.83.220' (ED25519) to the list of known hosts.
+2025-04-22T22:13:16.3487515Z ##[group]Run echo "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV
+2025-04-22T22:13:16.3488284Z [36;1mecho "DEPLOY_END_TIME=$(date +%s)" >> $GITHUB_ENV[0m
+2025-04-22T22:13:16.3535535Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:13:16.3535836Z env:
+2025-04-22T22:13:16.3536083Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:13:16.3536365Z   REMOTE_USER: ubuntu
+2025-04-22T22:13:16.3536670Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:13:16.3537109Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:16.3537616Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:16.3538303Z   PIPELINE_START_TIME: 1745359967
+2025-04-22T22:13:16.3538628Z ##[endgroup]
+2025-04-22T22:13:16.3645291Z ##[group]Run ssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log
+2025-04-22T22:13:16.3646490Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "vmstat -s | awk '{printf \"%.2f MB - %s\n\", \$1/1024, substr(\$0, index(\$0,\$2))}'" > resource_usage_after.log[0m
+2025-04-22T22:13:16.3647419Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "free -h" > mem_after.log[0m
+2025-04-22T22:13:16.3690319Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:13:16.3690618Z env:
+2025-04-22T22:13:16.3690862Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:13:16.3691146Z   REMOTE_USER: ubuntu
+2025-04-22T22:13:16.3691433Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:13:16.3691860Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:16.3692425Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:16.3692856Z   PIPELINE_START_TIME: 1745359967
+2025-04-22T22:13:16.3693173Z   DEPLOY_END_TIME: 1745359996
+2025-04-22T22:13:16.3693469Z ##[endgroup]
+2025-04-22T22:13:21.1966806Z ##[group]Run source $GITHUB_ENV
+2025-04-22T22:13:21.1967231Z [36;1msource $GITHUB_ENV[0m
+2025-04-22T22:13:21.1967709Z [36;1mDEPLOY_DURATION=$(($DEPLOY_END_TIME - $DEPLOY_START_TIME))[0m
+2025-04-22T22:13:21.1968690Z [36;1mPIPELINE_END_TIME=$(date +%s)[0m
+2025-04-22T22:13:21.1969190Z [36;1mTOTAL_PIPELINE_TIME=$(($PIPELINE_END_TIME - $PIPELINE_START_TIME))[0m
+2025-04-22T22:13:21.1969767Z [36;1mecho "DEPLOY_DURATION=$DEPLOY_DURATION" >> $GITHUB_ENV[0m
+2025-04-22T22:13:21.1970317Z [36;1mecho "TOTAL_PIPELINE_TIME=$TOTAL_PIPELINE_TIME" >> $GITHUB_ENV[0m
+2025-04-22T22:13:21.2017649Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:13:21.2017956Z env:
+2025-04-22T22:13:21.2018512Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:13:21.2018814Z   REMOTE_USER: ubuntu
+2025-04-22T22:13:21.2019115Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:13:21.2019561Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:21.2020139Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:21.2020591Z   PIPELINE_START_TIME: 1745359967
+2025-04-22T22:13:21.2020950Z   DEPLOY_END_TIME: 1745359996
+2025-04-22T22:13:21.2021261Z ##[endgroup]
+2025-04-22T22:13:21.2088637Z /home/runner/work/_temp/5340c850-43fa-4504-ab0c-d0176f767e53.sh: line 2: 1745359996 - : syntax error: operand expected (error token is "- ")
+2025-04-22T22:13:21.2140652Z ##[group]Run echo $'The error is:\n '
+2025-04-22T22:13:21.2141093Z [36;1mecho $'The error is:\n '[0m
+2025-04-22T22:13:21.2141431Z [36;1mcat compile_error.log[0m
+2025-04-22T22:13:21.2141736Z [36;1m[0m
+2025-04-22T22:13:21.2142065Z [36;1mecho "Deployment failed! Initiating rollback..."[0m
+2025-04-22T22:13:21.2142465Z [36;1mROLLBACK_START=$(date +%s)[0m
+2025-04-22T22:13:21.2142785Z [36;1m[0m
+2025-04-22T22:13:21.2143838Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST "if [ -f /tmp/actions_bak/JobManagement_ACTIONS.war_bak ]; then sudo cp /tmp/actions_bak/JobManagement_ACTIONS.war_bak /opt/tomcat10/webapps/JobManagement_ACTIONS.war; else echo 'No backup available'; exit 1; fi"[0m
+2025-04-22T22:13:21.2144915Z [36;1m[0m
+2025-04-22T22:13:21.2145306Z [36;1mssh -o StrictHostKeyChecking=no -i key.pem $REMOTE_USER@$REMOTE_HOST <<EOF[0m
+2025-04-22T22:13:21.2145885Z [36;1m  sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true[0m
+2025-04-22T22:13:21.2146316Z [36;1m  sleep 5[0m
+2025-04-22T22:13:21.2146627Z [36;1m  sudo /opt/tomcat10/bin/shutdown.sh || true[0m
+2025-04-22T22:13:21.2147059Z [36;1m  sudo /opt/tomcat10/bin/startup.sh[0m
+2025-04-22T22:13:21.2147383Z [36;1m  exit[0m
+2025-04-22T22:13:21.2147632Z [36;1mEOF[0m
+2025-04-22T22:13:21.2147864Z [36;1m[0m
+2025-04-22T22:13:21.2148483Z [36;1mROLLBACK_END=$(date +%s)[0m
+2025-04-22T22:13:21.2148874Z [36;1mROLLBACK_DURATION=$((ROLLBACK_END - ROLLBACK_START))[0m
+2025-04-22T22:13:21.2149346Z [36;1mecho "ROLLBACK_DURATION=$ROLLBACK_DURATION" >> $GITHUB_ENV[0m
+2025-04-22T22:13:21.2191996Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:13:21.2192292Z env:
+2025-04-22T22:13:21.2192546Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:13:21.2192842Z   REMOTE_USER: ubuntu
+2025-04-22T22:13:21.2193144Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:13:21.2193579Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:21.2194111Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:21.2194542Z   PIPELINE_START_TIME: 1745359967
+2025-04-22T22:13:21.2194853Z   DEPLOY_END_TIME: 1745359996
+2025-04-22T22:13:21.2195155Z   DEPLOY_DURATION: 
+2025-04-22T22:13:21.2195428Z   TOTAL_PIPELINE_TIME: 34
+2025-04-22T22:13:21.2195715Z ##[endgroup]
+2025-04-22T22:13:21.2259916Z The error is:
+2025-04-22T22:13:21.2260460Z  
+2025-04-22T22:13:21.2270135Z src/main/java/metrics/EfficiencyIndexCalculator.java:1: error: ';' expected
+2025-04-22T22:13:21.2270969Z package metrics
+2025-04-22T22:13:21.2271470Z                ^
+2025-04-22T22:13:21.2271966Z 1 error
+2025-04-22T22:13:21.2272431Z Deployment failed! Initiating rollback...
+2025-04-22T22:13:23.6692670Z Pseudo-terminal will not be allocated because stdin is not a terminal.
+2025-04-22T22:13:26.0824548Z Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1027-aws x86_64)
+2025-04-22T22:13:26.0825678Z 
+2025-04-22T22:13:26.0825997Z  * Documentation:  https://help.ubuntu.com
+2025-04-22T22:13:26.0826836Z  * Management:     https://landscape.canonical.com
+2025-04-22T22:13:26.0827541Z  * Support:        https://ubuntu.com/pro
+2025-04-22T22:13:26.0827916Z 
+2025-04-22T22:13:26.0828480Z  System information as of Tue Apr 22 22:12:50 UTC 2025
+2025-04-22T22:13:26.0828905Z 
+2025-04-22T22:13:26.0829201Z   System load:  1.3               Temperature:           -273.1 C
+2025-04-22T22:13:26.0829980Z   Usage of /:   67.8% of 6.71GB   Processes:             117
+2025-04-22T22:13:26.0830665Z   Memory usage: 24%               Users logged in:       1
+2025-04-22T22:13:26.0831372Z   Swap usage:   0%                IPv4 address for ens5: 172.31.20.166
+2025-04-22T22:13:26.0831816Z 
+2025-04-22T22:13:26.0832164Z  * Ubuntu Pro delivers the most comprehensive open source security and
+2025-04-22T22:13:26.0832838Z    compliance features.
+2025-04-22T22:13:26.0833121Z 
+2025-04-22T22:13:26.0833336Z    https://ubuntu.com/aws/pro
+2025-04-22T22:13:26.0833680Z 
+2025-04-22T22:13:26.0834000Z Expanded Security Maintenance for Applications is not enabled.
+2025-04-22T22:13:26.0834759Z 
+2025-04-22T22:13:26.0834978Z 1 update can be applied immediately.
+2025-04-22T22:13:26.0835598Z To see these additional updates run: apt list --upgradable
+2025-04-22T22:13:26.0836046Z 
+2025-04-22T22:13:26.0836343Z Enable ESM Apps to receive additional future security updates.
+2025-04-22T22:13:26.0837102Z See https://ubuntu.com/esm or run: sudo pro status
+2025-04-22T22:13:26.0837509Z 
+2025-04-22T22:13:26.0837516Z 
+2025-04-22T22:13:31.3389499Z sudo: /opt/tomcat10/bin/shutdown.sh: command not found
+2025-04-22T22:13:31.3747544Z Tomcat started.
+2025-04-22T22:13:31.3862611Z ##[group]Run echo "-------------------------------------------------"
+2025-04-22T22:13:31.3863249Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3863728Z [36;1mecho "              CI/CD Metrics Summary              "[0m
+2025-04-22T22:13:31.3864231Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3864716Z [36;1mecho "| Metric                             | Value          |"[0m
+2025-04-22T22:13:31.3865201Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3865754Z [36;1mecho "| Total Pipeline Time (sec)          | $TOTAL_PIPELINE_TIME          |"[0m
+2025-04-22T22:13:31.3866450Z [36;1m# If deployment succeeded, DEPLOY_DURATION is set; if not, ROLLBACK_DURATION is used.[0m
+2025-04-22T22:13:31.3867041Z [36;1mif [ -n "$DEPLOY_DURATION" ]; then[0m
+2025-04-22T22:13:31.3867595Z [36;1m  echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"[0m
+2025-04-22T22:13:31.3868261Z [36;1melse[0m
+2025-04-22T22:13:31.3868697Z [36;1m  echo "| Rollback Deployment Time (sec)     | $ROLLBACK_DURATION          |"[0m
+2025-04-22T22:13:31.3869198Z [36;1mfi[0m
+2025-04-22T22:13:31.3869593Z [36;1mecho "| Lead Time for Changes (sec)        | $LEAD_TIME          |"[0m
+2025-04-22T22:13:31.3870103Z [36;1mif [ -f test_results.log ]; then[0m
+2025-04-22T22:13:31.3870592Z [36;1m  TEST_SUMMARY=$(grep -i "tests found" test_results.log | head -n 1)[0m
+2025-04-22T22:13:31.3871078Z [36;1melse[0m
+2025-04-22T22:13:31.3871369Z [36;1m  TEST_SUMMARY="N/A"[0m
+2025-04-22T22:13:31.3871694Z [36;1mfi[0m
+2025-04-22T22:13:31.3872168Z [36;1m# ─── Cost Calculation & Echo ──────────────────────────────────────────────[0m
+2025-04-22T22:13:31.3872823Z [36;1m# GitHub Actions hosted runner = $0.008 per minute = $0.0001333 per sec[0m
+2025-04-22T22:13:31.3873449Z [36;1mCOST=$(awk "BEGIN { printf \"%.4f\", $TOTAL_PIPELINE_TIME * 0.008/60 }")[0m
+2025-04-22T22:13:31.3874023Z [36;1mecho "| Cost (USD)                         | $COST              |"[0m
+2025-04-22T22:13:31.3874588Z [36;1m# ─────────────────────────────────────────────────────────────────────────────[0m
+2025-04-22T22:13:31.3875172Z [36;1mecho "| Test Summary                       | $TEST_SUMMARY          |"[0m
+2025-04-22T22:13:31.3875846Z [36;1m[0m
+2025-04-22T22:13:31.3876216Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3876670Z [36;1mecho "Memory Usage BEFORE:"[0m
+2025-04-22T22:13:31.3877047Z [36;1mcat mem_before.log[0m
+2025-04-22T22:13:31.3877398Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3877781Z [36;1mecho "Memory Usage AFTER:"[0m
+2025-04-22T22:13:31.3878310Z [36;1mcat mem_after.log[0m
+2025-04-22T22:13:31.3878654Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3879048Z [36;1mecho "Resource Usage BEFORE (vmstat):"[0m
+2025-04-22T22:13:31.3879427Z [36;1mcat resource_usage_before.log[0m
+2025-04-22T22:13:31.3879812Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3880212Z [36;1mecho "Resource Usage AFTER (vmstat):"[0m
+2025-04-22T22:13:31.3880562Z [36;1mcat resource_usage_after.log[0m
+2025-04-22T22:13:31.3880940Z [36;1mecho "-------------------------------------------------"[0m
+2025-04-22T22:13:31.3929375Z shell: /usr/bin/bash -e {0}
+2025-04-22T22:13:31.3929710Z env:
+2025-04-22T22:13:31.3929988Z   REMOTE_HOST: 18.60.83.220
+2025-04-22T22:13:31.3930304Z   REMOTE_USER: ubuntu
+2025-04-22T22:13:31.3930630Z   REMOTE_BACKUP_DIR: /tmp/actions_bak
+2025-04-22T22:13:31.3931099Z   JAVA_HOME: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:31.3931683Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Corretto_jdk/17.0.15-6.1/x64
+2025-04-22T22:13:31.3932166Z   PIPELINE_START_TIME: 1745359967
+2025-04-22T22:13:31.3932524Z   DEPLOY_END_TIME: 1745359996
+2025-04-22T22:13:31.3932849Z   DEPLOY_DURATION: 
+2025-04-22T22:13:31.3933336Z   TOTAL_PIPELINE_TIME: 34
+2025-04-22T22:13:31.3933664Z   ROLLBACK_DURATION: 10
+2025-04-22T22:13:31.3933972Z ##[endgroup]
+2025-04-22T22:13:31.4007322Z -------------------------------------------------
+2025-04-22T22:13:31.4008318Z               CI/CD Metrics Summary              
+2025-04-22T22:13:31.4009005Z -------------------------------------------------
+2025-04-22T22:13:31.4009675Z | Metric                             | Value          |
+2025-04-22T22:13:31.4010342Z -------------------------------------------------
+2025-04-22T22:13:31.4011028Z | Total Pipeline Time (sec)          | 34          |
+2025-04-22T22:13:31.4011773Z | Rollback Deployment Time (sec)     | 10          |
+2025-04-22T22:13:31.4012467Z | Lead Time for Changes (sec)        |           |
+2025-04-22T22:13:31.4033636Z | Cost (USD)                         | 0.0045              |
+2025-04-22T22:13:31.4034321Z | Test Summary                       | N/A          |
+2025-04-22T22:13:31.4034965Z -------------------------------------------------
+2025-04-22T22:13:31.4035556Z Memory Usage BEFORE:
+2025-04-22T22:13:31.4044554Z cat: mem_before.log: No such file or directory
+2025-04-22T22:13:31.4050360Z ##[error]Process completed with exit code 1.
+2025-04-22T22:13:31.4129413Z Post job cleanup.
+2025-04-22T22:13:31.5944716Z Post job cleanup.
+2025-04-22T22:13:31.6684583Z [command]/usr/bin/git version
+2025-04-22T22:13:31.6721996Z git version 2.49.0
+2025-04-22T22:13:31.6766849Z Temporarily overriding HOME='/home/runner/work/_temp/9a46d081-5bb1-4ac9-8d77-7b0aca8b7319' before making global git config changes
+2025-04-22T22:13:31.6768526Z Adding repository directory to the temporary git global config as a safe directory
+2025-04-22T22:13:31.6772312Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/JobManagement/JobManagement
+2025-04-22T22:13:31.6805520Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-04-22T22:13:31.6834696Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-04-22T22:13:31.7061979Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-04-22T22:13:31.7082518Z http.https://github.com/.extraheader
+2025-04-22T22:13:31.7093678Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-04-22T22:13:31.7122227Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-04-22T22:13:31.7461684Z Cleaning up orphan processes
