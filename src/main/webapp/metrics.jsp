@@ -74,7 +74,7 @@
       // Now render the table rows in a separate JSP block
       for (MetricRecord r : map.keySet()) {
         double idx = map.get(r);
-        long memDelta = r.getMemoryAfterUsed() - r.getMemoryBeforeUsed();
+        double memDelta = r.getMemoryAfterUsed() - r.getMemoryBeforeUsed();
     %>
     <tr>
       <td><%= r.getToolName() %></td>
