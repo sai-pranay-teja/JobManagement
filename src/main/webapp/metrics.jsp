@@ -67,7 +67,7 @@
     <tr>
       <th>Tool</th>
       <th>Total Time (sec)</th>
-      <th>Memory Δ (Mi)</th>
+      <th>Memory Delta (Mi)</th>
       <th>Index</th>
     </tr>
     <%

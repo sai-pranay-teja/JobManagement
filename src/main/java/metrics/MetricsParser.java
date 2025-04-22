@@ -83,20 +83,18 @@ public class MetricsParser {
 
         // Parse memory BEFORE and AFTER
         Matcher memBeforeMatcher = MEM_BEFORE.matcher(sb);
-        if (memBeforeMatcher.find()) {
-            rec.setMemoryBeforeUsed(parseSize(
-                memBeforeMatcher.group(1), 
-                memBeforeMatcher.group(2)
-            ));
-        }
+            if (memBeforeMatcher.find()) {
+        double before = parseSize(memBeforeMatcher.group(1), memBeforeMatcher.group(2));
+        System.out.println("[DEBUG] " + logFile + " - Memory BEFORE: " + before + " MiB");
+        rec.setMemoryBeforeUsed(before);
+    }
 
         Matcher memAfterMatcher = MEM_AFTER.matcher(sb);
-        if (memAfterMatcher.find()) {
-            rec.setMemoryAfterUsed(parseSize(
-                memAfterMatcher.group(1), 
-                memAfterMatcher.group(2)
-            ));
-        }
+    if (memAfterMatcher.find()) {
+        double after = parseSize(memAfterMatcher.group(1), memAfterMatcher.group(2));
+        System.out.println("[DEBUG] " + logFile + " - Memory AFTER: " + after + " MiB");
+        rec.setMemoryAfterUsed(after);
+    }
 
         return rec;
     }
