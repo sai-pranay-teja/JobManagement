@@ -1,12 +1,14 @@
-<%@ page contentType="text/html;charset=UTF-8" isErrorPage="true" %>
+<%@ page isErrorPage="true" contentType="text/html;charset=UTF-8" %>
 <html>
-<head>
-    <title>Error</title>
-    <link rel="stylesheet" href="../css/styles.css">
-</head>
+<head><title>Error</title></head>
 <body>
-    <h1>Error Occurred</h1>
-    <p>${requestScope.error}</p>
-    <a href="login.jsp">Go Back to Login</a>
+  <h1>An error occurred</h1>
+  <h3><%= exception.getMessage() %></h3>
+  <pre>
+<%
+    exception.printStackTrace(new java.io.PrintWriter(out));
+%>
+  </pre>
+  <a href="login.jsp">Back to Login</a>
 </body>
 </html>
