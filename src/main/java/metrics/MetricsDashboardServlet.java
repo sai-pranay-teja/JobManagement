@@ -1,50 +1,3 @@
-// package metrics;
-
-// import jakarta.servlet.*;
-// import jakarta.servlet.http.*;
-// import java.io.IOException;
-// import java.nio.file.*;
-// import java.util.*;
-
-// public class MetricsDashboardServlet extends HttpServlet {
-//     private List<MetricRecord> records;
-
-//     @Override
-//     public void init() throws ServletException {
-//         try {
-//             Path logsDir = Paths.get(getServletContext().getRealPath("/logs"));
-//             records = MetricsParser.parseAllLogs(logsDir);
-//         } catch (IOException e) {
-//             throw new ServletException(e);
-//         }
-//     }
-
-//     @Override
-//     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-//             throws ServletException, IOException {
-//         // compute min/max
-//         IntSummaryStatistics ts = records.stream()
-//             .mapToInt(MetricRecord::getTotalPipelineTime).summaryStatistics();
-//         LongSummaryStatistics ms = records.stream()
-//             .mapToLong(r -> r.getMemoryAfterUsed() - r.getMemoryBeforeUsed()).summaryStatistics();
-
-//         Map<MetricRecord, Double> idxMap = new LinkedHashMap<>();
-//         for (MetricRecord rec : records) {
-//             long memDiff = rec.getMemoryAfterUsed() - rec.getMemoryBeforeUsed();
-//             double idx = EfficiencyIndexCalculator.computeIndex(
-//                 rec.getTotalPipelineTime(), ts.getMin(), ts.getMax(),
-//                 memDiff, ms.getMin(), ms.getMax()
-//             );
-//             idxMap.put(rec, idx);
-//         }
-
-//         req.setAttribute("indexMap", idxMap);
-//         req.getRequestDispatcher("/metrics.jsp").forward(req, resp);
-//     }
-// }
-
-
-
 package metrics;
 
 import jakarta.servlet.*;
@@ -70,26 +23,62 @@ public class MetricsDashboardServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        // Compute min/max for time and memory delta
-        DoubleSummaryStatistics ts = records.stream()
-            .mapToDouble(MetricRecord::getTotalPipelineTime)
-            .summaryStatistics();
+        
+        // Split records
+        List<MetricRecord> deployments = filterRecords(false);
+        List<MetricRecord> rollbacks = filterRecords(true);
 
-        DoubleSummaryStatistics ms = records.stream()
-            .mapToDouble(r -> r.getMemoryAfterUsed() - r.getMemoryBeforeUsed())
-            .summaryStatistics();
+        // Compute stats
+        DoubleSummaryStatistics deployTimeStats = getStats(deployments, "time");
+        DoubleSummaryStatistics deployMemStats = getStats(deployments, "memory");
+        DoubleSummaryStatistics rollbackStats = getStats(rollbacks, "time");
 
-        Map<MetricRecord, Double> idxMap = new LinkedHashMap<>();
+        // Calculate indices
+        Map<MetricRecord, Double> indices = new LinkedHashMap<>();
+        addDeploymentIndices(indices, deployments, deployTimeStats, deployMemStats);
+        addRollbackIndices(indices, rollbacks, rollbackStats);
+
+        req.setAttribute("indexMap", indices);
+        req.getRequestDispatcher("/metrics.jsp").forward(req, resp);
+    }
+
+    private List<MetricRecord> filterRecords(boolean isRollback) {
+        return records.stream()
+            .filter(r -> r.isRollback() == isRollback)
+            .collect(Collectors.toList());
+    }
+
+    private DoubleSummaryStatistics getStats(List<MetricRecord> records, String type) {
+        return records.stream()
+            .mapToDouble(r -> type.equals("time") ? 
+                (r.isRollback() ? r.getRollbackTime() : r.getTotalPipelineTime()) :
+                (r.getMemoryAfterUsed() - r.getMemoryBeforeUsed()))
+            .summaryStatistics();
+    }
+
+    private void addDeploymentIndices(Map<MetricRecord, Double> map, 
+                                    List<MetricRecord> records,
+                                    DoubleSummaryStatistics timeStats,
+                                    DoubleSummaryStatistics memStats) {
         for (MetricRecord rec : records) {
             double memDelta = rec.getMemoryAfterUsed() - rec.getMemoryBeforeUsed();
-            double idx = EfficiencyIndexCalculator.computeIndex(
-                rec.getTotalPipelineTime(), ts.getMin(), ts.getMax(),
-                memDelta, ms.getMin(), ms.getMax()
+            double idx = EfficiencyIndexCalculator.computeDeploymentIndex(
+                rec.getTotalPipelineTime(), memDelta,
+                timeStats.getMin(), timeStats.getMax(),
+                memStats.getMin(), memStats.getMax()
             );
-            idxMap.put(rec, idx);
+            map.put(rec, idx);
         }
+    }
 
-        req.setAttribute("indexMap", idxMap);
-        req.getRequestDispatcher("/metrics.jsp").forward(req, resp);
+    private void addRollbackIndices(Map<MetricRecord, Double> map,
+                                  List<MetricRecord> records,
+                                  DoubleSummaryStatistics stats) {
+        for (MetricRecord rec : records) {
+            double idx = EfficiencyIndexCalculator.computeRollbackIndex(
+                rec.getRollbackTime(), stats.getMin(), stats.getMax()
+            );
+            map.put(rec, idx);
+        }
     }
 }

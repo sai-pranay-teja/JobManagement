@@ -42,20 +42,26 @@
       data.addColumn('string', 'Tool');
       data.addColumn('number', 'Efficiency Index');
 
-      // Pure JavaScript loop—no JSP inside here!
       for (var i = 0; i < dataRows.length; i++) {
         data.addRow(dataRows[i]);
       }
 
+      var options = {
+        title: 'CI/CD Efficiency Comparison',
+        hAxis: { title: 'Tools' },
+        vAxis: { title: 'Index (Higher is better)', minValue: 0, maxValue: 1 }
+      };
+
       var chart = new google.visualization.ColumnChart(
         document.getElementById('chart_div')
       );
-      chart.draw(data);
+      chart.draw(data, options);
     }
   </script>
   <style>
     table { border-collapse: collapse; width: 80%; margin-top: 20px; }
     th, td { border: 1px solid #666; padding: 8px; text-align: left; }
+    .na { color: #666; font-style: italic; }
   </style>
 </head>
 <body>
@@ -66,20 +72,26 @@
   <table>
     <tr>
       <th>Tool</th>
-      <th>Total Time (sec)</th>
-      <th>Memory Delta (Mi)</th>
+      <th>Time (sec)</th>
+      <th>Memory Δ (Mi)</th>
       <th>Index</th>
     </tr>
     <%
-      // Now render the table rows in a separate JSP block
       for (MetricRecord r : map.keySet()) {
         double idx = map.get(r);
-        double memDelta = r.getMemoryAfterUsed() - r.getMemoryBeforeUsed();
+        double time = r.isRollback() ? r.getRollbackTime() : r.getTotalPipelineTime();
+        double memDelta = r.isRollback() ? 0 : r.getMemoryAfterUsed() - r.getMemoryBeforeUsed();
     %>
     <tr>
       <td><%= r.getToolName() %></td>
-      <td><%= r.getTotalPipelineTime() %></td>
-      <td><%= String.format("%.2f", memDelta) %></td>
+      <td><%= String.format("%.1f", time) %></td>
+      <td>
+        <% if(r.isRollback()) { %>
+          <span class="na">N/A</span>
+        <% } else { %>
+          <%= String.format("%.2f", memDelta) %>
+        <% } %>
+      </td>
       <td><%= String.format("%.3f", idx) %></td>
     </tr>
     <% } %>
