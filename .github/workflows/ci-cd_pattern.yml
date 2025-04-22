@@ -1,0 +1,413 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'A = optimized (incremental & parallel), B = baseline (full & sequential)'
+        required: true
+
+env:
+  REMOTE_BACKUP_DIR: /tmp/actions_bak
+  MODE: A
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+
+    - name: Copy config.properties for Measuring Baseline calculations
+      run: |
+        mkdir -p test_output
+        cp src/main/resources/config.properties test_output/
+
+    - name: Compute average baseline build+test (N=4)
+      id: baseline
+      run: |
+        N=4; sum=0
+        for i in $(seq 1 $N); do
+          echo "🔄 Baseline run #$i"
+          start=$(date +%s)
+          # full compile & test
+          find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+          javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output src/main/test/*.java
+          cp src/main/resources/config.properties test_output/
+          java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+            org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true
+          end=$(date +%s)
+          dur=$((end - start))
+          echo "⚖️  Run #$i = $dur sec"
+          sum=$((sum + dur))
+        done
+        avg=$((sum / N))
+        echo "AVERAGE_BASELINE=$avg" >> $GITHUB_ENV
+        echo "::notice title=Average Baseline::$avg seconds over $N runs"
+
+
+
+    # - name: Measure baseline build+test
+    #   id: baseline
+    #   run: |
+    #     start=$(date +%s)
+    #     echo "BASE_BUILD=$(date +%s)" >> $GITHUB_OUTPUT
+    #     # full compile & test
+    #     find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+    #     javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_output src/main/test/*.java
+    #     java -cp "test_output:src/main/webapp/WEB-INF/lib/*" \
+    #       org.junit.platform.console.ConsoleLauncher --scan-class-path test_output --details summary || true
+    #     end=$(date +%s)
+    #     echo "BASE_TEST=$(date +%s)" >> $GITHUB_OUTPUT
+
+    #     # Log the time for later analysis
+    #     baseline_time=$((end - start))
+    #     echo "BASELINE_TIME=$baseline_time" >> $GITHUB_ENV
+    #     echo "::notice title=Baseline Build+Test Time::$baseline_time seconds"
+
+
+       
+
+    
+    # - name: Decide MODE dynamically
+    #   run: |
+    #     base_build=$(( ${{ steps.baseline.outputs.BASE_TEST }} - ${{ steps.baseline.outputs.BASE_BUILD }} ))
+    #     THRESHOLD=5  # your chosen T in seconds
+    #     if [ $base_build -ge $THRESHOLD ]; then
+    #       echo "Running optimized Mode A"
+    #       echo "MODE=A" >> $GITHUB_ENV
+    #     else
+    #       echo "Running baseline Mode B"
+    #       echo "MODE=B" >> $GITHUB_ENV
+    #     fi
+
+
+    - name: Decide MODE dynamically
+      run: |
+        THRESHOLD=10  # fixed threshold, or tweak as needed
+        echo "▶ Threshold T = $THRESHOLD sec"
+        if [ $AVERAGE_BASELINE -ge $THRESHOLD ]; then
+          echo "Running optimized Mode A"
+          echo "MODE=A" >> $GITHUB_ENV
+        else
+          echo "Running baseline Mode B"
+          echo "MODE=B" >> $GITHUB_ENV
+        fi
+
+
+
+    - name: Validate MODE
+      run: |
+        if [[ "$MODE" != "A" && "$MODE" != "B" ]]; then
+          echo "❌ Invalid MODE: '$MODE'. Must be 'A' or 'B'."
+          exit 1
+        fi
+
+
+    - name: Record pipeline start
+      id: pipeline_start
+      run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+
+
+    - name: Show Mode
+      run: echo "🔧 Mode - Mode $MODE"
+
+    # --- JVM SETUP ---
+    - name: JVM Setup Start
+      run: echo "JVM_SETUP_START=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'corretto'
+  
+    - name: JVM Pre‑warm (Mode A)
+      if: ${{ env.MODE == 'A' }}
+      run: |
+        echo "JVM_PREWARM_START=$(date +%s)" >> $GITHUB_ENV
+        # Launch a no‑op java to warm the JVM
+        java -Xshare:auto -version > /dev/null 2>&1 || true
+        echo "JVM_PREWARM_END=$(date +%s)" >> $GITHUB_ENV
+
+    - name: JVM Setup End
+      run: |
+        echo "JVM_SETUP_END=$(date +%s)" >> $GITHUB_ENV
+
+    - name: Save SSH key
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > key.pem
+        chmod 400 key.pem
+
+    # --- BUILD CACHE RESTORE ---
+    - name: ⏱ Cache Restore (Build)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "BUILD_CACHE_RESTORE_START=$(date +%s)" >> $GITHUB_ENV
+
+    - uses: actions/cache@v3
+      if: ${{ env.MODE == 'A' }}
+      with:
+        path: build/WEB-INF/classes
+        key: build-classes-${{ hashFiles('src/main/java/model/**/*.java') }}
+
+    - name: Record end of Cache Restore (Build)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "BUILD_CACHE_RESTORE_END=$(date +%s)" >> $GITHUB_ENV
+
+    # --- BUILD STAGE ---
+
+    - name: Build WAR file
+      run: |
+        BUILD_START=$(date +%s)
+        mkdir -p build/WEB-INF/classes
+
+        TOTAL_FILES=$(find src/main/java/model -name "*.java" | wc -l)
+        if [ "$MODE" = "A" ]; then
+          CHANGED_COUNT=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes | wc -l)
+          echo "🔍 Incremental build: $CHANGED_COUNT/$TOTAL_FILES Java files changed"
+          if [ $CHANGED_COUNT -gt 0 ]; then
+            find src/main/java/model -name "*.java" -newer build/WEB-INF/classes | \
+              xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+          else
+            echo "No changes → full compile"
+            find src/main/java/model -name "*.java" | \
+              xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+          fi
+        else
+          echo "[Mode B] Full compile"
+          find src/main/java/model -name "*.java" | \
+            xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+        fi
+
+        cp -R src/main/resources/* build/WEB-INF/classes/
+        cp -R src/main/webapp/* build/
+        jar -cvf JobManagement_ACTIONS.war -C build .
+
+        BUILD_END=$(date +%s)
+        echo "BUILD_TIME=$((BUILD_END - BUILD_START))" >> $GITHUB_ENV
+
+
+
+
+
+
+    # - name: Build WAR file
+    #   run: |
+    #     BUILD_START=$(date +%s)
+    #     mkdir -p build/WEB-INF/classes
+
+    #     if [ "$MODE" = "A" ]; then
+    #       CHANGED=$(find src/main/java/model -name "*.java" -newer build/WEB-INF/classes)
+    #       if [ -n "$CHANGED" ]; then
+    #         echo "Incremental compile of changed files"
+    #         javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $CHANGED
+    #       else
+    #         echo "No changes => full compile"
+    #         find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+    #       fi
+    #     else
+    #       echo "[Mode B] Full compile"
+    #       find src/main/java/model -name "*.java" | xargs javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes
+    #     fi
+
+    #     cp -R src/main/resources/* build/WEB-INF/classes/
+    #     cp -R src/main/webapp/* build/
+    #     jar -cvf JobManagement_ACTIONS.war -C build .
+
+    #     BUILD_END=$(date +%s)
+    #     echo "BUILD_TIME=$((BUILD_END - BUILD_START))" >> $GITHUB_ENV
+
+    # --- BUILD CACHE SAVE ---
+    - name: ⏱ Cache Save (Build)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "BUILD_CACHE_SAVE_START=$(date +%s)" >> $GITHUB_ENV
+
+    - uses: actions/cache@v3
+      if: ${{ env.MODE == 'A' }}
+      with:
+        path: build/WEB-INF/classes
+        key: build-classes-${{ hashFiles('src/main/java/model/**/*.java') }}
+
+    - name: Record end of Cache Save (Build)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "BUILD_CACHE_SAVE_END=$(date +%s)" >> $GITHUB_ENV
+
+    # --- BACKUP WAR ---
+    - name: Backup WAR on remote
+      run: |
+        ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "mkdir -p $REMOTE_BACKUP_DIR"
+        scp -o StrictHostKeyChecking=no -i key.pem JobManagement_ACTIONS.war ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:$REMOTE_BACKUP_DIR/JobManagement_ACTIONS.war_bak
+
+    - name: Prepare test cache directory
+      if: ${{ env.MODE == 'A' }}
+      run: mkdir -p test_output
+
+    # --- TEST CACHE RESTORE ---
+    - name: ⏱ Cache Restore (Test Classes)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "TEST_CACHE_RESTORE_START=$(date +%s)" >> $GITHUB_ENV
+
+    - uses: actions/cache@v3
+      if: ${{ env.MODE == 'A' }}
+      with:
+        path: |
+          test_unit
+          test_int
+        key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
+
+    - name: Record end of Cache Restore (Test Classes)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "TEST_CACHE_RESTORE_END=$(date +%s)" >> $GITHUB_ENV
+
+
+
+
+    - name: Copy config.properties for tests
+      run: |
+        mkdir -p test_unit
+        cp src/main/resources/config.properties test_unit/
+
+
+    # --- TEST STAGE ---
+    - name: Run Tests
+      run: |
+        TEST_START=$(date +%s)
+
+        mkdir -p test_unit test_int
+        javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_unit src/main/test/TestAppPart1.java
+        javac -cp "src/main/webapp/WEB-INF/lib/*:src" -d test_int src/main/test/TestAppPart2.java
+
+        JVM1_START=$(date +%s)
+        java -cp "test_unit:src/main/webapp/WEB-INF/lib/*" \
+          org.junit.platform.console.ConsoleLauncher --select-class TestAppPart1 --details summary > test_unit.log 2>&1 &
+        JVM2_START=$(date +%s)
+        java -cp "test_int:src/main/webapp/WEB-INF/lib/*" \
+          org.junit.platform.console.ConsoleLauncher --select-class TestAppPart2 --details summary > test_int.log 2>&1 &
+        wait
+        JVM_END=$(date +%s)
+
+        TEST_END=$(date +%s)
+        echo "TEST_TIME=$((TEST_END - TEST_START))" >> $GITHUB_ENV
+        echo "JVM_STARTUP_TIME=$((JVM_END - JVM1_START))" >> $GITHUB_ENV
+
+    # --- TEST CACHE SAVE ---
+    - name: ⏱ Cache Save (Test Classes)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "TEST_CACHE_SAVE_START=$(date +%s)" >> $GITHUB_ENV
+
+    - uses: actions/cache@v3
+      if: ${{ env.MODE == 'A' }}
+      with:
+        path: |
+          test_unit
+          test_int
+        key: test-classes-${{ hashFiles('src/main/test/**/*.java') }}
+
+    - name: Record end of Cache Save (Test Classes)
+      if: ${{ env.MODE == 'A' }}
+      run: echo "TEST_CACHE_SAVE_END=$(date +%s)" >> $GITHUB_ENV
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # --- DEPLOY STAGE ---
+    - name: Record deploy and commit times
+      id: timing
+      run: |
+        echo "deploy_start=$(date +%s)" >> $GITHUB_OUTPUT
+        echo "commit_time=$(git log -1 --format=%ct)" >> $GITHUB_OUTPUT
+
+    - name: Deploy to Tomcat
+      run: |
+        scp -o StrictHostKeyChecking=no -i key.pem \
+          JobManagement_ACTIONS.war \
+          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/opt/tomcat10/webapps/
+        ssh -o StrictHostKeyChecking=no -i key.pem \
+          ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} <<EOF
+            sudo rm -rf /opt/tomcat10/webapps/JobManagement_ACTIONS || true
+            sudo /opt/tomcat10/bin/catalina.sh stop || true
+            sudo /opt/tomcat10/bin/catalina.sh start
+        EOF
+        echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
+
+    # --- FINAL METRICS ---
+    - name: Summarize Metrics
+      run: |
+        DEPLOY_END=$(date +%s)
+        DEPLOY_START=${{ steps.timing.outputs.deploy_start }}
+        COMMIT_TIME=${{ steps.timing.outputs.commit_time }}
+        PIPELINE_START=${{ steps.pipeline_start.outputs.start }}
+        NOW=$DEPLOY_END
+
+        DEPLOY_TIME=$((DEPLOY_END - DEPLOY_START))
+        LEAD_TIME=$((NOW - COMMIT_TIME))
+        TOTAL_TIME=$((NOW - PIPELINE_START))
+
+        JVM_SETUP_TIME=$((JVM_SETUP_END - JVM_SETUP_START))
+        BUILD_CACHE_RESTORE_TIME=$((BUILD_CACHE_RESTORE_END - BUILD_CACHE_RESTORE_START))
+        BUILD_CACHE_SAVE_TIME=$((BUILD_CACHE_SAVE_END - BUILD_CACHE_SAVE_START))
+        TEST_CACHE_RESTORE_TIME=$((TEST_CACHE_RESTORE_END - TEST_CACHE_RESTORE_START))
+        TEST_CACHE_SAVE_TIME=$((TEST_CACHE_SAVE_END - TEST_CACHE_SAVE_START))
+
+        # NET_BUILD=$((BUILD_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME))
+        # NET_TEST=$((TEST_TIME - JVM_STARTUP_TIME))
+        # NET_TOTAL=$((TOTAL_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME - TEST_CACHE_RESTORE_TIME - TEST_CACHE_SAVE_TIME - JVM_SETUP_TIME - JVM_STARTUP_TIME))
+
+        if [ "$MODE" = "A" ]; then
+          NET_BUILD=$((BUILD_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME))
+          NET_TEST=$((TEST_TIME - JVM_STARTUP_TIME))
+          NET_TOTAL=$((TOTAL_TIME - BUILD_CACHE_RESTORE_TIME - BUILD_CACHE_SAVE_TIME - TEST_CACHE_RESTORE_TIME - TEST_CACHE_SAVE_TIME - JVM_SETUP_TIME - JVM_STARTUP_TIME))
+        else
+        # For Mode B, report raw times
+          NET_BUILD=$BUILD_TIME
+          NET_TEST=$TEST_TIME
+          NET_TOTAL=$TOTAL_TIME
+        fi
+
+
+
+
+        echo "DEPLOY_TIME=$DEPLOY_TIME" >> $GITHUB_ENV
+        echo "LEAD_TIME=$LEAD_TIME" >> $GITHUB_ENV
+        echo "TOTAL_TIME=$TOTAL_TIME" >> $GITHUB_ENV
+
+        echo "🚀 Mode: Mode $MODE"
+        echo "Build Time          : $BUILD_TIME sec"
+        echo "Test Time           : $TEST_TIME sec"
+        echo "Deploy Time         : $DEPLOY_TIME sec"
+        echo "Lead Time           : $LEAD_TIME sec"
+        echo "Total Pipeline Time : $TOTAL_TIME sec"
+        echo "Overhead (JVM Setup)              : $JVM_SETUP_TIME sec"
+        echo "Overhead (Cache Restore - Build) : $BUILD_CACHE_RESTORE_TIME sec"
+        echo "Overhead (Cache Save - Build)    : $BUILD_CACHE_SAVE_TIME sec"
+        echo "Overhead (Cache Restore - Test)  : $TEST_CACHE_RESTORE_TIME sec"
+        echo "Overhead (Cache Save - Test)     : $TEST_CACHE_SAVE_TIME sec"
+        echo "Overhead (JVM Startup Time)      : $JVM_STARTUP_TIME sec"
+        echo "➡️ Pure Build   : $NET_BUILD sec"
+        echo "➡️ Pure Test    : $NET_TEST sec"
+        echo "➡️ Pure Total   : $NET_TOTAL sec"
+
+        echo "MODE,BUILD_TIME,TEST_TIME,DEPLOY_TIME,LEAD_TIME,TOTAL_TIME,JVM_SETUP,BUILD_CACHE_RESTORE,BUILD_CACHE_SAVE,TEST_CACHE_RESTORE,TEST_CACHE_SAVE,JVM_STARTUP,NET_BUILD_TIME,NET_TEST_TIME,NET_TOTAL_TIME" > stage_metrics.csv
+        echo "$MODE,$BUILD_TIME,$TEST_TIME,$DEPLOY_TIME,$LEAD_TIME,$TOTAL_TIME,$JVM_SETUP_TIME,$BUILD_CACHE_RESTORE_TIME,$BUILD_CACHE_SAVE_TIME,$TEST_CACHE_RESTORE_TIME,$TEST_CACHE_SAVE_TIME,$JVM_STARTUP_TIME,$NET_BUILD,$NET_TEST,$NET_TOTAL" >> stage_metrics.csv
+
+    - name: Upload test logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-results
+        path: |
+          test_unit.log
+          test_int.log
+          stage_metrics.csv
