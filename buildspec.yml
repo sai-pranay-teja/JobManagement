@@ -78,7 +78,7 @@ phases:
 
 
 
-          printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+          # printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
           echo "-------------------------------------------------" >> metrics_summary.log
           echo "Metrics Summary:" 
           cat metrics_summary.log
