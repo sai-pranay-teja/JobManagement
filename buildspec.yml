@@ -53,7 +53,7 @@ phases:
           # (Simulated) Deployment delay—replace this with your actual deployment commands.
           sleep 5
           
-          
+
           # Record the deployment end time and calculate the deployment duration.
           export DEPLOY_END_TIME=$(date +%s)
           export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
@@ -87,7 +87,10 @@ phases:
           echo -e "\nBuild failed - compilation errors:"
           cat compile_error.log
           echo "Initiating rollback and recording rollback metrics..."
-          
+          # AWS CodeBuild rate = $0.005 per minute = $0.0000833 per sec
+          COST=$(awk "BEGIN { printf \"%.4f\", $TOTAL_PIPELINE_TIME * 0.005/60 }")
+          printf "| %-35s | %-15s |\n" "Cost (USD)" "$COST" >> metrics_summary.log
+          # ─────────────────────────────────────────────────────────────────────────────
           # Record the rollback start time.
           export ROLLBACK_START_TIME=$(date +%s)
           ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.83.220 "
