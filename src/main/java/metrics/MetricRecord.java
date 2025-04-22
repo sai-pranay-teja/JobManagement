@@ -4,7 +4,7 @@ public class MetricRecord {
     private String toolName;
     private boolean isRollback;
     private double totalPipelineTime;
-    private double rollbackTime = -1; // -1 means N/A
+    private double rollbackTime;
     private double memoryBeforeUsed;
     private double memoryAfterUsed;
     private double duration;

@@ -31,7 +31,10 @@ public class MetricsDashboardServlet extends HttpServlet {
         // Compute stats
         DoubleSummaryStatistics deployTimeStats = getStats(deployments, "time");
         DoubleSummaryStatistics deployMemStats = getStats(deployments, "memory");
-        DoubleSummaryStatistics rollbackStats = getStats(rollbacks, "time");
+        DoubleSummaryStatistics rollbackStats = rollbacks.stream()
+    .mapToDouble(r -> r.getRollbackTime())
+    .filter(t -> t >= 0)  // Exclude invalid values
+    .summaryStatistics();
 
         // Calculate indices
         Map<MetricRecord, Double> indices = new LinkedHashMap<>();
