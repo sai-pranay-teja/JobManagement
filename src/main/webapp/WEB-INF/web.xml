@@ -1,69 +1,30 @@
-<!-- <?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee 
-                             https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
-         version="5.0">
-    <session-config>
-        <session-timeout>30</session-timeout>
-    </session-config>
-    
-    <welcome-file-list>
-        <welcome-file>login.jsp</welcome-file>
-    </welcome-file-list>
-    
-    
-    <error-page>
-    <exception-type>java.lang.Throwable</exception-type>
-    <location>/views/error.jsp</location>
-
-
-
-    <servlet>
-      <servlet-name>MetricsDashboardServlet</servlet-name>
-      <servlet-class>metrics.MetricsDashboardServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-      <servlet-name>MetricsDashboardServlet</servlet-name>
-      <url-pattern>/metrics-data</url-pattern>
-    </servlet-mapping>
-
-
-
-
-
-
-    
-</error-page>
-</web-app> -->
-
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee 
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
                              https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
          version="5.0">
-    <session-config>
-        <session-timeout>30</session-timeout>
-    </session-config>
-    
-    <welcome-file-list>
-        <welcome-file>login.jsp</welcome-file>
-    </welcome-file-list>
-    
-    <!-- Error page should be standalone -->
-    <error-page>
-        <exception-type>java.lang.Throwable</exception-type>
-        <location>/error.jsp</location> <!-- Fixed path (no /views/) -->
-    </error-page>
 
-    <!-- Servlet definitions AFTER error-page -->
-    <servlet>
-        <servlet-name>MetricsDashboardServlet</servlet-name>
-        <servlet-class>metrics.MetricsDashboardServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>MetricsDashboardServlet</servlet-name>
-        <url-pattern>/metrics</url-pattern>
-    </servlet-mapping>
+  <session-config>
+    <session-timeout>30</session-timeout>
+  </session-config>
+
+  <welcome-file-list>
+    <welcome-file>login.jsp</welcome-file>
+  </welcome-file-list>
+
+  <error-page>
+    <exception-type>java.lang.Throwable</exception-type>
+    <location>/error.jsp</location>
+  </error-page>
+
+  <servlet>
+    <servlet-name>MetricsDashboardServlet</servlet-name>
+    <servlet-class>metrics.MetricsDashboardServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>MetricsDashboardServlet</servlet-name>
+    <url-pattern>/metrics</url-pattern>
+  </servlet-mapping>
+
 </web-app>
