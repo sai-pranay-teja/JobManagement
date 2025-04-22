@@ -115,13 +115,13 @@ public class MetricsParser {
     
     if (filename.contains("gha")) {
         return filename.contains("rollback") ? "gha-rollback" : "gha";
+    }
     else if (filename.contains("jenkins")) {
         return filename.contains("rollback") ? "jenkins-rollback" : "jenkins";
+    }
     else if (filename.contains("codebuild")) {
         return filename.contains("rollback") ? "codebuild-rollback" : "codebuild";
     }
-    return "unknown";
-}
     }
-   }
+    return "unknown";
 }
