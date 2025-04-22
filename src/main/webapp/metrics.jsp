@@ -1,14 +1,17 @@
-<%@ page isErrorPage="true" %>
-<%
-    out.println("CHECKPOINT: JSP reached.<br>");
-    Object obj = request.getAttribute("indexMap");
-    if (obj == null) out.println("indexMap is NULL<br>");
-    else out.println("indexMap is NOT NULL<br>");
-%>
-
 
 
 <%@ page import="java.util.*, metrics.MetricRecord" %>
+
+<%
+    Object attr = request.getAttribute("indexMap");
+    if (attr == null) {
+        out.println("<h2>No data received. Servlet may not be forwarding properly.</h2>");
+        return;
+    }
+    Map<MetricRecord, Double> map = (Map<MetricRecord, Double>) attr;
+%>
+
+
 <html>
 <head>
   <title>CI/CD Metrics Dashboard</title>
