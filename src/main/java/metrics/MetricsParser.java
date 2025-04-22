@@ -7,16 +7,18 @@ import java.util.regex.*;
 
 public class MetricsParser {
 private static final Pattern KV = Pattern.compile(
-    "\\|\\s*(Rollback Deployment Time|Rollback completed in)\\s*\\|\\s*(\\d+)\\s*seconds?\\s*\\|", 
+    "\\|\\s*(Total Pipeline Time \\(sec\\)|Rollback Deployment Time|Rollback completed in)\\s*\\|\\s*(\\d+\\.?\\d*)\\s*\\|", 
     Pattern.CASE_INSENSITIVE
-);    private static final Pattern MEM_BEFORE = Pattern.compile(
-        "Memory Usage BEFORE:.*?\\|\\s*\\d+\\s*\\|\\s*Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
-        Pattern.DOTALL
-    );
-    private static final Pattern MEM_AFTER = Pattern.compile(
-        "Memory Usage AFTER:.*?\\|\\s*\\d+\\s*\\|\\s*Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
-        Pattern.DOTALL
-    );
+);  
+
+private static final Pattern MEM_BEFORE = Pattern.compile(
+    "Memory Usage BEFORE:.*?\\|\\s*\\d+\\s*\\|\\s*Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
+    Pattern.DOTALL
+);
+private static final Pattern MEM_AFTER = Pattern.compile(
+    "Memory Usage AFTER:.*?\\|\\s*\\d+\\s*\\|\\s*Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
+    Pattern.DOTALL
+);
 
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
         List<MetricRecord> records = new ArrayList<>();
@@ -56,12 +58,11 @@ private static final Pattern KV = Pattern.compile(
             String val = kvMatcher.group(2).trim();
             
             try {
-                if (key.equals("Total Pipeline Time (sec)")  ) {
-                    rec.setTotalPipelineTime(parseDoubleWithDefault(val, 0.0));
+                if (key.equalsIgnoreCase("Total Pipeline Time (sec)")  ) {
+                    rec.setTotalPipelineTime(Double.parseDouble(val));
                 } 
                 else if (key.equalsIgnoreCase("Rollback Deployment Time (sec)") || key.equalsIgnoreCase("Rollback completed in")) {
-                    double parsed = parseDoubleWithDefault(val, (end - start)/1000.0);
-                    rec.setRollbackTime(parsed);
+                    rec.setRollbackTime(Double.parseDouble(val));
                 }
             } catch (NumberFormatException e) {
                 System.err.println("Failed to parse value for key: " + key);
@@ -79,11 +80,15 @@ private static final Pattern KV = Pattern.compile(
     private static void parseMemoryMetrics(StringBuilder sb, MetricRecord rec) {
         Matcher mb = MEM_BEFORE.matcher(sb);
         if (mb.find()) {
-            rec.setMemoryBeforeUsed(parseSize(mb.group(1), mb.group(2)));
+        double before = parseSize(mb.group(1), mb.group(2));
+        System.out.println("[DEBUG] Memory BEFORE: " + before + " MiB");
+        rec.setMemoryBeforeUsed(before);
         }
         Matcher ma = MEM_AFTER.matcher(sb);
         if (ma.find()) {
-            rec.setMemoryAfterUsed(parseSize(ma.group(1), ma.group(2)));
+                    double after = parseSize(ma.group(1), ma.group(2));
+        System.out.println("[DEBUG] Memory AFTER: " + after + " MiB");
+        rec.setMemoryAfterUsed(after);
         }
     }
 
