@@ -7,8 +7,6 @@ public class MetricRecord {
     private double rollbackTime;
     private double memoryBeforeUsed;
     private double memoryAfterUsed;
-    private double duration;
-    private double cost;
 
     public MetricRecord(String toolName) {
         this.toolName = toolName;
@@ -26,8 +24,4 @@ public class MetricRecord {
     public void setMemoryBeforeUsed(double m) { this.memoryBeforeUsed = m; }
     public double getMemoryAfterUsed() { return memoryAfterUsed; }
     public void setMemoryAfterUsed(double m) { this.memoryAfterUsed = m; }
-    public double getDuration() { return duration; }
-    public void setDuration(double d) { this.duration = d; }
-    public double getCost() { return cost; }
-    public void setCost(double c) { this.cost = c; }
 }

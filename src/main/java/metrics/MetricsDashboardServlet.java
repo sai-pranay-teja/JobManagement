@@ -16,12 +16,12 @@ public class MetricsDashboardServlet extends HttpServlet {
             Path logsDir = Paths.get(getServletContext().getRealPath("/logs"));
             records = MetricsParser.parseAllLogs(logsDir);
         } catch (IOException e) {
-            throw new ServletException(e);
+            throw new ServletException("Failed to parse logs: " + e.getMessage(), e);
         }
     }
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) 
             throws ServletException, IOException {
         
         // Split records
@@ -31,10 +31,7 @@ public class MetricsDashboardServlet extends HttpServlet {
         // Compute stats
         DoubleSummaryStatistics deployTimeStats = getStats(deployments, "time");
         DoubleSummaryStatistics deployMemStats = getStats(deployments, "memory");
-        DoubleSummaryStatistics rollbackStats = rollbacks.stream()
-    .mapToDouble(r -> r.getRollbackTime())
-    .filter(t -> t >= 0)  // Exclude invalid values
-    .summaryStatistics();
+        DoubleSummaryStatistics rollbackStats = getStats(rollbacks, "time");
 
         // Calculate indices
         Map<MetricRecord, Double> indices = new LinkedHashMap<>();
@@ -54,7 +51,7 @@ public class MetricsDashboardServlet extends HttpServlet {
     private DoubleSummaryStatistics getStats(List<MetricRecord> records, String type) {
         return records.stream()
             .mapToDouble(r -> type.equals("time") ? 
-                (r.isRollback() ? r.getRollbackTime() : r.getTotalPipelineTime()) :
+                (r.isRollback() ? r.getRollbackTime() : r.getTotalPipelineTime()) : 
                 (r.getMemoryAfterUsed() - r.getMemoryBeforeUsed()))
             .summaryStatistics();
     }

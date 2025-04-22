@@ -6,19 +6,15 @@ import java.util.*;
 import java.util.regex.*;
 
 public class MetricsParser {
-private static final Pattern KV = Pattern.compile(
-    "\\|\\s*(Total Pipeline Time \\(sec\\)|Rollback Deployment Time|Rollback completed in)\\s*\\|\\s*(\\d+\\.?\\d*)\\s*\\|", 
-    Pattern.CASE_INSENSITIVE
-);  
-
-private static final Pattern MEM_BEFORE = Pattern.compile(
-    "Memory Usage BEFORE:.*?\\|\\s*\\d+\\s*\\|\\s*Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
-    Pattern.DOTALL
-);
-private static final Pattern MEM_AFTER = Pattern.compile(
-    "Memory Usage AFTER:.*?\\|\\s*\\d+\\s*\\|\\s*Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
-    Pattern.DOTALL
-);
+    private static final Pattern TIME_PATTERN = Pattern.compile(
+        "\\|\\s*(Total Pipeline Time|Rollback Deployment Time|Rollback completed in)\\s*\\|\\s*(\\d+\\.?\\d*)", 
+        Pattern.CASE_INSENSITIVE
+    );
+    
+    private static final Pattern MEM_USED = Pattern.compile(
+        "Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
+        Pattern.DOTALL
+    );
 
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
         List<MetricRecord> records = new ArrayList<>();
@@ -45,71 +41,45 @@ private static final Pattern MEM_AFTER = Pattern.compile(
             sb.append(line).append("\n");
         }
 
-        // Set duration-based fallback for rollback time
-        if (rec.isRollback()) {
-            double durationSec = (end - start) / 1000.0;
-            rec.setRollbackTime(durationSec);
-        }
-
-        // Enhanced KV parsing with fallback values
-        Matcher kvMatcher = KV.matcher(sb);
-        while (kvMatcher.find()) {
-            String key = kvMatcher.group(1).trim();
-            String val = kvMatcher.group(2).trim();
+        // Parse time metrics
+        Matcher timeMatcher = TIME_PATTERN.matcher(sb);
+        while (timeMatcher.find()) {
+            String key = timeMatcher.group(1).replaceAll("[^a-zA-Z]", "").toLowerCase();
+            String val = timeMatcher.group(2).trim();
             
             try {
-                if (key.equalsIgnoreCase("Total Pipeline Time (sec)")  ) {
+                if (key.contains("totalpipeline")) {
                     rec.setTotalPipelineTime(Double.parseDouble(val));
                 } 
-                else if (key.equalsIgnoreCase("Rollback Deployment Time (sec)") || key.equalsIgnoreCase("Rollback completed in")) {
+                else if (key.contains("rollback")) {
                     rec.setRollbackTime(Double.parseDouble(val));
                 }
             } catch (NumberFormatException e) {
-                System.err.println("Failed to parse value for key: " + key);
+                System.err.printf("Failed to parse time in %s: %s=%s%n", 
+                    logFile.getFileName(), key, val);
             }
         }
 
-        // Parse memory metrics
+        // Parse memory metrics for non-rollbacks
         if (!rec.isRollback()) {
-            parseMemoryMetrics(sb, rec);
+            List<Double> memValues = new ArrayList<>();
+            Matcher memMatcher = MEM_USED.matcher(sb);
+            while (memMatcher.find()) {
+                double value = parseSize(memMatcher.group(1), memMatcher.group(2));
+                memValues.add(value);
+            }
+            if (memValues.size() >= 2) {
+                rec.setMemoryBeforeUsed(memValues.get(0));
+                rec.setMemoryAfterUsed(memValues.get(1));
+            }
         }
 
         return rec;
     }
 
-    private static void parseMemoryMetrics(StringBuilder sb, MetricRecord rec) {
-        Matcher mb = MEM_BEFORE.matcher(sb);
-        if (mb.find()) {
-        double before = parseSize(mb.group(1), mb.group(2));
-        System.out.println("[DEBUG] Memory BEFORE: " + before + " MiB");
-        rec.setMemoryBeforeUsed(before);
-        }
-        Matcher ma = MEM_AFTER.matcher(sb);
-        if (ma.find()) {
-                    double after = parseSize(ma.group(1), ma.group(2));
-        System.out.println("[DEBUG] Memory AFTER: " + after + " MiB");
-        rec.setMemoryAfterUsed(after);
-        }
-    }
-
-    private static double parseDoubleWithDefault(String value, double defaultValue) {
-        try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
-    }
-
     private static double parseSize(String num, String unit) {
         double v = Double.parseDouble(num);
-        return "Gi".equals(unit) ? v * 1024 : v;
-    }
-
-    private static double calculateCost(String tool, double duration) {
-        Map<String, Double> prices = Map.of(
-            "gha", 0.008, "codebuild", 0.005, "jenkins", 0.003
-        );
-        return prices.getOrDefault(tool.replace("-rollback", ""), 0.0) * duration;
+        return unit.equalsIgnoreCase("Gi") ? v * 1024 : v;
     }
 
     private static String extractToolName(Path path) {

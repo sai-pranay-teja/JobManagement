@@ -17,6 +17,7 @@ public class EfficiencyIndexCalculator {
     }
 
     private static double safeNorm(double val, double min, double max) {
-        return (max != min) ? (max - val) / (max - min) : 1.0;
+        if (max == min) return 1.0; // All values equal
+        return (max - val) / (max - min);
     }
 }
