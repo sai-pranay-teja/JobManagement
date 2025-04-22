@@ -10,13 +10,13 @@ public class MetricsParser {
     private static final Pattern HEADER = Pattern.compile("CI/CD Metrics Summary");
     private static final Pattern KV = Pattern.compile("\\|\\s*(.+?)\\s*\\|\\s*(\\S+)\\s*\\|");
     private static final Pattern MEM_BEFORE = Pattern.compile(
-        "Memory Usage BEFORE.*?Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
-        Pattern.DOTALL
-    );
+    "Memory Usage BEFORE:.*?Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi).*?Swap:", 
+    Pattern.DOTALL
+);
     private static final Pattern MEM_AFTER = Pattern.compile(
-        "Memory Usage AFTER.*?Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi)", 
-        Pattern.DOTALL
-    );
+    "Memory Usage AFTER:.*?Mem:\\s+\\S+\\s+(\\d+\\.?\\d*)(Gi|Mi).*?Swap:", 
+    Pattern.DOTALL
+);
     private static final Pattern TIMESTAMP = Pattern.compile("\\| (\\d+) \\|");
 
     // Pricing (USD per minute)
@@ -110,11 +110,15 @@ public class MetricsParser {
         return unit.equals("Gi") ? v * 1024 : v; // Convert GiB to MiB
     }
 
-    private static String extractToolName(Path path) {
-        String filename = path.getFileName().toString();
-        if (filename.contains("gha")) return "gha";
-        if (filename.contains("jenkins")) return "jenkins";
-        if (filename.contains("codebuild")) return "codebuild";
-        return "unknown";
+   private static String extractToolName(Path path) {
+    String filename = path.getFileName().toString().toLowerCase();
+    
+    if (filename.contains("gha")) {
+        return filename.contains("rollback") ? "gha-rollback" : "gha";
+    else if (filename.contains("jenkins")) {
+        return filename.contains("rollback") ? "jenkins-rollback" : "jenkins";
+    else if (filename.contains("codebuild")) {
+        return filename.contains("rollback") ? "codebuild-rollback" : "codebuild";
     }
+    return "unknown";
 }

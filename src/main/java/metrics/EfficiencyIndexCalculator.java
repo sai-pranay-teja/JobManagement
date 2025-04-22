@@ -26,8 +26,8 @@ public class EfficiencyIndexCalculator {
         double m, double mMin, double mMax
     ) {
         // Higher index for lower time/memory
-        double normT = (tMax - t) / (tMax - tMin);
-        double normM = (mMax - m) / (mMax - mMin);
+    double normT = (tMax != tMin) ? (tMax - t) / (tMax - tMin) : 1.0;
+    double normM = (mMax != mMin) ? (mMax - m) / (mMax - mMin) : 1.0;
         return (W_TIME * normT) + (W_MEM * normM);
     }
 }
