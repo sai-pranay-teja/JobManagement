@@ -1,3 +1,13 @@
+<%@ page isErrorPage="true" %>
+<%
+    out.println("CHECKPOINT: JSP reached.<br>");
+    Object obj = request.getAttribute("indexMap");
+    if (obj == null) out.println("indexMap is NULL<br>");
+    else out.println("indexMap is NOT NULL<br>");
+%>
+
+
+
 <%@ page import="java.util.*, metrics.MetricRecord" %>
 <html>
 <head>
