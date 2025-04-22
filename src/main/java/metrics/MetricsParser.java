@@ -7,12 +7,10 @@ import java.util.regex.*;
 
 public class MetricsParser {
     private static final Pattern HEADER = Pattern.compile("CI/CD Metrics Summary");
-    // private static final Pattern KV = Pattern.compile("\|\\s*(.+?)\\s*\|\\s*(\\S+)\\s*\|");
-    // private static final Pattern MEM_BEFORE = Pattern.compile("Mem:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)");
-    // private static final Pattern MEM_AFTER  = Pattern.compile("Memory Usage AFTER:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)", Pattern.DOTALL);
     private static final Pattern KV = Pattern.compile("\\|\\s*(.+?)\\s*\\|\\s*(\\S+)\\s*\\|");
     private static final Pattern MEM_BEFORE = Pattern.compile("Mem:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)");
     private static final Pattern MEM_AFTER  = Pattern.compile("Memory Usage AFTER:.*used\\s+(\\d+\\.\\d+)(Gi|Mi)", Pattern.DOTALL);
+    private static final String PLACEHOLDER_REGEX = "\\$[A-Za-z_][A-Za-z0-9_]*"; // Regex to detect placeholders like $TOTAL_PIPELINE_TIME
 
 
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
@@ -41,12 +39,23 @@ public class MetricsParser {
                     if (!m.find()) continue;
                     String key = m.group(1).trim();
                     String val = m.group(2).trim();
-                    switch (key) {
-                        case "Total Pipeline Time (sec)": rec.setTotalPipelineTime(Integer.parseInt(val)); break;
-                        case "Deployment Time (sec)":     rec.setDeploymentTime(Integer.parseInt(val)); break;
-                        case "Lead Time for Changes (sec)": rec.setLeadTime(Integer.parseInt(val)); break;
-                        case "Rollback Time (sec)":       rec.setRollbackTime(val.equals("N/A")? -1 : Integer.parseInt(val)); break;
-                        default: break;
+                    
+                    // Skip or substitute placeholder values
+                    if (val.matches(PLACEHOLDER_REGEX)) {
+                        val = "0"; // or set to any default value you want
+                    }
+                    
+                    try {
+                        switch (key) {
+                            case "Total Pipeline Time (sec)": rec.setTotalPipelineTime(Integer.parseInt(val)); break;
+                            case "Deployment Time (sec)":     rec.setDeploymentTime(Integer.parseInt(val)); break;
+                            case "Lead Time for Changes (sec)": rec.setLeadTime(Integer.parseInt(val)); break;
+                            case "Rollback Deployment Time (sec)": rec.setRollbackTime(val.equals("N/A") ? -1 : Integer.parseInt(val)); break;
+                            default: break;
+                        }
+                    } catch (NumberFormatException e) {
+                        // Handle the case where the value is not a number (e.g., empty string or invalid format)
+                        System.err.println("Invalid number format for key: " + key + " with value: " + val);
                     }
                 }
 
