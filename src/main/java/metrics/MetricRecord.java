@@ -41,3 +41,4 @@ public class MetricRecord {
     public double getCost()          { return cost; }
 public void   setCost(double c)  { this.cost = c; }
 }
+
