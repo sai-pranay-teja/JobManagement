@@ -88,8 +88,7 @@ phases:
           cat compile_error.log
           echo "Initiating rollback and recording rollback metrics..."
           # AWS CodeBuild rate = $0.005 per minute = $0.0000833 per sec
-          COST=$(awk "BEGIN { printf \"%.4f\", $TOTAL_PIPELINE_TIME * 0.005/60 }")
-          printf "| %-35s | %-15s |\n" "Cost (USD)" "$COST" >> metrics_summary.log
+
           # ─────────────────────────────────────────────────────────────────────────────
           # Record the rollback start time.
           export ROLLBACK_START_TIME=$(date +%s)
@@ -106,6 +105,8 @@ phases:
           # Record the pipeline end time and calculate the total pipeline time.
           export PIPELINE_END_TIME=$(date +%s)
           export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+          COST=$(awk "BEGIN { printf \"%.4f\", $TOTAL_PIPELINE_TIME * 0.005/60 }")
+          printf "| %-35s | %-15s |\n" "Cost (USD)" "$COST" >> metrics_summary.log
           
           # Prepare a metrics summary that includes the rollback time.
           echo "-------------------------------------------------" > metrics_summary.log
