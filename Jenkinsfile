@@ -150,8 +150,8 @@ pipeline {
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
 sleep 5
-${TOMCAT_HOME}/bin/shutdown.sh || true
-${TOMCAT_HOME}/bin/startup.sh
+${TOMCAT_HOME}/bin/catalina.sh stop || true
+${TOMCAT_HOME}/bin/catalina.sh start
 exit
 EOF
 
@@ -196,8 +196,8 @@ EOF
                         ssh ${SSH_OPTS} -i ${SSH_KEY} ${SSH_USER}@${SSH_HOST} <<EOF
 pkill -f 'org.apache.catalina.startup.Bootstrap' || true
 sleep 5
-${TOMCAT_HOME}/bin/shutdown.sh || true
-${TOMCAT_HOME}/bin/startup.sh
+${TOMCAT_HOME}/bin/catalina.sh stop || true
+${TOMCAT_HOME}/bin/catalina.sh start
 exit
 EOF
                     """
