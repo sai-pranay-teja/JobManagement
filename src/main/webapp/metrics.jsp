@@ -1,37 +1,47 @@
-
-
-<%@ page import="java.util.*, metrics.MetricRecord" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ page import="metrics.MetricRecord" %>
 
 <%
-    Object attr = request.getAttribute("indexMap");
-    if (attr == null) {
-        out.println("<h2>No data received. Servlet may not be forwarding properly.</h2>");
-        return;
-    }
-    Map<MetricRecord, Double> map = (Map<MetricRecord, Double>) attr;
+    // Fallback if no data  
+    Object _idxMap = request.getAttribute("indexMap");
+    if (_idxMap == null) {
 %>
-
-
+    <html>
+    <head><title>No Metrics</title></head>
+    <body>
+      <h2>No data received. Servlet may not be forwarding properly.</h2>
+    </body>
+    </html>
+<%
+      return;
+    }
+%>
 
 <html>
 <head>
   <title>CI/CD Metrics Dashboard</title>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
+    // prepare the chart
     google.charts.load('current', {packages:['corechart','table']});
     google.charts.setOnLoadCallback(drawChart);
     function drawChart() {
       var data = new google.visualization.DataTable();
       data.addColumn('string', 'Tool');
       data.addColumn('number', 'Efficiency Index');
-      <% Map<MetricRecord,Double> map = (Map)request.getAttribute("indexMap");
-         for (MetricRecord rec : map.keySet()) {
-             double idx = map.get(rec);
-      %>
-      data.addRow(['<%=rec.getToolName()%>', <%=idx%>]);
-      <% } %>
+
+      <!-- iterate entirely in JSTL/EL -->
+      <c:forEach var="entry" items="${indexMap.entrySet()}">
+        data.addRow([
+          '${entry.key.toolName}',
+          ${entry.value}
+        ]);
+      </c:forEach>
+
       var chart = new google.visualization.ColumnChart(
-          document.getElementById('chart_div'));
+        document.getElementById('chart_div')
+      );
       chart.draw(data);
     }
   </script>
@@ -39,19 +49,25 @@
 <body>
   <h1>CI/CD Efficiency Comparison</h1>
   <div id="chart_div" style="width: 800px; height: 400px;"></div>
+
   <h2>Detailed Metrics</h2>
   <table border="1">
-    <tr><th>Tool</th><th>Total Time</th><th>Memory Δ (Mi)</th><th>Index</th></tr>
-    <% for (Map.Entry<MetricRecord,Double> e : map.entrySet()) {
-         MetricRecord r = e.getKey(); double i = e.getValue();
-    %>
     <tr>
-      <td><%=r.getToolName()%></td>
-      <td><%=r.getTotalPipelineTime()%></td>
-      <td><%=(r.getMemoryAfterUsed()-r.getMemoryBeforeUsed())%></td>
-      <td><%=String.format("%.3f", i)%></td>
+      <th>Tool</th>
+      <th>Total Time (sec)</th>
+      <th>Memory Δ (Mi)</th>
+      <th>Index</th>
     </tr>
-    <% } %>
+    <c:forEach var="entry" items="${indexMap.entrySet()}">
+      <c:set var="rec" value="${entry.key}" />
+      <c:set var="idx" value="${entry.value}" />
+      <tr>
+        <td>${rec.toolName}</td>
+        <td>${rec.totalPipelineTime}</td>
+        <td>${rec.memoryAfterUsed - rec.memoryBeforeUsed}</td>
+        <td>${fn:formatNumber(idx, '###0.000')}</td>
+      </tr>
+    </c:forEach>
   </table>
 </body>
 </html>
