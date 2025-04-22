@@ -52,6 +52,8 @@
         }
     </script>
 </head>
+
+<a href="exportMetrics" style="display: block; margin: 20px;">Download Full Metrics CSV</a>
 <body>
     <div class="chart-container">
         <div id="chart_div" style="width: 1000px; height: 600px;"></div>
