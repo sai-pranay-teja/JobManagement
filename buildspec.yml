@@ -53,6 +53,7 @@ phases:
           # (Simulated) Deployment delay—replace this with your actual deployment commands.
           sleep 5
           
+          
           # Record the deployment end time and calculate the deployment duration.
           export DEPLOY_END_TIME=$(date +%s)
           export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
