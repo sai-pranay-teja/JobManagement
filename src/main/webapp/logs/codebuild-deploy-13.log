@@ -1,0 +1,583 @@
+[Container] 2025/04/23 13:35:09.357958 Running on CodeBuild On-demand
+
+[Container] 2025/04/23 13:35:09.357969 Waiting for agent ping
+
+[Container] 2025/04/23 13:35:11.867456 Waiting for DOWNLOAD_SOURCE
+
+[Container] 2025/04/23 13:35:19.404871 Phase is DOWNLOAD_SOURCE
+
+[Container] 2025/04/23 13:35:19.407080 CODEBUILD_SRC_DIR=/codebuild/output/src1675983664/src/github.com/sai-pranay-teja/JobManagement
+
+[Container] 2025/04/23 13:35:19.409558 YAML location is /codebuild/output/src1675983664/src/github.com/sai-pranay-teja/JobManagement/buildspec.yml
+
+[Container] 2025/04/23 13:35:19.409961 No commands found for phase name: install
+
+[Container] 2025/04/23 13:35:19.412258 Setting HTTP client timeout to higher timeout for Github and GitHub Enterprise sources
+
+[Container] 2025/04/23 13:35:19.412365 Processing environment variables
+
+[Container] 2025/04/23 13:35:21.028026 Selecting 'java' runtime version 'corretto17' based on manual selections...
+
+[Container] 2025/04/23 13:35:21.028511 Running command echo "Installing Corretto(OpenJDK) version 17 ..."
+
+Installing Corretto(OpenJDK) version 17 ...
+
+
+
+[Container] 2025/04/23 13:35:21.032679 Running command export JAVA_HOME="$JAVA_17_HOME"
+
+
+
+[Container] 2025/04/23 13:35:21.035940 Running command export JRE_HOME="$JRE_17_HOME"
+
+
+
+[Container] 2025/04/23 13:35:21.038893 Running command export JDK_HOME="$JDK_17_HOME"
+
+
+
+[Container] 2025/04/23 13:35:21.041578 Running command for tool_path in "$JAVA_HOME"/bin/*;
+
+ do tool=`basename "$tool_path"`;
+
+  if [ $tool != 'java-rmi.cgi' ];
+
+  then
+
+    rm -f /usr/bin/$tool /var/lib/alternatives/$tool;
+
+    update-alternatives --install /usr/bin/$tool $tool $tool_path 20000;
+
+    update-alternatives --set $tool $tool_path;
+
+  fi;
+
+done
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jar because link group jar is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jarsigner because link group jarsigner is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/java because link group java is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/javac because link group javac is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/javadoc because link group javadoc is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/javap because link group javap is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jcmd because link group jcmd is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jconsole because link group jconsole is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jdb because link group jdb is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jdeprscan because link group jdeprscan is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jdeps because link group jdeps is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jfr because link group jfr is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jhsdb because link group jhsdb is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jimage because link group jimage is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jinfo because link group jinfo is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jlink because link group jlink is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jmap because link group jmap is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jmod because link group jmod is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jpackage because link group jpackage is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jps because link group jps is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jrunscript because link group jrunscript is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jshell because link group jshell is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jstack because link group jstack is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jstat because link group jstat is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/jstatd because link group jstatd is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/keytool because link group keytool is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/rmiregistry because link group rmiregistry is broken
+
+update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm/java-17-amazon-corretto/bin/serialver because link group serialver is broken
+
+
+
+[Container] 2025/04/23 13:35:22.872036 Moving to directory /codebuild/output/src1675983664/src/github.com/sai-pranay-teja/JobManagement
+
+[Container] 2025/04/23 13:35:22.872097 Cache is not defined in the buildspec
+
+[Container] 2025/04/23 13:35:23.634645 Skip cache due to: no paths specified to be cached
+
+[Container] 2025/04/23 13:35:23.634915 Registering with agent
+
+[Container] 2025/04/23 13:35:24.400224 Phases found in YAML: 4
+
+[Container] 2025/04/23 13:35:24.400256  INSTALL: 0 commands
+
+[Container] 2025/04/23 13:35:24.400265  PRE_BUILD: 8 commands
+
+[Container] 2025/04/23 13:35:24.400269  BUILD: 6 commands
+
+[Container] 2025/04/23 13:35:24.400273  POST_BUILD: 2 commands
+
+[Container] 2025/04/23 13:35:24.400615 Phase complete: DOWNLOAD_SOURCE State: SUCCEEDED
+
+[Container] 2025/04/23 13:35:24.400627 Phase context status code:  Message: 
+
+[Container] 2025/04/23 13:35:25.210253 Entering phase INSTALL
+
+[Container] 2025/04/23 13:35:26.732446 Phase complete: INSTALL State: SUCCEEDED
+
+[Container] 2025/04/23 13:35:26.732466 Phase context status code:  Message: 
+
+[Container] 2025/04/23 13:35:26.784747 Entering phase PRE_BUILD
+
+[Container] 2025/04/23 13:35:26.785770 Running command echo "Starting build pipeline..."
+
+Starting build pipeline...
+
+
+
+[Container] 2025/04/23 13:35:26.790781 Running command export PIPELINE_START_TIME=$(date +%s)
+
+
+
+[Container] 2025/04/23 13:35:26.796280 Running command echo $PIPELINE_START_TIME > pipeline_start_time.txt
+
+
+
+[Container] 2025/04/23 13:35:26.801432 Running command echo "Fetched pipeline start time - $PIPELINE_START_TIME"
+
+Fetched pipeline start time - 1745415326
+
+
+
+[Container] 2025/04/23 13:35:26.806686 Running command echo "Fetching SSH Key..."
+
+Fetching SSH Key...
+
+
+
+[Container] 2025/04/23 13:35:26.812077 Running command aws secretsmanager get-secret-value --secret-id MyServerSSHKey_1 --query SecretString --output text > key.pem
+
+
+
+[Container] 2025/04/23 13:35:38.129451 Running command sed -i 's/\\n/\n/g' key.pem
+
+
+
+[Container] 2025/04/23 13:35:38.137868 Running command chmod 400 key.pem
+
+
+
+[Container] 2025/04/23 13:35:38.174749 Phase complete: PRE_BUILD State: SUCCEEDED
+
+[Container] 2025/04/23 13:35:38.174766 Phase context status code:  Message: 
+
+[Container] 2025/04/23 13:35:38.231685 Entering phase BUILD
+
+[Container] 2025/04/23 13:35:38.232874 Running command echo "Building application..."
+
+Building application...
+
+
+
+[Container] 2025/04/23 13:35:38.238971 Running command mkdir -p build/WEB-INF/classes
+
+
+
+[Container] 2025/04/23 13:35:38.245497 Running command javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
+
+
+
+[Container] 2025/04/23 13:35:41.187306 Running command cp -R src/main/resources/* build/WEB-INF/classes/
+
+
+
+[Container] 2025/04/23 13:35:41.194059 Running command cp -R src/main/webapp/* build/
+
+
+
+[Container] 2025/04/23 13:35:41.206384 Running command jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
+
+added manifest
+
+adding: WEB-INF/(in = 0) (out= 0)(stored 0%)
+
+adding: WEB-INF/classes/(in = 0) (out= 0)(stored 0%)
+
+adding: WEB-INF/classes/TestApp.class(in = 393) (out= 279)(deflated 29%)
+
+adding: WEB-INF/classes/TestAppPart1.class(in = 3452) (out= 1808)(deflated 47%)
+
+adding: WEB-INF/classes/TestAppPart2.class(in = 644) (out= 427)(deflated 33%)
+
+adding: WEB-INF/classes/config.properties(in = 132) (out= 117)(deflated 11%)
+
+adding: WEB-INF/classes/metrics/(in = 0) (out= 0)(stored 0%)
+
+adding: WEB-INF/classes/metrics/EfficiencyIndexCalculator.class(in = 796) (out= 525)(deflated 34%)
+
+adding: WEB-INF/classes/metrics/ExportMetricsCSVServlet.class(in = 6498) (out= 2926)(deflated 54%)
+
+adding: WEB-INF/classes/metrics/MetricRecord.class(in = 1674) (out= 687)(deflated 58%)
+
+adding: WEB-INF/classes/metrics/MetricsDashboardServlet.class(in = 5675) (out= 2432)(deflated 57%)
+
+adding: WEB-INF/classes/metrics/MetricsParser.class(in = 4726) (out= 2606)(deflated 44%)
+
+adding: WEB-INF/classes/model/(in = 0) (out= 0)(stored 0%)
+
+adding: WEB-INF/classes/model/Application.class(in = 1590) (out= 613)(deflated 61%)
+
+adding: WEB-INF/classes/model/ApplicationController.class(in = 3616) (out= 1875)(deflated 48%)
+
+adding: WEB-INF/classes/model/ApplicationDAO.class(in = 5283) (out= 2359)(deflated 55%)
+
+adding: WEB-INF/classes/model/CancelApplicationController.class(in = 1651) (out= 891)(deflated 46%)
+
+adding: WEB-INF/classes/model/DatabaseUtil.class(in = 2328) (out= 1292)(deflated 44%)
+
+adding: WEB-INF/classes/model/DeleteJobController.class(in = 2258) (out= 1187)(deflated 47%)
+
+adding: WEB-INF/classes/model/DownloadResumeController.class(in = 2480) (out= 1329)(deflated 46%)
+
+adding: WEB-INF/classes/model/EmployerDashboardController.class(in = 2913) (out= 1416)(deflated 51%)
+
+adding: WEB-INF/classes/model/Job.class(in = 1299) (out= 572)(deflated 55%)
+
+adding: WEB-INF/classes/model/JobController.class(in = 2383) (out= 1290)(deflated 45%)
+
+adding: WEB-INF/classes/model/JobDAO.class(in = 5248) (out= 2320)(deflated 55%)
+
+adding: WEB-INF/classes/model/LoginController.class(in = 2435) (out= 1248)(deflated 48%)
+
+adding: WEB-INF/classes/model/LogoutServlet.class(in = 969) (out= 538)(deflated 44%)
+
+adding: WEB-INF/classes/model/UpdateApplicationStatusController.class(in = 1727) (out= 926)(deflated 46%)
+
+adding: WEB-INF/classes/model/User.class(in = 1110) (out= 469)(deflated 57%)
+
+adding: WEB-INF/classes/model/UserController.class(in = 2109) (out= 1166)(deflated 44%)
+
+adding: WEB-INF/classes/model/UserDAO.class(in = 4628) (out= 2108)(deflated 54%)
+
+adding: WEB-INF/classes/model/ViewApplicationsController.class(in = 2475) (out= 1234)(deflated 50%)
+
+adding: WEB-INF/classes/model/ViewJobsController.class(in = 3200) (out= 1649)(deflated 48%)
+
+adding: WEB-INF/lib/(in = 0) (out= 0)(stored 0%)
+
+adding: WEB-INF/lib/commons-fileupload2-core-2.0.0-M2.jar(in = 63228) (out= 55526)(deflated 12%)
+
+adding: WEB-INF/lib/commons-io-2.18.0.jar(in = 538910) (out= 479979)(deflated 10%)
+
+adding: WEB-INF/lib/hamcrest-core-1.3.jar(in = 45024) (out= 39918)(deflated 11%)
+
+adding: WEB-INF/lib/jakarta.servlet-api-6.0.0.jar(in = 347613) (out= 324001)(deflated 6%)
+
+adding: WEB-INF/lib/jakarta.servlet.jsp.jstl-3.0.0.jar(in = 3712950) (out= 3357798)(deflated 9%)
+
+adding: WEB-INF/lib/jakarta.servlet.jsp.jstl-api-3.0.0.jar(in = 46041) (out= 41321)(deflated 10%)
+
+adding: WEB-INF/lib/junit-platform-console-standalone-1.9.2.jar(in = 2614420) (out= 2294330)(deflated 12%)
+
+adding: WEB-INF/lib/mysql-connector-j-9.2.0.jar(in = 2609756) (out= 2445064)(deflated 6%)
+
+adding: WEB-INF/web.xml(in = 1218) (out= 397)(deflated 67%)
+
+adding: css/(in = 0) (out= 0)(stored 0%)
+
+adding: css/styles.css(in = 4741) (out= 1265)(deflated 73%)
+
+adding: dashboard.jsp(in = 941) (out= 435)(deflated 53%)
+
+adding: employerDashboard.jsp(in = 2440) (out= 870)(deflated 64%)
+
+adding: error.jsp(in = 327) (out= 232)(deflated 29%)
+
+adding: login.jsp(in = 606) (out= 335)(deflated 44%)
+
+adding: logs/(in = 0) (out= 0)(stored 0%)
+
+adding: logs/codebuild-rollback.log(in = 26758) (out= 3486)(deflated 86%)
+
+adding: logs/codebuild.log(in = 20462) (out= 4294)(deflated 79%)
+
+adding: logs/gha-rollback.log(in = 41669) (out= 9105)(deflated 78%)
+
+adding: logs/gha.log(in = 57429) (out= 12210)(deflated 78%)
+
+adding: logs/jenkins-1.log(in = 32996) (out= 6427)(deflated 80%)
+
+adding: logs/jenkins-2.log(in = 33005) (out= 6420)(deflated 80%)
+
+adding: logs/jenkins-3.log(in = 23908) (out= 5358)(deflated 77%)
+
+adding: logs/jenkins-4.log(in = 33002) (out= 6389)(deflated 80%)
+
+adding: logs/jenkins-rollback.log(in = 11672) (out= 2705)(deflated 76%)
+
+adding: logs/jenkins.log(in = 32974) (out= 6426)(deflated 80%)
+
+adding: metrics.jsp(in = 3715) (out= 1269)(deflated 65%)
+
+adding: postJob.jsp(in = 899) (out= 454)(deflated 49%)
+
+adding: register.jsp(in = 931) (out= 410)(deflated 55%)
+
+adding: viewApplications.jsp(in = 3165) (out= 1113)(deflated 64%)
+
+adding: viewJobs.jsp(in = 5148) (out= 1546)(deflated 69%)
+
+
+
+[Container] 2025/04/23 13:35:41.731521 Phase complete: BUILD State: SUCCEEDED
+
+[Container] 2025/04/23 13:35:41.731595 Phase context status code:  Message: 
+
+[Container] 2025/04/23 13:35:41.781076 Entering phase POST_BUILD
+
+[Container] 2025/04/23 13:35:41.782372 Running command export PIPELINE_START_TIME=$(cat pipeline_start_time.txt)
+
+
+
+[Container] 2025/04/23 13:35:41.789041 Running command if [ -f JobManagement_CODEBUILD.war ]; then
+
+  echo "Build succeeded! Creating backup and recording deployment metrics..."
+
+  # Record the deployment start time.
+
+  export DEPLOY_START_TIME=$(date +%s)
+
+  # Calculate Lead Time for Changes using the latest commit time (fallback to DEPLOY_START_TIME if not available)
+
+  export COMMIT_TIME=$(git log -1 --format=%ct 2>/dev/null || echo $DEPLOY_START_TIME)
+
+  export LEAD_TIME=$(expr $DEPLOY_START_TIME - $COMMIT_TIME)
+
+  echo "Lead Time for Changes: $LEAD_TIME seconds"
+
+  
+
+  # Backup the WAR file.
+
+  ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.149.136 "mkdir -p /tmp/codebuild_bak"
+
+  scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@18.60.149.136:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+
+  
+
+  # (Simulated) Deployment delay—replace this with your actual deployment commands.
+
+  sleep 5
+
+  
+
+
+
+  # Record the deployment end time and calculate the deployment duration.
+
+  export DEPLOY_END_TIME=$(date +%s)
+
+  export DEPLOY_DURATION=$(expr $DEPLOY_END_TIME - $DEPLOY_START_TIME)
+
+  echo "Deployment Duration: $DEPLOY_DURATION seconds"
+
+  
+
+  # Record the pipeline end time and calculate the overall pipeline duration.
+
+  export PIPELINE_END_TIME=$(date +%s)
+
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+
+  
+
+  # Prepare a metrics summary.
+
+  echo "-------------------------------------------------" > metrics_summary.log
+
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+
+  echo "-------------------------------------------------" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "$LEAD_TIME" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "$DEPLOY_DURATION" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+
+  # ─── Cost Calculation & Echo ──────────────────────────────────────────────
+
+  # AWS CodeBuild rate = $0.005 per minute = $0.0000833 per sec
+
+  COST=$(awk "BEGIN { printf \"%.4f\", $TOTAL_PIPELINE_TIME * 0.005/60 }")
+
+  printf "| %-35s | %-15s |\n" "Cost (USD)" "$COST" >> metrics_summary.log
+
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+
+
+
+
+
+
+
+  # printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "N/A" >> metrics_summary.log
+
+  echo "-------------------------------------------------" >> metrics_summary.log
+
+  echo "Metrics Summary:" 
+
+  cat metrics_summary.log
+
+else  
+
+  echo -e "\nBuild failed - compilation errors:"
+
+  cat compile_error.log
+
+  echo "Initiating rollback and recording rollback metrics..."
+
+  # AWS CodeBuild rate = $0.005 per minute = $0.0000833 per sec
+
+
+
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  # Record the rollback start time.
+
+  export ROLLBACK_START_TIME=$(date +%s)
+
+  ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.149.136 "
+
+    /opt/tomcat10/bin/catalina.sh stop || true
+
+    cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
+
+    /opt/tomcat10/bin/catalina.sh start" 
+
+  # Allow time for the rollback to complete.
+
+  sleep 5
+
+  export ROLLBACK_END_TIME=$(date +%s)
+
+  export ROLLBACK_DURATION=$(expr $ROLLBACK_END_TIME - $ROLLBACK_START_TIME)
+
+  echo "Rollback Duration: $ROLLBACK_DURATION seconds"
+
+  
+
+  # Record the pipeline end time and calculate the total pipeline time.
+
+  export PIPELINE_END_TIME=$(date +%s)
+
+  export TOTAL_PIPELINE_TIME=$(expr $PIPELINE_END_TIME - $PIPELINE_START_TIME)
+
+  COST=$(awk "BEGIN { printf \"%.4f\", $TOTAL_PIPELINE_TIME * 0.005/60 }")
+
+  
+
+  
+
+  # Prepare a metrics summary that includes the rollback time.
+
+  echo "-------------------------------------------------" > metrics_summary.log
+
+  echo "              CI/CD Metrics Summary              " >> metrics_summary.log
+
+  echo "-------------------------------------------------" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Lead Time for Changes (sec)" "N/A" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Deployment Duration (sec)" "N/A" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Rollback Time (sec)" "$ROLLBACK_DURATION" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Total Pipeline Time (sec)" "$TOTAL_PIPELINE_TIME" >> metrics_summary.log
+
+  printf "| %-35s | %-15s |\n" "Cost (USD)" "$COST" >> metrics_summary.log
+
+  echo "-------------------------------------------------" >> metrics_summary.log
+
+  echo "Metrics Summary:"
+
+  cat metrics_summary.log
+
+  
+
+  exit 1
+
+fi
+
+
+
+Build succeeded! Creating backup and recording deployment metrics...
+
+Lead Time for Changes: 2767 seconds
+
+Warning: Permanently added '18.60.149.136' (ED25519) to the list of known hosts.
+
+Deployment Duration: 6 seconds
+
+Metrics Summary:
+
+-------------------------------------------------
+
+              CI/CD Metrics Summary              
+
+-------------------------------------------------
+
+| Lead Time for Changes (sec)         | 2767            |
+
+| Deployment Duration (sec)           | 6               |
+
+| Total Pipeline Time (sec)           | 21              |
+
+| Cost (USD)                          | 0.0018          |
+
+| Rollback Time (sec)                 | N/A             |
+
+-------------------------------------------------
+
+
+
+[Container] 2025/04/23 13:35:47.724733 Phase complete: POST_BUILD State: SUCCEEDED
+
+[Container] 2025/04/23 13:35:47.724751 Phase context status code:  Message: 
+
+[Container] 2025/04/23 13:35:48.977815 Set report auto-discover timeout to 5 seconds
+
+[Container] 2025/04/23 13:35:48.977856 Expanding base directory path:  .
+
+[Container] 2025/04/23 13:35:48.979865 Assembling file list
+
+[Container] 2025/04/23 13:35:48.979889 Expanding .
+
+[Container] 2025/04/23 13:35:48.981645 Expanding file paths for base directory .
+
+[Container] 2025/04/23 13:35:48.981661 Assembling file list
+
+[Container] 2025/04/23 13:35:48.981665 Expanding **/*
+
+[Container] 2025/04/23 13:35:48.984208 Found 2 file(s)
+
+[Container] 2025/04/23 13:35:48.984229 Report auto-discover file discovery took 0.006414 seconds
+
+[Container] 2025/04/23 13:35:48.984777 Phase complete: UPLOAD_ARTIFACTS State: SUCCEEDED
+
+[Container] 2025/04/23 13:35:48.984788 Phase context status code:  Message: 
