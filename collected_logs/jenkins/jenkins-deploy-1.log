@@ -11,11 +11,11 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
 using GIT_ASKPASS to set credentials 
  > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 7089f278c3700e29031f3240a0499eb9d72e9b22 (refs/remotes/origin/main)
+Checking out Revision be705f0a4f0101817f98e1df7755da28a286dd81 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 7089f278c3700e29031f3240a0499eb9d72e9b22 # timeout=10
-Commit message: "ds"
- > git rev-list --no-walk 7089f278c3700e29031f3240a0499eb9d72e9b22 # timeout=10
+ > git checkout -f be705f0a4f0101817f98e1df7755da28a286dd81 # timeout=10
+Commit message: "go"
+ > git rev-list --no-walk be705f0a4f0101817f98e1df7755da28a286dd81 # timeout=10
 [Pipeline] Start of Pipeline
 [Pipeline] node
 Running on Jenkins in /var/lib/jenkins/workspace/my-research-pipeline
@@ -34,10 +34,10 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
 using GIT_ASKPASS to set credentials 
  > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 7089f278c3700e29031f3240a0499eb9d72e9b22 (refs/remotes/origin/main)
+Checking out Revision be705f0a4f0101817f98e1df7755da28a286dd81 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 7089f278c3700e29031f3240a0499eb9d72e9b22 # timeout=10
-Commit message: "ds"
+ > git checkout -f be705f0a4f0101817f98e1df7755da28a286dd81 # timeout=10
+Commit message: "go"
 [Pipeline] }
 [Pipeline] // stage
 [Pipeline] withEnv
@@ -58,7 +58,7 @@ Commit message: "ds"
 [Pipeline] sh
 + date +%s
 [Pipeline] echo
-Pipeline start time recorded: 1745409717
+Pipeline start time recorded: 1745411502
 [Pipeline] }
 [Pipeline] // script
 [Pipeline] }
@@ -79,12 +79,12 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
  > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
 Avoid second fetch
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 7089f278c3700e29031f3240a0499eb9d72e9b22 (refs/remotes/origin/main)
+Checking out Revision be705f0a4f0101817f98e1df7755da28a286dd81 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 7089f278c3700e29031f3240a0499eb9d72e9b22 # timeout=10
+ > git checkout -f be705f0a4f0101817f98e1df7755da28a286dd81 # timeout=10
  > git branch -a -v --no-abbrev # timeout=10
- > git checkout -b main 7089f278c3700e29031f3240a0499eb9d72e9b22 # timeout=10
-Commit message: "ds"
+ > git checkout -b main be705f0a4f0101817f98e1df7755da28a286dd81 # timeout=10
+Commit message: "go"
 [Pipeline] }
 [Pipeline] // stage
 [Pipeline] stage
@@ -234,7 +234,7 @@ Failures (2):
        org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
        [...]
 
-Test run finished after 136 ms
+Test run finished after 103 ms
 [         6 containers found      ]
 [         0 containers skipped    ]
 [         6 containers started    ]
@@ -254,8 +254,8 @@ Test run finished after 136 ms
 [Pipeline] stage
 [Pipeline] { (Measure Resource Usage Before Deployment)
 [Pipeline] sh
-+ awk {printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}
 + vmstat -s
++ awk {printf "%.2f MB - %s\n", $1/1024, substr($0, index($0,$2))}
 [Pipeline] sh
 + free -h
 [Pipeline] }
@@ -269,10 +269,10 @@ Test run finished after 136 ms
 [Pipeline] sh
 + git log -1 --format=%ct
 [Pipeline] echo
-Lead Time for Changes (time from last commit to deployment start): 282 seconds
+Lead Time for Changes (time from last commit to deployment start): 367 seconds
 [Pipeline] sh
 + date
-+ echo Starting deployment at Wed Apr 23 12:02:09 UTC 2025
++ echo Starting deployment at Wed Apr 23 12:31:53 UTC 2025
 + scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa /var/lib/jenkins/workspace/my-research-pipeline/JobManagement_JENKINS.war root@18.60.149.136:/opt/tomcat10/webapps/
 + ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.60.149.136
 Pseudo-terminal will not be allocated because stdin is not a terminal.
@@ -282,11 +282,11 @@ Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1027-aws x86_64)
  * Management:     https://landscape.canonical.com
  * Support:        https://ubuntu.com/pro
 
- System information as of Wed Apr 23 12:01:30 UTC 2025
+ System information as of Wed Apr 23 12:31:17 UTC 2025
 
-  System load:  0.29              Temperature:           -273.1 C
-  Usage of /:   68.5% of 6.71GB   Processes:             121
-  Memory usage: 27%               Users logged in:       1
+  System load:  0.09              Temperature:           -273.1 C
+  Usage of /:   68.5% of 6.71GB   Processes:             120
+  Memory usage: 28%               Users logged in:       1
   Swap usage:   0%                IPv4 address for ens5: 172.31.20.166
 
  * Ubuntu Pro delivers the most comprehensive open source security and
@@ -303,9 +303,9 @@ Enable ESM Apps to receive additional future security updates.
 See https://ubuntu.com/esm or run: sudo pro status
 
 
-Apr 23, 2025 12:02:15 PM org.apache.catalina.startup.Catalina stopServer
+Apr 23, 2025 12:31:58 PM org.apache.catalina.startup.Catalina stopServer
 SEVERE: Could not contact [localhost:8005] (base port [8005] and offset [0]). Tomcat may not be running.
-Apr 23, 2025 12:02:15 PM org.apache.catalina.startup.Catalina stopServer
+Apr 23, 2025 12:31:59 PM org.apache.catalina.startup.Catalina stopServer
 SEVERE: Error stopping Catalina
 java.net.ConnectException: Connection refused
 	at java.base/sun.nio.ch.Net.connect0(Native Method)
@@ -326,30 +326,144 @@ java.net.ConnectException: Connection refused
 Tomcat started.
 + tail -f /opt/tomcat10/logs/catalina.out
 + read line
-+ echo 23-Apr-2025 12:00:29.212 INFO [main] org.apache.coyote.AbstractProtocol.pause Pausing ProtocolHandler ["http-nio-8090"]
++ echo at org.apache.catalina.startup.Bootstrap.start(Bootstrap.java:345)
++ grep -q Deployment of web application archive
++ read line
++ echo at org.apache.catalina.startup.Bootstrap.main(Bootstrap.java:473)
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:30:15.976 INFO [main] org.apache.coyote.AbstractProtocol.pause Pausing ProtocolHandler ["http-nio-8090"]
++ grep -q Deployment of web application archive
++ read line
++ + grep -q Deployment of web application archive
+echo 23-Apr-2025 12:30:15.976 INFO [main] org.apache.catalina.core.StandardService.stopInternal Stopping service [Catalina]
++ read line
++ echo 23-Apr-2025 12:30:16.030 INFO [main] org.apache.coyote.AbstractProtocol.stop Stopping ProtocolHandler ["http-nio-8090"]
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:30:16.033 INFO [main] org.apache.coyote.AbstractProtocol.destroy Destroying ProtocolHandler ["http-nio-8090"]
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:53.771 INFO [Thread-1] org.apache.coyote.AbstractProtocol.pause Pausing ProtocolHandler ["http-nio-8090"]
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:53.776 INFO [Thread-1] org.apache.catalina.core.StandardService.stopInternal Stopping service [Catalina]
++ grep -q Deployment of web application archive
++ read line
++ + echo 23-Apr-2025 12:31:53.807 INFO [Thread-1] org.apache.coyote.AbstractProtocol.stop Stopping ProtocolHandler ["http-nio-8090"]grep
+ -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:53.820 INFO [Thread-1] org.apache.coyote.AbstractProtocol.destroy Destroying ProtocolHandler ["http-nio-8090"]
 + grep -q Deployment of web application archive
 + read line
 + grep -q Deployment of web application archive
-+ echo 23-Apr-2025 12:00:29.214 INFO [main] org.apache.catalina.core.StandardService.stopInternal Stopping service [Catalina]
++ echo 23-Apr-2025 12:31:59.481 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server version name:   Apache Tomcat/10.1.39
 + read line
-+ echo 23-Apr-2025 12:00:29.294 INFO [main] org.apache.coyote.AbstractProtocol.stop Stopping ProtocolHandler ["http-nio-8090"]
++ echo 23-Apr-2025 12:31:59.488 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server built:          Mar 4 2025 19:02:32 UTC
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.488 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server version number: 10.1.39.0
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log OS Name:               Linux
++ grep -q Deployment of web application archive
++ read line
++ + grep -q Deployment of web application archive
+echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log OS Version:            6.8.0-1027-aws
++ read line
++ echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Architecture:          amd64
 + grep -q Deployment of web application archive
 + read line
 + grep -q Deployment of web application archive
-+ echo 23-Apr-2025 12:00:29.299 INFO [main] org.apache.coyote.AbstractProtocol.destroy Destroying ProtocolHandler ["http-nio-8090"]
++ echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Java Home:             /usr/lib/jvm/java-21-openjdk-amd64
 + read line
-+ echo 23-Apr-2025 12:00:34.060 INFO [Catalina-utility-2] org.apache.jasper.servlet.TldScanner.scanJars At least one JAR was scanned for TLDs yet contained no TLDs. Enable debug logging for this logger for a complete list of JARs that were scanned but no TLDs were found in them. Skipping unneeded JARs during scanning can improve startup time and JSP compilation time.
++ echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log JVM Version:           21.0.6+7-Ubuntu-124.04.1
 + grep -q Deployment of web application archive
 + read line
-+ echo 23-Apr-2025 12:00:34.283 INFO [Catalina-utility-2] org.apache.catalina.startup.HostConfig.deployWAR Deployment of web application archive [/opt/tomcat10/webapps/JobManagement_ACTIONS.war] has finished in [19,189] ms
++ echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log JVM Vendor:            Ubuntu
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log CATALINA_BASE:         /opt/tomcat10
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.492 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log CATALINA_HOME:         /opt/tomcat10
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.504 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.util.logging.config.file=/opt/tomcat10/conf/logging.properties
++ grep -q Deployment of web application archive
++ read line
++ grep -q Deployment of web application archive
++ echo 23-Apr-2025 12:31:59.504 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager
++ read line
++ echo 23-Apr-2025 12:31:59.504 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djdk.tls.ephemeralDHKeySize=2048
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.505 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.protocol.handler.pkgs=org.apache.catalina.webresources
++ grep -q Deployment of web application archive
++ read line
++ grep -q Deployment of web application archive
++ echo 23-Apr-2025 12:31:59.505 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Dsun.io.useCanonCaches=false
++ read line
++ echo 23-Apr-2025 12:31:59.505 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Dorg.apache.catalina.security.SecurityListener.UMASK=0027
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.505 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.lang=ALL-UNNAMED
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.506 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
++ grep -q Deployment of web application archive
++ read line
++ grep -q Deployment of web application archive
++ echo 23-Apr-2025 12:31:59.506 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.io=ALL-UNNAMED
++ read line
++ echo 23-Apr-2025 12:31:59.506 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.util=ALL-UNNAMED
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.507 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.507 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.507 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Dcatalina.base=/opt/tomcat10
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:31:59.507 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Dcatalina.home=/opt/tomcat10
++ grep -q Deployment of web application archive
++ read line
++ grep -q Deployment of web application archive
++ echo 23-Apr-2025 12:31:59.507 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.io.tmpdir=/opt/tomcat10/temp
++ read line
++ echo 23-Apr-2025 12:31:59.508 INFO [main] org.apache.catalina.core.AprLifecycleListener.lifecycleEvent The Apache Tomcat Native library which allows using OpenSSL was not found on the java.library.path: [/usr/java/packages/lib:/usr/lib/x86_64-linux-gnu/jni:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/jni:/lib:/usr/lib]
++ grep -q Deployment of web application archive
++ read line
++ + grep -q Deployment of web application archive
+echo 23-Apr-2025 12:32:00.109 INFO [main] org.apache.coyote.AbstractProtocol.init Initializing ProtocolHandler ["http-nio-8090"]
++ read line
++ echo 23-Apr-2025 12:32:00.148 INFO [main] org.apache.catalina.startup.Catalina.load Server initialization in [854] milliseconds
++ grep -q Deployment of web application archive
++ read line
++ + grep -q Deployment of web application archive
+echo 23-Apr-2025 12:32:00.214 INFO [main] org.apache.catalina.core.StandardService.startInternal Starting service [Catalina]
++ read line
++ echo 23-Apr-2025 12:32:00.218 INFO [main] org.apache.catalina.core.StandardEngine.startInternal Starting Servlet engine: [Apache Tomcat/10.1.39]
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:32:00.251 INFO [main] org.apache.catalina.startup.HostConfig.deployWAR Deploying web application archive [/opt/tomcat10/webapps/JobManagement_CODEBUILD.war]
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:32:01.538 INFO [main] org.apache.jasper.servlet.TldScanner.scanJars At least one JAR was scanned for TLDs yet contained no TLDs. Enable debug logging for this logger for a complete list of JARs that were scanned but no TLDs were found in them. Skipping unneeded JARs during scanning can improve startup time and JSP compilation time.
++ grep -q Deployment of web application archive
++ read line
++ echo 23-Apr-2025 12:32:01.592 INFO [main] org.apache.catalina.startup.HostConfig.deployWAR Deployment of web application archive [/opt/tomcat10/webapps/JobManagement_CODEBUILD.war] has finished in [1,340] ms
 + grep -q Deployment of web application archive
 + break
 [Pipeline] sh
 + date +%s
 [Pipeline] sh
-+ echo Deployment took 7 seconds.
++ echo Deployment took 9 seconds.
 [Pipeline] echo
-Deployment completed in 7 seconds.
+Deployment completed in 9 seconds.
 [Pipeline] }
 [Pipeline] // script
 [Pipeline] }
@@ -395,11 +509,11 @@ Deployment completed in 7 seconds.
 [Pipeline] echo
 -------------------------------------------------
 [Pipeline] echo
-| Total Pipeline Time (sec)           | 20              |
+| Total Pipeline Time (sec)           | 21              |
 [Pipeline] echo
-| Deployment Time (sec)               | 7               |
+| Deployment Time (sec)               | 9               |
 [Pipeline] echo
-| Lead Time for Changes (sec)         | 282             |
+| Lead Time for Changes (sec)         | 367             |
 [Pipeline] echo
 | Cost (USD)                          | 0.0003          |
 [Pipeline] echo
@@ -414,7 +528,7 @@ Memory Usage BEFORE Deployment (free -h):
 -------------------------------------------------
 [Pipeline] echo
 total        used        free      shared  buff/cache   available
-Mem:           3.7Gi       1.3Gi       2.0Gi       2.7Mi       757Mi       2.5Gi
+Mem:           3.7Gi       1.3Gi       1.9Gi       2.7Mi       771Mi       2.5Gi
 Swap:             0B          0B          0B
 [Pipeline] echo
 -------------------------------------------------
@@ -424,7 +538,7 @@ Memory Usage AFTER Deployment (free -h):
 -------------------------------------------------
 [Pipeline] echo
 total        used        free      shared  buff/cache   available
-Mem:           3.7Gi       1.1Gi       2.1Gi       2.7Mi       757Mi       2.6Gi
+Mem:           3.7Gi       1.2Gi       2.0Gi       2.7Mi       771Mi       2.5Gi
 Swap:             0B          0B          0B
 [Pipeline] echo
 -------------------------------------------------
@@ -436,33 +550,33 @@ Resource Usage BEFORE Deployment (vmstat):
 -------------------------------------------------
 [Pipeline] echo
 3836.87 MB - K total memory
-1298.55 MB - K used memory
-1206.72 MB - K active memory
-383.20 MB - K inactive memory
-2018.38 MB - K free memory
-88.07 MB - K buffer memory
-669.35 MB - K swap cache
+1320.68 MB - K used memory
+1205.02 MB - K active memory
+388.59 MB - K inactive memory
+1986.24 MB - K free memory
+91.27 MB - K buffer memory
+679.91 MB - K swap cache
 0.00 MB - K total swap
 0.00 MB - K used swap
 0.00 MB - K free swap
-95.78 MB - non-nice user cpu ticks
+102.47 MB - non-nice user cpu ticks
 0.06 MB - nice user cpu ticks
-8.92 MB - system cpu ticks
-4503.43 MB - idle cpu ticks
-4.11 MB - IO-wait cpu ticks
+9.77 MB - system cpu ticks
+4843.19 MB - idle cpu ticks
+4.54 MB - IO-wait cpu ticks
 0.00 MB - IRQ cpu ticks
-0.16 MB - softirq cpu ticks
-0.17 MB - stolen cpu ticks
+0.18 MB - softirq cpu ticks
+0.18 MB - stolen cpu ticks
 0.00 MB - non-nice guest cpu ticks
 0.00 MB - nice guest cpu ticks
-540.37 MB - K paged in
-2595.19 MB - K paged out
+543.80 MB - K paged in
+2935.74 MB - K paged out
 0.00 MB - pages swapped in
 0.00 MB - pages swapped out
-4254.85 MB - interrupts
-6185.80 MB - CPU context switches
+4601.48 MB - interrupts
+6702.37 MB - CPU context switches
 1704478.59 MB - boot time
-27.45 MB - forks
+30.38 MB - forks
 [Pipeline] echo
 -------------------------------------------------
 [Pipeline] echo
@@ -471,33 +585,33 @@ Resource Usage AFTER Deployment (vmstat):
 -------------------------------------------------
 [Pipeline] echo
 3836.87 MB - K total memory
-1133.74 MB - K used memory
-1087.53 MB - K active memory
-383.42 MB - K inactive memory
-2182.82 MB - K free memory
-88.17 MB - K buffer memory
-669.63 MB - K swap cache
+1224.99 MB - K used memory
+1169.57 MB - K active memory
+388.84 MB - K inactive memory
+2081.65 MB - K free memory
+91.35 MB - K buffer memory
+680.14 MB - K swap cache
 0.00 MB - K total swap
 0.00 MB - K used swap
 0.00 MB - K free swap
-96.07 MB - non-nice user cpu ticks
+103.27 MB - non-nice user cpu ticks
 0.06 MB - nice user cpu ticks
-8.97 MB - system cpu ticks
-4504.69 MB - idle cpu ticks
-4.14 MB - IO-wait cpu ticks
+9.84 MB - system cpu ticks
+4844.42 MB - idle cpu ticks
+4.57 MB - IO-wait cpu ticks
 0.00 MB - IRQ cpu ticks
-0.16 MB - softirq cpu ticks
-0.17 MB - stolen cpu ticks
+0.18 MB - softirq cpu ticks
+0.18 MB - stolen cpu ticks
 0.00 MB - non-nice guest cpu ticks
 0.00 MB - nice guest cpu ticks
-540.37 MB - K paged in
-2607.96 MB - K paged out
+543.80 MB - K paged in
+2948.74 MB - K paged out
 0.00 MB - pages swapped in
 0.00 MB - pages swapped out
-4263.69 MB - interrupts
-6195.96 MB - CPU context switches
+4616.24 MB - interrupts
+6717.07 MB - CPU context switches
 1704478.59 MB - boot time
-27.70 MB - forks
+30.71 MB - forks
 [Pipeline] echo
 -------------------------------------------------
 [Pipeline] }

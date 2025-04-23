@@ -1,42 +1,42 @@
-[Container] 2025/04/23 12:00:53.445520 Running on CodeBuild On-demand
+[Container] 2025/04/23 12:30:40.071183 Running on CodeBuild On-demand
 
-[Container] 2025/04/23 12:00:53.445533 Waiting for agent ping
+[Container] 2025/04/23 12:30:40.071195 Waiting for agent ping
 
-[Container] 2025/04/23 12:00:55.953774 Waiting for DOWNLOAD_SOURCE
+[Container] 2025/04/23 12:30:42.581100 Waiting for DOWNLOAD_SOURCE
 
-[Container] 2025/04/23 12:01:02.669178 Phase is DOWNLOAD_SOURCE
+[Container] 2025/04/23 12:30:50.442133 Phase is DOWNLOAD_SOURCE
 
-[Container] 2025/04/23 12:01:02.671205 CODEBUILD_SRC_DIR=/codebuild/output/src2498526706/src/github.com/sai-pranay-teja/JobManagement
+[Container] 2025/04/23 12:30:50.444045 CODEBUILD_SRC_DIR=/codebuild/output/src1014931804/src/github.com/sai-pranay-teja/JobManagement
 
-[Container] 2025/04/23 12:01:02.673303 YAML location is /codebuild/output/src2498526706/src/github.com/sai-pranay-teja/JobManagement/buildspec.yml
+[Container] 2025/04/23 12:30:50.446490 YAML location is /codebuild/output/src1014931804/src/github.com/sai-pranay-teja/JobManagement/buildspec.yml
 
-[Container] 2025/04/23 12:01:02.673606 No commands found for phase name: install
+[Container] 2025/04/23 12:30:50.446815 No commands found for phase name: install
 
-[Container] 2025/04/23 12:01:02.675550 Setting HTTP client timeout to higher timeout for Github and GitHub Enterprise sources
+[Container] 2025/04/23 12:30:50.457486 Setting HTTP client timeout to higher timeout for Github and GitHub Enterprise sources
 
-[Container] 2025/04/23 12:01:02.675640 Processing environment variables
+[Container] 2025/04/23 12:30:50.457754 Processing environment variables
 
-[Container] 2025/04/23 12:01:04.322537 Selecting 'java' runtime version 'corretto17' based on manual selections...
+[Container] 2025/04/23 12:30:52.212550 Selecting 'java' runtime version 'corretto17' based on manual selections...
 
-[Container] 2025/04/23 12:01:04.322998 Running command echo "Installing Corretto(OpenJDK) version 17 ..."
+[Container] 2025/04/23 12:30:52.213045 Running command echo "Installing Corretto(OpenJDK) version 17 ..."
 
 Installing Corretto(OpenJDK) version 17 ...
 
 
 
-[Container] 2025/04/23 12:01:04.326826 Running command export JAVA_HOME="$JAVA_17_HOME"
+[Container] 2025/04/23 12:30:52.216631 Running command export JAVA_HOME="$JAVA_17_HOME"
 
 
 
-[Container] 2025/04/23 12:01:04.329973 Running command export JRE_HOME="$JRE_17_HOME"
+[Container] 2025/04/23 12:30:52.219593 Running command export JRE_HOME="$JRE_17_HOME"
 
 
 
-[Container] 2025/04/23 12:01:04.332649 Running command export JDK_HOME="$JDK_17_HOME"
+[Container] 2025/04/23 12:30:52.222024 Running command export JDK_HOME="$JDK_17_HOME"
 
 
 
-[Container] 2025/04/23 12:01:04.335214 Running command for tool_path in "$JAVA_HOME"/bin/*;
+[Container] 2025/04/23 12:30:52.224556 Running command for tool_path in "$JAVA_HOME"/bin/*;
 
  do tool=`basename "$tool_path"`;
 
@@ -112,103 +112,103 @@ update-alternatives: warning: forcing reinstallation of alternative /usr/lib/jvm
 
 
 
-[Container] 2025/04/23 12:01:06.016583 Moving to directory /codebuild/output/src2498526706/src/github.com/sai-pranay-teja/JobManagement
+[Container] 2025/04/23 12:30:54.061527 Moving to directory /codebuild/output/src1014931804/src/github.com/sai-pranay-teja/JobManagement
 
-[Container] 2025/04/23 12:01:06.016685 Cache is not defined in the buildspec
+[Container] 2025/04/23 12:30:54.061551 Cache is not defined in the buildspec
 
-[Container] 2025/04/23 12:01:06.794366 Skip cache due to: no paths specified to be cached
+[Container] 2025/04/23 12:30:54.835688 Skip cache due to: no paths specified to be cached
 
-[Container] 2025/04/23 12:01:06.794722 Registering with agent
+[Container] 2025/04/23 12:30:54.835981 Registering with agent
 
-[Container] 2025/04/23 12:01:07.552209 Phases found in YAML: 4
+[Container] 2025/04/23 12:30:55.610567 Phases found in YAML: 4
 
-[Container] 2025/04/23 12:01:07.552232  PRE_BUILD: 8 commands
+[Container] 2025/04/23 12:30:55.610594  POST_BUILD: 2 commands
 
-[Container] 2025/04/23 12:01:07.552238  BUILD: 6 commands
+[Container] 2025/04/23 12:30:55.610599  INSTALL: 0 commands
 
-[Container] 2025/04/23 12:01:07.552242  POST_BUILD: 2 commands
+[Container] 2025/04/23 12:30:55.610602  PRE_BUILD: 8 commands
 
-[Container] 2025/04/23 12:01:07.552246  INSTALL: 0 commands
+[Container] 2025/04/23 12:30:55.610606  BUILD: 6 commands
 
-[Container] 2025/04/23 12:01:07.552566 Phase complete: DOWNLOAD_SOURCE State: SUCCEEDED
+[Container] 2025/04/23 12:30:55.610953 Phase complete: DOWNLOAD_SOURCE State: SUCCEEDED
 
-[Container] 2025/04/23 12:01:07.552578 Phase context status code:  Message: 
+[Container] 2025/04/23 12:30:55.610965 Phase context status code:  Message: 
 
-[Container] 2025/04/23 12:01:08.370135 Entering phase INSTALL
+[Container] 2025/04/23 12:30:56.446696 Entering phase INSTALL
 
-[Container] 2025/04/23 12:01:10.166989 Phase complete: INSTALL State: SUCCEEDED
+[Container] 2025/04/23 12:30:58.014589 Phase complete: INSTALL State: SUCCEEDED
 
-[Container] 2025/04/23 12:01:10.167009 Phase context status code:  Message: 
+[Container] 2025/04/23 12:30:58.014615 Phase context status code:  Message: 
 
-[Container] 2025/04/23 12:01:10.213717 Entering phase PRE_BUILD
+[Container] 2025/04/23 12:30:58.064175 Entering phase PRE_BUILD
 
-[Container] 2025/04/23 12:01:10.214679 Running command echo "Starting build pipeline..."
+[Container] 2025/04/23 12:30:58.065208 Running command echo "Starting build pipeline..."
 
 Starting build pipeline...
 
 
 
-[Container] 2025/04/23 12:01:10.218276 Running command export PIPELINE_START_TIME=$(date +%s)
+[Container] 2025/04/23 12:30:58.071444 Running command export PIPELINE_START_TIME=$(date +%s)
 
 
 
-[Container] 2025/04/23 12:01:10.222102 Running command echo $PIPELINE_START_TIME > pipeline_start_time.txt
+[Container] 2025/04/23 12:30:58.077944 Running command echo $PIPELINE_START_TIME > pipeline_start_time.txt
 
 
 
-[Container] 2025/04/23 12:01:10.225385 Running command echo "Fetched pipeline start time - $PIPELINE_START_TIME"
+[Container] 2025/04/23 12:30:58.083551 Running command echo "Fetched pipeline start time - $PIPELINE_START_TIME"
 
-Fetched pipeline start time - 1745409670
+Fetched pipeline start time - 1745411458
 
 
 
-[Container] 2025/04/23 12:01:10.228743 Running command echo "Fetching SSH Key..."
+[Container] 2025/04/23 12:30:58.089148 Running command echo "Fetching SSH Key..."
 
 Fetching SSH Key...
 
 
 
-[Container] 2025/04/23 12:01:10.232096 Running command aws secretsmanager get-secret-value --secret-id MyServerSSHKey_1 --query SecretString --output text > key.pem
+[Container] 2025/04/23 12:30:58.094828 Running command aws secretsmanager get-secret-value --secret-id MyServerSSHKey_1 --query SecretString --output text > key.pem
 
 
 
-[Container] 2025/04/23 12:01:22.318305 Running command sed -i 's/\\n/\n/g' key.pem
+[Container] 2025/04/23 12:31:09.450228 Running command sed -i 's/\\n/\n/g' key.pem
 
 
 
-[Container] 2025/04/23 12:01:22.324090 Running command chmod 400 key.pem
+[Container] 2025/04/23 12:31:09.458132 Running command chmod 400 key.pem
 
 
 
-[Container] 2025/04/23 12:01:22.371519 Phase complete: PRE_BUILD State: SUCCEEDED
+[Container] 2025/04/23 12:31:09.496041 Phase complete: PRE_BUILD State: SUCCEEDED
 
-[Container] 2025/04/23 12:01:22.371532 Phase context status code:  Message: 
+[Container] 2025/04/23 12:31:09.496062 Phase context status code:  Message: 
 
-[Container] 2025/04/23 12:01:22.428750 Entering phase BUILD
+[Container] 2025/04/23 12:31:09.546996 Entering phase BUILD
 
-[Container] 2025/04/23 12:01:22.429925 Running command echo "Building application..."
+[Container] 2025/04/23 12:31:09.548280 Running command echo "Building application..."
 
 Building application...
 
 
 
-[Container] 2025/04/23 12:01:22.433438 Running command mkdir -p build/WEB-INF/classes
+[Container] 2025/04/23 12:31:09.554216 Running command mkdir -p build/WEB-INF/classes
 
 
 
-[Container] 2025/04/23 12:01:22.437502 Running command javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
+[Container] 2025/04/23 12:31:09.560492 Running command javac -cp "src/main/webapp/WEB-INF/lib/*" -d build/WEB-INF/classes $(find src -name "*.java") 2> compile_error.log || { echo "Build failed!"; exit 1; }
 
 
 
-[Container] 2025/04/23 12:01:29.462447 Running command cp -R src/main/resources/* build/WEB-INF/classes/
+[Container] 2025/04/23 12:31:16.214461 Running command cp -R src/main/resources/* build/WEB-INF/classes/
 
 
 
-[Container] 2025/04/23 12:01:29.467211 Running command cp -R src/main/webapp/* build/
+[Container] 2025/04/23 12:31:16.222705 Running command cp -R src/main/webapp/* build/
 
 
 
-[Container] 2025/04/23 12:01:29.477250 Running command jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
+[Container] 2025/04/23 12:31:16.245698 Running command jar -cvf JobManagement_CODEBUILD.war -C build . || { echo "WAR creation failed!"; exit 1; }
 
 added manifest
 
@@ -342,17 +342,17 @@ adding: viewJobs.jsp(in = 5148) (out= 1546)(deflated 69%)
 
 
 
-[Container] 2025/04/23 12:01:30.167846 Phase complete: BUILD State: SUCCEEDED
+[Container] 2025/04/23 12:31:17.015107 Phase complete: BUILD State: SUCCEEDED
 
-[Container] 2025/04/23 12:01:30.167861 Phase context status code:  Message: 
+[Container] 2025/04/23 12:31:17.015122 Phase context status code:  Message: 
 
-[Container] 2025/04/23 12:01:30.218536 Entering phase POST_BUILD
+[Container] 2025/04/23 12:31:17.064073 Entering phase POST_BUILD
 
-[Container] 2025/04/23 12:01:30.219795 Running command export PIPELINE_START_TIME=$(cat pipeline_start_time.txt)
+[Container] 2025/04/23 12:31:17.065229 Running command export PIPELINE_START_TIME=$(cat pipeline_start_time.txt)
 
 
 
-[Container] 2025/04/23 12:01:30.224182 Running command if [ -f JobManagement_CODEBUILD.war ]; then
+[Container] 2025/04/23 12:31:17.072157 Running command if [ -f JobManagement_CODEBUILD.war ]; then
 
   echo "Build succeeded! Creating backup and recording deployment metrics..."
 
@@ -528,7 +528,7 @@ fi
 
 Build succeeded! Creating backup and recording deployment metrics...
 
-Lead Time for Changes: 244 seconds
+Lead Time for Changes: 332 seconds
 
 Warning: Permanently added '18.60.149.136' (ED25519) to the list of known hosts.
 
@@ -542,13 +542,13 @@ Metrics Summary:
 
 -------------------------------------------------
 
-| Lead Time for Changes (sec)         | 244             |
+| Lead Time for Changes (sec)         | 332             |
 
 | Deployment Duration (sec)           | 6               |
 
-| Total Pipeline Time (sec)           | 26              |
+| Total Pipeline Time (sec)           | 25              |
 
-| Cost (USD)                          | 0.0022          |
+| Cost (USD)                          | 0.0021          |
 
 | Rollback Time (sec)                 | N/A             |
 
@@ -556,28 +556,28 @@ Metrics Summary:
 
 
 
-[Container] 2025/04/23 12:01:36.140350 Phase complete: POST_BUILD State: SUCCEEDED
+[Container] 2025/04/23 12:31:23.112103 Phase complete: POST_BUILD State: SUCCEEDED
 
-[Container] 2025/04/23 12:01:36.140367 Phase context status code:  Message: 
+[Container] 2025/04/23 12:31:23.112122 Phase context status code:  Message: 
 
-[Container] 2025/04/23 12:01:37.387760 Set report auto-discover timeout to 5 seconds
+[Container] 2025/04/23 12:31:24.406239 Set report auto-discover timeout to 5 seconds
 
-[Container] 2025/04/23 12:01:37.387808 Expanding base directory path:  .
+[Container] 2025/04/23 12:31:24.406283 Expanding base directory path:  .
 
-[Container] 2025/04/23 12:01:37.389702 Assembling file list
+[Container] 2025/04/23 12:31:24.408328 Assembling file list
 
-[Container] 2025/04/23 12:01:37.389717 Expanding .
+[Container] 2025/04/23 12:31:24.408345 Expanding .
 
-[Container] 2025/04/23 12:01:37.391324 Expanding file paths for base directory .
+[Container] 2025/04/23 12:31:24.410080 Expanding file paths for base directory .
 
-[Container] 2025/04/23 12:01:37.391337 Assembling file list
+[Container] 2025/04/23 12:31:24.410093 Assembling file list
 
-[Container] 2025/04/23 12:01:37.391341 Expanding **/*
+[Container] 2025/04/23 12:31:24.410097 Expanding **/*
 
-[Container] 2025/04/23 12:01:37.393794 Found 2 file(s)
+[Container] 2025/04/23 12:31:24.414238 Found 2 file(s)
 
-[Container] 2025/04/23 12:01:37.393812 Report auto-discover file discovery took 0.006052 seconds
+[Container] 2025/04/23 12:31:24.414262 Report auto-discover file discovery took 0.008023 seconds
 
-[Container] 2025/04/23 12:01:37.394240 Phase complete: UPLOAD_ARTIFACTS State: SUCCEEDED
+[Container] 2025/04/23 12:31:24.414775 Phase complete: UPLOAD_ARTIFACTS State: SUCCEEDED
 
-[Container] 2025/04/23 12:01:37.394250 Phase context status code:  Message: 
+[Container] 2025/04/23 12:31:24.414788 Phase context status code:  Message: 
