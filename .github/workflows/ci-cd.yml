@@ -4,7 +4,11 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run identifier for CI metrics'
+        required: true
 
 jobs:
   build-and-deploy:

@@ -20,7 +20,7 @@ phases:
       - echo $PIPELINE_START_TIME > pipeline_start_time.txt
       - echo "Fetched pipeline start time - $PIPELINE_START_TIME"
       - echo "Fetching SSH Key..."
-      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey --query SecretString --output text > key.pem
+      - aws secretsmanager get-secret-value --secret-id MyServerSSHKey_1 --query SecretString --output text > key.pem
       - sed -i 's/\\n/\n/g' key.pem
       - chmod 400 key.pem
 
@@ -48,7 +48,7 @@ phases:
           echo "Lead Time for Changes: $LEAD_TIME seconds"
           
           # Backup the WAR file.
-          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@18.60.83.220:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
+          scp -o StrictHostKeyChecking=no -i key.pem JobManagement_CODEBUILD.war ubuntu@18.60.149.136:/tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak
           
           # (Simulated) Deployment delay—replace this with your actual deployment commands.
           sleep 5
@@ -92,7 +92,7 @@ phases:
           # ─────────────────────────────────────────────────────────────────────────────
           # Record the rollback start time.
           export ROLLBACK_START_TIME=$(date +%s)
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.83.220 "
+          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@18.60.149.136 "
             /opt/tomcat10/bin/catalina.sh stop || true
             cp -f /tmp/codebuild_bak/JobManagement_CODEBUILD.war_bak /opt/tomcat10/webapps/JobManagement_CODEBUILD.war
             /opt/tomcat10/bin/catalina.sh start" 
