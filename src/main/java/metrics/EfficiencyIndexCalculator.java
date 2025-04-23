@@ -1,4 +1,4 @@
-package metrics;
+package metrics
 
 public class EfficiencyIndexCalculator {
     private static final double W_TIME = 0.5;
