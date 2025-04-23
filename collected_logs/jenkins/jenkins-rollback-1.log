@@ -11,11 +11,11 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
 using GIT_ASKPASS to set credentials 
  > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 32c13de1e71ed00ed5876fe435537196a7204af4 (refs/remotes/origin/main)
+Checking out Revision 8e2056be861962c5db37efca5ff27daa8d686903 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 32c13de1e71ed00ed5876fe435537196a7204af4 # timeout=10
-Commit message: "dsacds"
- > git rev-list --no-walk 32c13de1e71ed00ed5876fe435537196a7204af4 # timeout=10
+ > git checkout -f 8e2056be861962c5db37efca5ff27daa8d686903 # timeout=10
+Commit message: "vkdllte"
+ > git rev-list --no-walk 8e2056be861962c5db37efca5ff27daa8d686903 # timeout=10
 [Pipeline] Start of Pipeline
 [Pipeline] node
 Running on Jenkins in /var/lib/jenkins/workspace/my-research-pipeline
@@ -34,10 +34,10 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
 using GIT_ASKPASS to set credentials 
  > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 32c13de1e71ed00ed5876fe435537196a7204af4 (refs/remotes/origin/main)
+Checking out Revision 8e2056be861962c5db37efca5ff27daa8d686903 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 32c13de1e71ed00ed5876fe435537196a7204af4 # timeout=10
-Commit message: "dsacds"
+ > git checkout -f 8e2056be861962c5db37efca5ff27daa8d686903 # timeout=10
+Commit message: "vkdllte"
 [Pipeline] }
 [Pipeline] // stage
 [Pipeline] withEnv
@@ -58,7 +58,7 @@ Commit message: "dsacds"
 [Pipeline] sh
 + date +%s
 [Pipeline] echo
-Pipeline start time recorded: 1745412082
+Pipeline start time recorded: 1745412522
 [Pipeline] }
 [Pipeline] // script
 [Pipeline] }
@@ -79,12 +79,12 @@ Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.
  > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
 Avoid second fetch
  > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
-Checking out Revision 32c13de1e71ed00ed5876fe435537196a7204af4 (refs/remotes/origin/main)
+Checking out Revision 8e2056be861962c5db37efca5ff27daa8d686903 (refs/remotes/origin/main)
  > git config core.sparsecheckout # timeout=10
- > git checkout -f 32c13de1e71ed00ed5876fe435537196a7204af4 # timeout=10
+ > git checkout -f 8e2056be861962c5db37efca5ff27daa8d686903 # timeout=10
  > git branch -a -v --no-abbrev # timeout=10
- > git checkout -b main 32c13de1e71ed00ed5876fe435537196a7204af4 # timeout=10
-Commit message: "dsacds"
+ > git checkout -b main 8e2056be861962c5db37efca5ff27daa8d686903 # timeout=10
+Commit message: "vkdllte"
 [Pipeline] }
 [Pipeline] // stage
 [Pipeline] stage
@@ -219,10 +219,10 @@ Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1027-aws x86_64)
  * Management:     https://landscape.canonical.com
  * Support:        https://ubuntu.com/pro
 
- System information as of Wed Apr 23 12:40:54 UTC 2025
+ System information as of Wed Apr 23 12:48:16 UTC 2025
 
-  System load:  0.12              Temperature:           -273.1 C
-  Usage of /:   68.2% of 6.71GB   Processes:             116
+  System load:  0.1               Temperature:           -273.1 C
+  Usage of /:   68.2% of 6.71GB   Processes:             118
   Memory usage: 27%               Users logged in:       1
   Swap usage:   0%                IPv4 address for ens5: 172.31.20.166
 
@@ -240,9 +240,9 @@ Enable ESM Apps to receive additional future security updates.
 See https://ubuntu.com/esm or run: sudo pro status
 
 
-Apr 23, 2025 12:41:34 PM org.apache.catalina.startup.Catalina stopServer
+Apr 23, 2025 12:48:53 PM org.apache.catalina.startup.Catalina stopServer
 SEVERE: Could not contact [localhost:8005] (base port [8005] and offset [0]). Tomcat may not be running.
-Apr 23, 2025 12:41:34 PM org.apache.catalina.startup.Catalina stopServer
+Apr 23, 2025 12:48:53 PM org.apache.catalina.startup.Catalina stopServer
 SEVERE: Error stopping Catalina
 java.net.ConnectException: Connection refused
 	at java.base/sun.nio.ch.Net.connect0(Native Method)
