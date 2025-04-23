@@ -1,220 +1,133 @@
-# #!/usr/bin/env python3
-# import os, time, sys, argparse, shutil
-# from pathlib import Path
-# from github import Github
-# import boto3
-# import jenkins
-
-# def ensure_dir(d: Path):
-#     d.mkdir(parents=True, exist_ok=True)
-
-# def trigger_and_collect_github(run_id: int, outdir: Path):
-#     gh = Github(os.environ["GITHUB_TOKEN"])
-#     repo = gh.get_repo(os.environ["GITHUB_REPO"])
-#     # dispatch your workflow
-#     repo.create_workflow_dispatch(
-#         workflow_id="ci-cd.yml",
-#         ref="main",
-#         inputs={"run_id": str(run_id)}
-#     )
-#     time.sleep(5)
-#     # poll for completion
-#     workflow = repo.get_workflow("ci-cd.yml")
-#     for _ in range(60):
-#         runs = workflow.get_runs(branch="main")
-#         for r in runs:
-#             if r.event == "workflow_dispatch" and r.status == "completed":
-#                 log_zip = repo.get_workflow_run(r.id).download_logs()
-#                 with open(outdir / f"github-{run_id}.zip", "wb") as f:
-#                     f.write(log_zip)
-#                 return
-#         time.sleep(10)
-#     print("⏰ GitHub run timeout", file=sys.stderr)
-
-# def trigger_and_collect_codebuild(run_id: int, outdir: Path):
-#     cb = boto3.client("codebuild")
-#     resp = cb.start_build(projectName=os.environ["CODEBUILD_PROJECT"])
-#     build_id = resp["build"]["id"]
-#     for _ in range(60):
-#         build = cb.batch_get_builds(ids=[build_id])["builds"][0]
-#         status = build["buildStatus"]
-#         if status in ("SUCCEEDED","FAILED","FAULT","TIMED_OUT"):
-#             logs = build["logs"]
-#             cw = boto3.client("logs")
-#             events = cw.get_log_events(
-#                 logGroupName=logs["cloudWatchLogs"]["groupName"],
-#                 logStreamName=logs["cloudWatchLogs"]["streamName"]
-#             )["events"]
-#             with open(outdir / f"codebuild-{run_id}.log","w") as f:
-#                 for e in events:
-#                     f.write(e["message"] + "\n")
-#             return
-#         time.sleep(10)
-#     print("⏰ CodeBuild timeout", file=sys.stderr)
-
-# def trigger_and_collect_jenkins(run_id: int, outdir: Path):
-#     server = jenkins.Jenkins(
-#         os.environ["JENKINS_URL"],
-#         username=os.environ["JENKINS_USER"],
-#         password=os.environ["JENKINS_TOKEN"]
-#     )
-#     job = os.environ["JENKINS_JOB"]
-#     next_number = server.get_job_info(job)["nextBuildNumber"]
-#     server.build_job(job, {"RUN_ID": run_id})
-#     for _ in range(60):
-#         info = server.get_build_info(job, next_number)
-#         if not info["building"]:
-#             console = server.get_build_console_output(job, next_number)
-#             with open(outdir / f"jenkins-{run_id}.log","w") as f:
-#                 f.write(console)
-#             return
-#         time.sleep(10)
-#     print("⏰ Jenkins timeout", file=sys.stderr)
-
-# def main():
-#     parser = argparse.ArgumentParser(description="Run CI metrics across platforms")
-#     parser.add_argument("-n","--runs", type=int, default=10,
-#                         help="Number of runs per tool")
-#     parser.add_argument("-o","--outdir", default="ci-logs",
-#                         help="Directory to save all logs")
-#     args = parser.parse_args()
-
-#     # prepare directories
-#     base = Path(args.outdir)
-#     for tool in ("github","codebuild","jenkins"):
-#         d = base / tool
-#         if d.exists():
-#             shutil.rmtree(d)
-#         ensure_dir(d)
-
-#     # trigger each tool, one run at a time
-#     for i in range(1, args.runs + 1):
-#         print(f"\n=== Run {i}/{args.runs} ===")
-#         trigger_and_collect_github(i, base / "github")
-#         trigger_and_collect_codebuild(i, base / "codebuild")
-#         trigger_and_collect_jenkins(i, base / "jenkins")
-#         time.sleep(5)
-
-# if __name__ == "__main__":
-#     main()
-
 #!/usr/bin/env python3
-import os
-import time
-import sys
-import argparse
-import shutil
+import os, time, sys, argparse, shutil, zipfile, requests
 from pathlib import Path
 from github import Github
 import boto3
-import jenkins
-import requests  # Add this import
+import jenkins as jenkins_module
+
+# Disable Jenkins crumb checks
+jenkins_module.Jenkins.maybe_add_crumb = lambda self, req: None
 
 def ensure_dir(d: Path):
     d.mkdir(parents=True, exist_ok=True)
 
-# Add this new function for dispatching the workflow directly using GitHub's API.
+# --- GitHub Actions ---
 def trigger_workflow_dispatch(run_id: int):
-    repo_name = os.environ["GITHUB_REPO"]  # Format: "owner/repo"
+    repo = os.environ["GITHUB_REPO"]
     token = os.environ["GITHUB_TOKEN"]
-    # Use your workflow file name (or ID) in the URL
-    url = f"https://api.github.com/repos/{repo_name}/actions/workflows/ci-cd.yml/dispatches"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    data = {
-        "ref": "main",  # The branch you want to run on.
-        "inputs": {"run_id": str(run_id)}
-    }
-    response = requests.post(url, headers=headers, json=data)
-    response.raise_for_status()
-    print("Workflow dispatch triggered successfully.")
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/ci-cd.yml/dispatches"
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.v3+json"}
+    payload = {"ref": "main", "inputs": {"run_id": str(run_id)}}
+    r = requests.post(url, headers=headers, json=payload)
+    if r.status_code != 204:
+        print(f"[GitHub] dispatch error: {r.status_code} {r.text}", file=sys.stderr)
+    r.raise_for_status()
 
-def trigger_and_collect_github(run_id: int, outdir: Path):
-    # Use our custom API call helper instead of repo.create_workflow_dispatch:
+def collect_github(run_id: int, outdir: Path):
     trigger_workflow_dispatch(run_id)
     time.sleep(5)
-    
-    # Now, continue with polling the workflow run status.
     gh = Github(os.environ["GITHUB_TOKEN"])
     repo = gh.get_repo(os.environ["GITHUB_REPO"])
-    workflow = repo.get_workflow("ci-cd.yml")
+    wf = repo.get_workflow("ci-cd.yml")
     for _ in range(60):
-        runs = workflow.get_runs(branch="main")
-        for r in runs:
+        for r in wf.get_runs(branch="main"):
             if r.event == "workflow_dispatch" and r.status == "completed":
-                log_zip = repo.get_workflow_run(r.id).download_logs()
-                with open(outdir / f"github-{run_id}.zip", "wb") as f:
-                    f.write(log_zip)
+                logs_url = r.raw_data["logs_url"]
+                resp = requests.get(logs_url, headers={"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}"})
+                resp.raise_for_status()
+                zp = outdir / f"github-{run_id}.zip"
+                with open(zp, "wb") as f:
+                    f.write(resp.content)
+                # extract only first .log or .txt
+                with zipfile.ZipFile(zp, 'r') as z:
+                    for name in z.namelist():
+                        if name.lower().endswith(('.log', '.txt')):
+                            with z.open(name) as src, open(outdir / f"github-{run_id}.log", 'wb') as dst:
+                                dst.write(src.read())
+                            break
+                zp.unlink()
                 return
         time.sleep(10)
-    print("⏰ GitHub run timeout", file=sys.stderr)
+    print("⏰ GitHub timeout", file=sys.stderr)
 
-def trigger_and_collect_codebuild(run_id: int, outdir: Path):
+# --- AWS CodeBuild ---
+def collect_codebuild(run_id: int, outdir: Path):
     cb = boto3.client("codebuild")
-    resp = cb.start_build(projectName=os.environ["CODEBUILD_PROJECT"])
-    build_id = resp["build"]["id"]
+    build_id = cb.start_build(projectName=os.environ["CODEBUILD_PROJECT"])["build"]["id"]
     for _ in range(60):
-        build = cb.batch_get_builds(ids=[build_id])["builds"][0]
-        status = build["buildStatus"]
-        if status in ("SUCCEEDED","FAILED","FAULT","TIMED_OUT"):
-            logs = build["logs"]
-            cw = boto3.client("logs")
-            events = cw.get_log_events(
-                logGroupName=logs["cloudWatchLogs"]["groupName"],
-                logStreamName=logs["cloudWatchLogs"]["streamName"]
-            )["events"]
-            with open(outdir / f"codebuild-{run_id}.log","w") as f:
-                for e in events:
-                    f.write(e["message"] + "\n")
+        b = cb.batch_get_builds(ids=[build_id])["builds"][0]
+        if b["buildStatus"] in ("SUCCEEDED", "FAILED", "FAULT", "TIMED_OUT"):
+            logs_info = b.get("logs", {})
+            # CloudWatch logs
+            group = logs_info.get("groupName")
+            stream = logs_info.get("streamName")
+            if group and stream:
+                events = boto3.client("logs").get_log_events(
+                    logGroupName=group, logStreamName=stream
+                )["events"]
+                with open(outdir / f"codebuild-{run_id}.log", 'w', encoding='utf-8', errors='replace') as f:
+                    for e in events:
+                        f.write(e.get("message", "") + '\n')
+                return
+            # S3 logs via location field
+            s3logs = logs_info.get("s3Logs", {})
+            loc = s3logs.get("location")
+            if loc and loc.startswith("s3://"):
+                _, path = loc.split("s3://", 1)
+                bucket, key = path.split("/", 1)
+                obj = boto3.client("s3").get_object(Bucket=bucket, Key=key)
+                body = obj["Body"].read().decode('utf-8', errors='replace')
+                with open(outdir / f"codebuild-{run_id}.log", 'w', encoding='utf-8', errors='replace') as f:
+                    f.write(body)
+                return
+            print(f"⏰ No logs for CodeBuild {build_id}", file=sys.stderr)
             return
         time.sleep(10)
     print("⏰ CodeBuild timeout", file=sys.stderr)
 
-def trigger_and_collect_jenkins(run_id: int, outdir: Path):
-    server = jenkins.Jenkins(
+# --- Jenkins Pipeline ---
+def collect_jenkins(run_id: int, outdir: Path):
+    server = jenkins_module.Jenkins(
         os.environ["JENKINS_URL"],
         username=os.environ["JENKINS_USER"],
         password=os.environ["JENKINS_TOKEN"]
     )
     job = os.environ["JENKINS_JOB"]
-    next_number = server.get_job_info(job)["nextBuildNumber"]
-    server.build_job(job, {"RUN_ID": run_id})
+    info = server.get_job_info(job)
+    prev_num = info.get("lastBuild", {}).get("number", 0)
+    server.build_job(job)
     for _ in range(60):
-        info = server.get_build_info(job, next_number)
-        if not info["building"]:
-            console = server.get_build_console_output(job, next_number)
-            with open(outdir / f"jenkins-{run_id}.log","w") as f:
-                f.write(console)
-            return
-        time.sleep(10)
+        info = server.get_job_info(job)
+        last = info.get("lastBuild", {}).get("number", 0)
+        if last > prev_num:
+            build_info = server.get_build_info(job, last)
+            if not build_info.get("building", True):
+                console = server.get_build_console_output(job, last)
+                with open(outdir / f"jenkins-{run_id}.log", 'w', encoding='utf-8', errors='replace') as f:
+                    f.write(console)
+                return
+        time.sleep(5)
     print("⏰ Jenkins timeout", file=sys.stderr)
 
+# --- Main Entry ---
 def main():
-    parser = argparse.ArgumentParser(description="Run CI metrics across platforms")
-    parser.add_argument("-n","--runs", type=int, default=10,
-                        help="Number of runs per tool")
-    parser.add_argument("-o","--outdir", default="ci-logs",
-                        help="Directory to save all logs")
-    args = parser.parse_args()
+    p = argparse.ArgumentParser()
+    p.add_argument("-n","--runs", type=int, default=10, help="runs per tool")
+    p.add_argument("-o","--outdir", default="ci-logs", help="output folder")
+    args = p.parse_args()
 
-    # Prepare directories
     base = Path(args.outdir)
     for tool in ("github", "codebuild", "jenkins"):
         d = base / tool
-        if d.exists():
-            shutil.rmtree(d)
+        if d.exists(): shutil.rmtree(d)
         ensure_dir(d)
 
-    # Trigger each tool, one run at a time.
     for i in range(1, args.runs + 1):
         print(f"\n=== Run {i}/{args.runs} ===")
-        trigger_and_collect_github(i, base / "github")
-        trigger_and_collect_codebuild(i, base / "codebuild")
-        trigger_and_collect_jenkins(i, base / "jenkins")
+        collect_github(i, base / "github")
+        collect_codebuild(i, base / "codebuild")
+        collect_jenkins(i, base / "jenkins")
         time.sleep(5)
 
 if __name__ == "__main__":
     main()
-
