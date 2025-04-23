@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, time, sys, argparse, shutil, zipfile, requests
+import os, time, sys, argparse, shutil, requests
 from pathlib import Path
 from github import Github
 import boto3
@@ -12,73 +12,61 @@ def ensure_dir(d: Path):
     d.mkdir(parents=True, exist_ok=True)
 
 # --- GitHub Actions ---
-def trigger_workflow_dispatch(run_id: int):
-    repo = os.environ["GITHUB_REPO"]
-    token = os.environ["GITHUB_TOKEN"]
-    url = f"https://api.github.com/repos/{repo}/actions/workflows/ci-cd.yml/dispatches"
-    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.v3+json"}
-    payload = {"ref": "main", "inputs": {"run_id": str(run_id)}}
-    r = requests.post(url, headers=headers, json=payload)
-    if r.status_code != 204:
-        print(f"[GitHub] dispatch error: {r.status_code} {r.text}", file=sys.stderr)
-    r.raise_for_status()
-
 def collect_github(run_id: int, outdir: Path):
-    trigger_workflow_dispatch(run_id)
-    time.sleep(5)
     gh = Github(os.environ["GITHUB_TOKEN"])
     repo = gh.get_repo(os.environ["GITHUB_REPO"])
     wf = repo.get_workflow("ci-cd.yml")
+    prev_ids = {r.id for r in wf.get_runs(branch="main")}
+    # trigger dispatch
+    url = f"https://api.github.com/repos/{os.environ['GITHUB_REPO']}/actions/workflows/ci-cd.yml/dispatches"
+    headers = {"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}", "Accept": "application/vnd.github.v3+json"}
+    requests.post(url, headers=headers, json={"ref":"main","inputs":{"run_id":str(run_id)}}).raise_for_status()
+    # poll for new run
     for _ in range(60):
         for r in wf.get_runs(branch="main"):
-            if r.event == "workflow_dispatch" and r.status == "completed":
-                logs_url = r.raw_data["logs_url"]
-                resp = requests.get(logs_url, headers={"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}"})
+            if r.id not in prev_ids and r.status == "completed":
+                logs_url = r.raw_data.get("logs_url")
+                resp = requests.get(logs_url, headers=headers)
                 resp.raise_for_status()
-                zp = outdir / f"github-{run_id}.zip"
-                with open(zp, "wb") as f:
-                    f.write(resp.content)
-                # extract only first .log or .txt
-                with zipfile.ZipFile(zp, 'r') as z:
-                    for name in z.namelist():
-                        if name.lower().endswith(('.log', '.txt')):
-                            with z.open(name) as src, open(outdir / f"github-{run_id}.log", 'wb') as dst:
-                                dst.write(src.read())
-                            break
-                zp.unlink()
-                return
+                from io import BytesIO
+                import zipfile
+                zf = zipfile.ZipFile(BytesIO(resp.content))
+                for name in zf.namelist():
+                    if name.lower().endswith(('.log', '.txt')):
+                        data = zf.read(name)
+                        text = data.decode('utf-8', errors='ignore')
+                        suffix = 'rollback' if 'rollback deployment time' in text.lower() else 'deploy'
+                        path = outdir / f"gha-{suffix}-{run_id}.log"
+                        with open(path, 'wb') as f:
+                            f.write(data)
+                        return
         time.sleep(10)
     print("⏰ GitHub timeout", file=sys.stderr)
 
 # --- AWS CodeBuild ---
 def collect_codebuild(run_id: int, outdir: Path):
     cb = boto3.client("codebuild")
-    build_id = cb.start_build(projectName=os.environ["CODEBUILD_PROJECT"])["build"]["id"]
+    build = cb.start_build(projectName=os.environ["CODEBUILD_PROJECT"])["build"]
+    build_id = build["id"]
     for _ in range(60):
-        b = cb.batch_get_builds(ids=[build_id])["builds"][0]
-        if b["buildStatus"] in ("SUCCEEDED", "FAILED", "FAULT", "TIMED_OUT"):
-            logs_info = b.get("logs", {})
-            # CloudWatch logs
+        binfo = cb.batch_get_builds(ids=[build_id])["builds"][0]
+        if binfo["buildStatus"] in ("SUCCEEDED","FAILED","FAULT","TIMED_OUT"):
+            logs_info = binfo.get("logs", {})
+            # CloudWatch logs: groupName and streamName at top level
             group = logs_info.get("groupName")
             stream = logs_info.get("streamName")
             if group and stream:
                 events = boto3.client("logs").get_log_events(
                     logGroupName=group, logStreamName=stream
                 )["events"]
-                with open(outdir / f"codebuild-{run_id}.log", 'w', encoding='utf-8', errors='replace') as f:
-                    for e in events:
-                        f.write(e.get("message", "") + '\n')
-                return
-            # S3 logs via location field
-            s3logs = logs_info.get("s3Logs", {})
-            loc = s3logs.get("location")
-            if loc and loc.startswith("s3://"):
-                _, path = loc.split("s3://", 1)
-                bucket, key = path.split("/", 1)
-                obj = boto3.client("s3").get_object(Bucket=bucket, Key=key)
-                body = obj["Body"].read().decode('utf-8', errors='replace')
-                with open(outdir / f"codebuild-{run_id}.log", 'w', encoding='utf-8', errors='replace') as f:
-                    f.write(body)
+                log_text = "\n".join(e.get("message","") for e in events)
+            else:
+                log_text = None
+            if log_text is not None:
+                suffix = 'rollback' if 'rollback time' in log_text.lower() else 'deploy'
+                path = outdir / f"codebuild-{suffix}-{run_id}.log"
+                with open(path, 'w', encoding='utf-8', errors='replace') as f:
+                    f.write(log_text)
                 return
             print(f"⏰ No logs for CodeBuild {build_id}", file=sys.stderr)
             return
@@ -103,7 +91,9 @@ def collect_jenkins(run_id: int, outdir: Path):
             build_info = server.get_build_info(job, last)
             if not build_info.get("building", True):
                 console = server.get_build_console_output(job, last)
-                with open(outdir / f"jenkins-{run_id}.log", 'w', encoding='utf-8', errors='replace') as f:
+                suffix = 'rollback' if 'rollback took' in console.lower() else 'deploy'
+                path = outdir / f"jenkins-{suffix}-{run_id}.log"
+                with open(path, 'w', encoding='utf-8', errors='replace') as f:
                     f.write(console)
                 return
         time.sleep(5)
@@ -117,17 +107,17 @@ def main():
     args = p.parse_args()
 
     base = Path(args.outdir)
-    for tool in ("github", "codebuild", "jenkins"):
+    for tool in ("gha","codebuild","jenkins"):
         d = base / tool
         if d.exists(): shutil.rmtree(d)
         ensure_dir(d)
 
-    for i in range(1, args.runs + 1):
+    for i in range(1, args.runs+1):
         print(f"\n=== Run {i}/{args.runs} ===")
-        collect_github(i, base / "github")
-        collect_codebuild(i, base / "codebuild")
-        collect_jenkins(i, base / "jenkins")
+        collect_github(i, base/"gha")
+        collect_codebuild(i, base/"codebuild")
+        collect_jenkins(i, base/"jenkins")
         time.sleep(5)
 
-if __name__ == "__main__":
+if __name__=="__main__":
     main()
