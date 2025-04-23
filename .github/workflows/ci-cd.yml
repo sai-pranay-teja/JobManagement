@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      REMOTE_HOST: 18.60.83.220
+      REMOTE_HOST: 18.60.149.136
       REMOTE_USER: ubuntu
       # Remote backup directory on the server
       REMOTE_BACKUP_DIR: /tmp/actions_bak
