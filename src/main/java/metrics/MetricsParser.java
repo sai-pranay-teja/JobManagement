@@ -30,8 +30,6 @@ public class MetricsParser {
         "\\|\\s*Cost \\(USD\\)\\s*\\|\\s*(\\d+\\.?\\d*)\\s*\\|"
     );
     
-    private static final Pattern RUN_NUMBER_PATTERN = 
-        Pattern.compile("(gha|jenkins|codebuild)(-rollback)?-?(\\d+)\\.log", Pattern.CASE_INSENSITIVE);
 
     public static List<MetricRecord> parseAllLogs(Path logsDir) throws IOException {
         List<MetricRecord> records = new ArrayList<>();
@@ -109,29 +107,18 @@ public class MetricsParser {
     }
 
     private static String extractToolName(String fn) {
-        String baseName = "unknown";
-        fn = fn.toLowerCase();
-
-        Matcher runMatcher = RUN_NUMBER_PATTERN.matcher(fn);
-        if (runMatcher.find()) {
-            baseName = runMatcher.group(1); // Tool name (gha/jenkins/codebuild)
-            boolean isRollback = (runMatcher.group(2) != null);
-            String runNumber = runMatcher.group(3);
-
-            if (isRollback) {
-                baseName += "-rollback";
-            }
-            if (runNumber != null) {
-                baseName += "-" + runNumber;
-            }
-        } else {
-            // Fallback for filenames without run numbers
-            if (fn.contains("gha")) baseName = "gha";
-            else if (fn.contains("jenkins")) baseName = "jenkins";
-            else if (fn.contains("codebuild")) baseName = "codebuild";
-            if (fn.contains("rollback")) baseName += "-rollback";
-        }
-
-        return baseName;
+    fn = fn.toLowerCase();
+    
+    if (fn.contains("jenkins")) {
+        return fn.contains("rollback") ? "jenkins-rollback" : "jenkins";
+    } 
+    else if (fn.contains("gha")) {
+        return fn.contains("rollback") ? "gha-rollback" : "gha";
+    } 
+    else if (fn.contains("codebuild")) {
+        return fn.contains("rollback") ? "codebuild-rollback" : "codebuild";
     }
+    
+    return "unknown";
+}
 }
