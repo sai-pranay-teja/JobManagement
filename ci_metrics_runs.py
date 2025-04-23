@@ -4,6 +4,7 @@ from pathlib import Path
 from github import Github
 import boto3
 import jenkins as jenkins_module
+import re
 
 # Disable Jenkins crumb checks
 jenkins_module.Jenkins.maybe_add_crumb = lambda self, req: None
@@ -35,7 +36,9 @@ def collect_github(run_id: int, outdir: Path):
                     if name.lower().endswith(('.log', '.txt')):
                         data = zf.read(name)
                         text = data.decode('utf-8', errors='ignore')
-                        suffix = 'rollback' if 'rollback deployment time' in text.lower() else 'deploy'
+                        # suffix = 'rollback' if 'rollback deployment time' in text.lower() else 'deploy'
+                        m = re.search(r'\|\s*Rollback Time.*\|\s*([0-9]+)\s*\|', text)
+                        suffix = 'rollback' if m else 'deploy'
                         path = outdir / f"gha-{suffix}-{run_id}.log"
                         with open(path, 'wb') as f:
                             f.write(data)
@@ -63,7 +66,8 @@ def collect_codebuild(run_id: int, outdir: Path):
             else:
                 log_text = None
             if log_text is not None:
-                suffix = 'rollback' if 'rollback time' in log_text.lower() else 'deploy'
+                m = re.search(r'\|\s*Rollback Time.*\|\s*([0-9]+)\s*\|', log_text)
+                suffix = 'rollback' if m else 'deploy'
                 path = outdir / f"codebuild-{suffix}-{run_id}.log"
                 with open(path, 'w', encoding='utf-8', errors='replace') as f:
                     f.write(log_text)
