@@ -1,0 +1,282 @@
+Started by user pranay
+Checking out git https://github.com/sai-pranay-teja/JobManagement.git into /var/lib/jenkins/workspace/my-research-pipeline@script/0146aad64d0bfefbf1280cf3da085ce655f78a7a4c3d4cf8039b6116d9e90fc3 to read Jenkinsfile
+The recommended git tool is: NONE
+using credential b5a881c0-9f78-4ab0-99cd-2900e5d503b2
+ > git rev-parse --resolve-git-dir /var/lib/jenkins/workspace/my-research-pipeline@script/0146aad64d0bfefbf1280cf3da085ce655f78a7a4c3d4cf8039b6116d9e90fc3/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/sai-pranay-teja/JobManagement.git # timeout=10
+Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+using GIT_ASKPASS to set credentials 
+ > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision dcfda55ab4395c3543c77808538956e1dd35b838 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f dcfda55ab4395c3543c77808538956e1dd35b838 # timeout=10
+Commit message: "cdscs"
+ > git rev-list --no-walk dcfda55ab4395c3543c77808538956e1dd35b838 # timeout=10
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /var/lib/jenkins/workspace/my-research-pipeline
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+The recommended git tool is: NONE
+using credential b5a881c0-9f78-4ab0-99cd-2900e5d503b2
+ > git rev-parse --resolve-git-dir /var/lib/jenkins/workspace/my-research-pipeline/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/sai-pranay-teja/JobManagement.git # timeout=10
+Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+using GIT_ASKPASS to set credentials 
+ > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision dcfda55ab4395c3543c77808538956e1dd35b838 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f dcfda55ab4395c3543c77808538956e1dd35b838 # timeout=10
+Commit message: "cdscs"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Clean Workspace)
+[Pipeline] cleanWs
+[WS-CLEANUP] Deleting project workspace...
+[WS-CLEANUP] done
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Initialize)
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ date +%s
+[Pipeline] echo
+Pipeline start time recorded: 1745418007
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Checkout)
+[Pipeline] git
+The recommended git tool is: NONE
+No credentials specified
+Cloning the remote Git repository
+Cloning repository https://github.com/sai-pranay-teja/JobManagement.git
+ > git init /var/lib/jenkins/workspace/my-research-pipeline # timeout=10
+Fetching upstream changes from https://github.com/sai-pranay-teja/JobManagement.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.43.0'
+ > git fetch --tags --force --progress -- https://github.com/sai-pranay-teja/JobManagement.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git config remote.origin.url https://github.com/sai-pranay-teja/JobManagement.git # timeout=10
+ > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
+Avoid second fetch
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision dcfda55ab4395c3543c77808538956e1dd35b838 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f dcfda55ab4395c3543c77808538956e1dd35b838 # timeout=10
+ > git branch -a -v --no-abbrev # timeout=10
+ > git checkout -b main dcfda55ab4395c3543c77808538956e1dd35b838 # timeout=10
+Commit message: "cdscs"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Build WAR)
+[Pipeline] sh
++ mkdir -p build/WEB-INF/classes
+[Pipeline] sh
++ find src -name *.java
++ javac -cp /var/lib/jenkins/workspace/my-research-pipeline/src/main/webapp/WEB-INF/lib/* -d build/WEB-INF/classes src/main/test/TestApp.java src/main/test/TestAppPart2.java src/main/test/TestAppPart1.java src/main/java/model/ApplicationController.java src/main/java/model/UserDAO.java src/main/java/model/Job.java src/main/java/model/DownloadResumeController.java src/main/java/model/UserController.java src/main/java/model/ApplicationDAO.java src/main/java/model/ViewJobsController.java src/main/java/model/DeleteJobController.java src/main/java/model/UpdateApplicationStatusController.java src/main/java/model/CancelApplicationController.java src/main/java/model/EmployerDashboardController.java src/main/java/model/Application.java src/main/java/model/JobDAO.java src/main/java/model/ViewApplicationsController.java src/main/java/model/User.java src/main/java/model/JobController.java src/main/java/model/LogoutServlet.java src/main/java/model/DatabaseUtil.java src/main/java/model/LoginController.java src/main/java/metrics/MetricRecord.java src/main/java/metrics/MetricsParser.java src/main/java/metrics/EfficiencyIndexCalculator.java src/main/java/metrics/ExportMetricsCSVServlet.java src/main/java/metrics/MetricsDashboardServlet.java
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Backup WAR)
+Stage "Backup WAR" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Run Unit Tests)
+Stage "Run Unit Tests" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Measure Resource Usage Before Deployment)
+Stage "Measure Resource Usage Before Deployment" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Deploy and Restart Tomcat)
+Stage "Deploy and Restart Tomcat" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Measure Resource Usage After Deployment)
+Stage "Measure Resource Usage After Deployment" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ date +%s
+[Pipeline] fileExists
+[Pipeline] fileExists
+[Pipeline] fileExists
+[Pipeline] fileExists
+[Pipeline] fileExists
+[Pipeline] fileExists
+[Pipeline] fileExists
+[Pipeline] echo
+
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+              CI/CD Metrics Summary              
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+| Metric                              | Value           |
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+| Total Pipeline Time (sec)           | 4               |
+[Pipeline] echo
+| Deployment Time (sec)               | N/A             |
+[Pipeline] echo
+| Lead Time for Changes (sec)         | 0               |
+[Pipeline] echo
+| Cost (USD)                          | 0.0001          |
+[Pipeline] echo
+| Test Summary                        | N/A             |
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+
+[Pipeline] echo
+Memory Usage BEFORE Deployment (free -h):
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+N/A
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+Memory Usage AFTER Deployment (free -h):
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+N/A
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+
+[Pipeline] echo
+Resource Usage BEFORE Deployment (vmstat):
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+N/A
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+Resource Usage AFTER Deployment (vmstat):
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] echo
+N/A
+[Pipeline] echo
+-------------------------------------------------
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] echo
+Deployment failed! Performing rollback...
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ date +%s
+[Pipeline] fileExists
+[Pipeline] sh
++ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.60.149.136 rm -rf /tmp/jenkins_bak/JobManagement_JENKINS.war
++ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.60.149.136 cp /tmp/jenkins_bak/JobManagement_JENKINS.war_bak /opt/tomcat10/webapps/JobManagement_JENKINS.war
++ ssh -o StrictHostKeyChecking=no -i /var/lib/jenkins/.ssh/id_rsa root@18.60.149.136
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Welcome to Ubuntu 24.04.2 LTS (GNU/Linux 6.8.0-1027-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Wed Apr 23 14:19:42 UTC 2025
+
+  System load:  0.2               Temperature:           -273.1 C
+  Usage of /:   68.5% of 6.71GB   Processes:             122
+  Memory usage: 28%               Users logged in:       1
+  Swap usage:   0%                IPv4 address for ens5: 172.31.20.166
+
+ * Ubuntu Pro delivers the most comprehensive open source security and
+   compliance features.
+
+   https://ubuntu.com/aws/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+2 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+Apr 23, 2025 2:20:18 PM org.apache.catalina.startup.Catalina stopServer
+SEVERE: Could not contact [localhost:8005] (base port [8005] and offset [0]). Tomcat may not be running.
+Apr 23, 2025 2:20:18 PM org.apache.catalina.startup.Catalina stopServer
+SEVERE: Error stopping Catalina
+java.net.ConnectException: Connection refused
+	at java.base/sun.nio.ch.Net.connect0(Native Method)
+	at java.base/sun.nio.ch.Net.connect(Net.java:589)
+	at java.base/sun.nio.ch.Net.connect(Net.java:578)
+	at java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:583)
+	at java.base/java.net.SocksSocketImpl.connect(SocksSocketImpl.java:327)
+	at java.base/java.net.Socket.connect(Socket.java:751)
+	at java.base/java.net.Socket.connect(Socket.java:686)
+	at java.base/java.net.Socket.<init>(Socket.java:555)
+	at java.base/java.net.Socket.<init>(Socket.java:324)
+	at org.apache.catalina.startup.Catalina.stopServer(Catalina.java:657)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.catalina.startup.Bootstrap.stopServer(Bootstrap.java:393)
+	at org.apache.catalina.startup.Bootstrap.main(Bootstrap.java:478)
+
+Tomcat started.
+[Pipeline] sh
++ date +%s
+[Pipeline] sh
++ echo Rollback took 8 seconds.
+[Pipeline] echo
+Rollback completed in 8 seconds.
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+ERROR: script returned exit code 1
+Finished: FAILURE
