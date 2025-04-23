@@ -155,7 +155,7 @@ jobs:
           if [ -n "$DEPLOY_DURATION" ]; then
             echo "| Deployment Time (sec)              | $DEPLOY_DURATION          |"
           else
-            echo "| Rollback Deployment Time (sec)     | $ROLLBACK_DURATION          |"
+            echo "| Rollback Time (sec)     | $ROLLBACK_DURATION          |"
           fi
           echo "| Lead Time for Changes (sec)        | $LEAD_TIME          |"
           if [ -f test_results.log ]; then
